@@ -16,27 +16,41 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
   - Create `backend/tests/__init__.py`, `backend/tests/unit/__init__.py`, `backend/tests/integration/__init__.py`, `backend/tests/property/__init__.py`
   - _Requirements: all_
 
-- [ ] 2. Implement database setup
-  - [ ] 2.1 Create `backend/app/db/database.py` with SQLAlchemy engine, `SessionLocal`, and `Base`
+- [x] 2. Implement database setup
+  - [x] 2.1 Create `backend/app/db/database.py` with SQLAlchemy engine, `SessionLocal`, and `Base`
     - Use `create_engine("sqlite:///./expense_reports.db", connect_args={"check_same_thread": False})`
     - Define `get_db` dependency yielding a `SessionLocal` session
     - _Requirements: 3.2_
-  - [ ]* 2.2 Write unit test for database session dependency
+  - [x] 2.2 Write unit test for database session dependency
     - Test that `get_db` yields a session and closes it after use
     - `backend/tests/unit/test_database.py`
     - _Requirements: 3.2_
 
-- [ ] 3. Implement SQLAlchemy ORM models
-  - [ ] 3.1 Create `backend/app/models/user.py` with `User` model
+- [x] 3. Implement SQLAlchemy ORM models
+  - [x] 3.1 Create `backend/app/models/user.py` with `User` model
     - Fields: `id`, `username` (unique, indexed), `hashed_password`
     - Relationship: `reports` → `ExpenseReport`
     - _Requirements: 1.1_
-  - [ ] 3.2 Create `backend/app/models/expense_report.py` with `ExpenseReport` model
+  - [x] 3.2 Create `backend/app/models/expense_report.py` with `ExpenseReport` model
     - Fields: `id`, `title`, `purpose`, `total_amount`, `status` (default `"Pending"`), `owner_id` (FK → `users.id`)
     - Relationship: `owner` → `User`
     - _Requirements: 3.2_
-  - [ ] 3.3 Export models from `backend/app/models/__init__.py` and call `Base.metadata.create_all` in `backend/app/db/database.py`
+  - [x] 3.3 Export models from `backend/app/models/__init__.py` and call `Base.metadata.create_all` in `backend/app/db/database.py`
     - _Requirements: 3.2_
+  - [x] 3.4 Write unit tests for ORM models
+    - Use an in-memory SQLite database (`sqlite:///:memory:`) with a fresh schema per test via a pytest fixture
+    - `backend/tests/unit/test_models.py`
+    - **User model tests**:
+      - Creating a `User` with valid fields persists and is retrievable
+      - Inserting a duplicate `username` raises `IntegrityError`
+      - `hashed_password` is stored as-is (no auto-hashing at the model layer)
+      - The `reports` relationship returns an empty list by default
+    - **ExpenseReport model tests**:
+      - Creating a report with valid fields persists and is retrievable
+      - `status` defaults to `"Pending"` when not explicitly set
+      - Inserting a report with a non-existent `owner_id` raises `IntegrityError`
+      - The `owner` back-populates correctly to the associated `User`
+    - _Requirements: 1.1, 3.2_
 
 - [ ] 4. Implement Pydantic schemas
   - [ ] 4.1 Create `backend/app/schemas/auth.py` with `LoginRequest` and `UserResponse`
@@ -47,7 +61,7 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - `ExpenseReportCreate`: `title: str = Field(..., min_length=1, max_length=255)`, `purpose: str = Field(..., min_length=1)`, `total_amount: float = Field(..., gt=0)`
     - `ExpenseReportResponse`: `id`, `title`, `purpose`, `total_amount`, `status`, `owner_id`, `model_config = ConfigDict(from_attributes=True)`
     - _Requirements: 3.1, 3.4, 3.5_
-  - [ ]* 4.3 Write unit tests for Pydantic schema validation
+  - [ ] 4.3 Write unit tests for Pydantic schema validation
     - `backend/tests/unit/test_schemas.py`
     - Test `ExpenseReportCreate` rejects: empty title, empty purpose, `total_amount=0`, `total_amount=-1`
     - Test `ExpenseReportCreate` accepts: valid title, purpose, and positive amount
