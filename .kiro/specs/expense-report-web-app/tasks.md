@@ -1,0 +1,336 @@
+# Implementation Plan: Expense Report Web App
+
+## Overview
+
+Full-stack implementation following an API-first, red-green-refactor approach. Backend is scaffolded and tested first (FastAPI + SQLAlchemy + SQLite), then the frontend (React + TypeScript + MUI). Tests are written before or alongside each implementation step. Property-based tests cover all 7 correctness properties from the design.
+
+## Tasks
+
+- [x] 1. Scaffold backend project structure
+  - Create `backend/` directory layout: `app/routers/`, `app/models/`, `app/schemas/`, `app/services/`, `app/db/`, `docs/`, `migrations/`, `tests/unit/`, `tests/integration/`, `tests/property/`
+  - Create `backend/requirements.txt` with pinned production dependencies: `fastapi==0.111.0`, `uvicorn==0.29.0`, `sqlalchemy==2.0.30`, `alembic==1.13.1`, `pydantic==2.7.1`, `passlib[bcrypt]==1.7.4`, `starlette==0.37.2`, `itsdangerous==2.2.0`
+  - Create `backend/requirements.dev.txt` with pinned dev/test dependencies: `pytest==8.2.0`, `pytest-asyncio==0.23.6`, `httpx==0.27.0`, `hypothesis==6.100.1`
+  - Create `backend/docs/openapi.yaml` as a placeholder OpenAPI 3.0 contract (to be populated before implementing routes, per API-first convention)
+  - Create `backend/migrations/env.py` as the Alembic environment file for DB versioning
+  - Create `backend/app/__init__.py`, `backend/app/routers/__init__.py`, `backend/app/models/__init__.py`, `backend/app/schemas/__init__.py`, `backend/app/services/__init__.py`, `backend/app/db/__init__.py`
+  - Create `backend/tests/__init__.py`, `backend/tests/unit/__init__.py`, `backend/tests/integration/__init__.py`, `backend/tests/property/__init__.py`
+  - _Requirements: all_
+
+- [ ] 2. Implement database setup
+  - [ ] 2.1 Create `backend/app/db/database.py` with SQLAlchemy engine, `SessionLocal`, and `Base`
+    - Use `create_engine("sqlite:///./expense_reports.db", connect_args={"check_same_thread": False})`
+    - Define `get_db` dependency yielding a `SessionLocal` session
+    - _Requirements: 3.2_
+  - [ ]* 2.2 Write unit test for database session dependency
+    - Test that `get_db` yields a session and closes it after use
+    - `backend/tests/unit/test_database.py`
+    - _Requirements: 3.2_
+
+- [ ] 3. Implement SQLAlchemy ORM models
+  - [ ] 3.1 Create `backend/app/models/user.py` with `User` model
+    - Fields: `id`, `username` (unique, indexed), `hashed_password`
+    - Relationship: `reports` → `ExpenseReport`
+    - _Requirements: 1.1_
+  - [ ] 3.2 Create `backend/app/models/expense_report.py` with `ExpenseReport` model
+    - Fields: `id`, `title`, `purpose`, `total_amount`, `status` (default `"Pending"`), `owner_id` (FK → `users.id`)
+    - Relationship: `owner` → `User`
+    - _Requirements: 3.2_
+  - [ ] 3.3 Export models from `backend/app/models/__init__.py` and call `Base.metadata.create_all` in `backend/app/db/database.py`
+    - _Requirements: 3.2_
+
+- [ ] 4. Implement Pydantic schemas
+  - [ ] 4.1 Create `backend/app/schemas/auth.py` with `LoginRequest` and `UserResponse`
+    - `LoginRequest`: `username: str`, `password: str`
+    - `UserResponse`: `id: int`, `username: str`, `model_config = ConfigDict(from_attributes=True)`
+    - _Requirements: 1.1_
+  - [ ] 4.2 Create `backend/app/schemas/expense_report.py` with `ExpenseReportCreate` and `ExpenseReportResponse`
+    - `ExpenseReportCreate`: `title: str = Field(..., min_length=1, max_length=255)`, `purpose: str = Field(..., min_length=1)`, `total_amount: float = Field(..., gt=0)`
+    - `ExpenseReportResponse`: `id`, `title`, `purpose`, `total_amount`, `status`, `owner_id`, `model_config = ConfigDict(from_attributes=True)`
+    - _Requirements: 3.1, 3.4, 3.5_
+  - [ ]* 4.3 Write unit tests for Pydantic schema validation
+    - `backend/tests/unit/test_schemas.py`
+    - Test `ExpenseReportCreate` rejects: empty title, empty purpose, `total_amount=0`, `total_amount=-1`
+    - Test `ExpenseReportCreate` accepts: valid title, purpose, and positive amount
+    - Test `LoginRequest` rejects missing fields
+    - _Requirements: 3.4, 3.5_
+
+- [ ] 5. Implement password hashing utility
+  - [ ] 5.1 Create `backend/app/services/auth_service.py` with `hash_password` and `verify_password` using `passlib.context.CryptContext` (bcrypt, cost ≥ 12)
+    - Business logic for credential verification lives here; routers call this service, not `passlib` directly
+    - _Requirements: 1.1_
+  - [ ]* 5.2 Write unit tests for password hashing
+    - `backend/tests/unit/test_auth_service.py`
+    - Test `verify_password` returns `True` for correct password
+    - Test `verify_password` returns `False` for incorrect password
+    - Test `hash_password` never returns the plaintext password
+    - _Requirements: 1.1_
+
+- [ ] 6. Implement auth dependency and session middleware
+  - [ ] 6.1 Create `backend/app/dependencies.py` with `get_current_user` FastAPI dependency
+    - Read `user_id` from `request.session`; query DB for user; raise `HTTPException(401)` if absent or not found
+    - _Requirements: 1.4_
+  - [ ]* 6.2 Write unit tests for `get_current_user` dependency
+    - `backend/tests/unit/test_dependencies.py`
+    - Test with valid session cookie → returns user
+    - Test with missing session → raises 401
+    - Test with invalid/unknown user_id in session → raises 401
+    - _Requirements: 1.4_
+
+- [ ] 7. Implement auth router and service
+  - [ ] 7.1 Create `backend/app/services/auth_service.py` login logic
+    - `authenticate_user(db, username, password) -> User | None`: query user by username, call `verify_password`, return user or `None`
+    - Routers delegate credential verification to this service; no DB queries in the router
+    - _Requirements: 1.1, 1.2, 1.3_
+  - [ ] 7.2 Create `backend/app/routers/auth.py` with `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
+    - `POST /auth/login`: validate `LoginRequest`, call `auth_service.authenticate_user`, set `request.session["user_id"]`, return `UserResponse`; return `401` on failure
+    - `POST /auth/logout`: clear `request.session`, return `{"detail": "Logged out"}`
+    - `GET /auth/me`: use `get_current_user` dependency, return `UserResponse`
+    - _Requirements: 1.1, 1.2, 1.3_
+  - [ ] 7.3 Create `backend/app/main.py`
+    - Instantiate `FastAPI` app
+    - Add `SessionMiddleware` with a secret key
+    - Register `auth` router with prefix `/auth`
+    - Register global 500 exception handler
+    - Call `Base.metadata.create_all` on startup
+    - _Requirements: 1.1, 1.4_
+
+- [ ] 8. Write auth integration tests
+  - [ ] 8.1 Create `backend/tests/integration/test_auth.py` using `httpx.AsyncClient` with `ASGITransport`
+    - `POST /auth/login` success: seed a user, submit correct credentials → `200`, cookie set, response matches `UserResponse` shape
+    - `POST /auth/login` wrong password: → `401`, no session cookie
+    - `POST /auth/login` missing fields: → `422`
+    - `POST /auth/logout` success: → `200`, session cleared
+    - `GET /auth/me` with valid session: → `200`, correct user shape
+    - `GET /auth/me` without session: → `401`
+    - _Requirements: 1.1, 1.2, 1.3, 1.4_
+
+- [ ] 9. Implement reports router and service
+  - [ ] 9.1 Create `backend/app/services/report_service.py` with report business logic
+    - `get_reports_for_user(db, user_id) -> list[ExpenseReport]`: query reports filtered by `owner_id`
+    - `create_report(db, user_id, data: ExpenseReportCreate) -> ExpenseReport`: create record with `status="Pending"`, commit, return ORM object
+    - Routers delegate all DB interaction to this service
+    - _Requirements: 2.1, 3.2_
+  - [ ] 9.2 Create `backend/app/routers/reports.py` with `GET /reports` and `POST /reports`
+    - `GET /reports`: use `get_current_user`, call `report_service.get_reports_for_user`, return list of `ExpenseReportResponse`
+    - `POST /reports`: use `get_current_user`, validate `ExpenseReportCreate`, call `report_service.create_report`, return `ExpenseReportResponse` with status `201`
+    - Register router in `main.py` with prefix `/reports`
+    - _Requirements: 2.1, 3.2, 3.4, 3.5_
+
+- [ ] 10. Write reports integration tests
+  - [ ] 10.1 Create `backend/tests/integration/test_reports.py`
+    - `GET /reports` success: seed user + reports, authenticate → `200`, array shape correct, only owner's reports returned
+    - `GET /reports` unauthenticated: → `401`
+    - `POST /reports` success: authenticate, submit valid payload → `201`, response shape correct, `status == "Pending"`, `owner_id` matches
+    - `POST /reports` empty title: → `422`
+    - `POST /reports` non-positive amount (`total_amount=0`, `total_amount=-5`): → `422`
+    - `POST /reports` missing fields: → `422`
+    - _Requirements: 2.1, 3.2, 3.4, 3.5_
+
+- [ ] 11. Write backend property-based tests
+  - [ ] 11.1 Create `backend/tests/property/test_auth_properties.py`
+    - **Property 1: Valid credentials always establish a session**
+      - Use `@given` to generate valid username/password pairs; seed user with hashed password; assert `POST /auth/login` returns `200` and sets session cookie
+      - **Validates: Requirements 1.1, 1.2**
+    - **Property 2: Invalid credentials never establish a session**
+      - Use `@given` to generate username/wrong-password pairs; assert `POST /auth/login` returns `401` and does NOT set session cookie
+      - **Validates: Requirements 1.3**
+    - Minimum 100 iterations each (`@settings(max_examples=100)`)
+    - _Requirements: 1.1, 1.2, 1.3_
+  - [ ] 11.2 Create `backend/tests/property/test_protected_endpoints.py`
+    - **Property 3: Unauthenticated requests to protected endpoints are always rejected**
+      - Use `@given` to sample from the list of protected routes (`GET /reports`, `POST /reports`, `GET /auth/me`); assert each returns `401` when called without a session cookie
+      - **Validates: Requirements 1.4**
+    - Minimum 100 iterations
+    - _Requirements: 1.4_
+  - [ ] 11.3 Create `backend/tests/property/test_reports_properties.py`
+    - **Property 4: Dashboard returns exactly the authenticated user's reports**
+      - Use `@given` to generate 2+ users each with distinct report sets; assert `GET /reports` for each user returns only their own reports (correct count and `owner_id`)
+      - **Validates: Requirements 2.1**
+    - **Property 5: Report creation round-trip preserves all fields**
+      - Use `@given(st.builds(ExpenseReportCreate, ...))` with valid strategies; `POST /reports` then `GET /reports`; assert title, purpose, total_amount match and `status == "Pending"` and `owner_id` matches
+      - **Validates: Requirements 3.2**
+    - **Property 6: Reports with invalid fields are always rejected**
+      - Use `@given` to generate payloads with at least one invalid field (empty title, empty purpose, `total_amount ≤ 0`); assert `POST /reports` returns `422` and no new DB record is created
+      - **Validates: Requirements 3.4, 3.5**
+    - **Property 7: Zod and Pydantic validation agree on valid inputs**
+      - Use `@given` to generate inputs that satisfy the Zod constraints (modeled as Python predicates: non-empty strings, positive float); assert `POST /reports` returns `201` (not `422`) for all such inputs
+      - **Validates: Requirements 3.4, 3.5**
+    - Minimum 100 iterations each
+    - _Requirements: 2.1, 3.2, 3.4, 3.5_
+
+- [ ] 12. Backend checkpoint — ensure all tests pass
+  - Run `pip install -r requirements.txt -r requirements.dev.txt` then `pytest` from `backend/`; all unit, integration, and property tests must pass before proceeding to frontend work.
+  - Ask the user if any questions arise.
+
+- [ ] 13. Scaffold frontend project
+  - [ ] 13.1 Initialise Vite + React + TypeScript project in `frontend/` using `npm create vite@5.2.0 frontend -- --template react-ts`
+    - _Requirements: all_
+  - [ ] 13.2 Install pinned frontend dependencies
+    - Production: `@mui/material@5.15.18`, `@mui/icons-material@5.15.18`, `@emotion/react@11.11.4`, `@emotion/styled@11.11.5`, `react-router-dom@6.23.1`, `zod@3.23.8`
+    - Dev: `vitest@1.6.0`, `@vitest/coverage-v8@1.6.0`, `@testing-library/react@15.0.7`, `@testing-library/user-event@14.5.2`, `@testing-library/jest-dom@6.4.5`, `fast-check@3.19.0`, `msw@2.3.0`
+    - _Requirements: all_
+  - [ ] 13.3 Create directory structure: `frontend/src/pages/`, `frontend/src/components/`, `frontend/src/api/`, `frontend/src/types/`, `frontend/src/hooks/`
+    - _Requirements: all_
+  - [ ] 13.4 Configure Vitest in `vite.config.ts` with `globals: true`, `environment: 'jsdom'`, `setupFiles: ['./src/setupTests.ts']`, and coverage thresholds (100% for `src/api/` and `src/hooks/`)
+    - Create `frontend/src/setupTests.ts` importing `@testing-library/jest-dom`
+    - _Requirements: all_
+
+- [ ] 14. Implement TypeScript types and Zod schemas
+  - [ ] 14.1 Create `frontend/src/types/auth.ts` with `LoginRequest` and `UserResponse` interfaces mirroring backend Pydantic schemas
+    - _Requirements: 1.1_
+  - [ ] 14.2 Create `frontend/src/types/expenseReport.ts` with `ExpenseReportCreate` and `ExpenseReportResponse` interfaces
+    - _Requirements: 3.1, 3.2_
+  - [ ] 14.3 Create `frontend/src/types/schemas.ts` with Zod schemas `loginRequestSchema` and `expenseReportCreateSchema`
+    - `loginRequestSchema`: `username` min 1, `password` min 1
+    - `expenseReportCreateSchema`: `title` min 1 max 255, `purpose` min 1, `total_amount` positive number
+    - Export inferred types: `LoginFormData`, `ExpenseReportFormData`
+    - _Requirements: 3.4, 3.5_
+  - [ ]* 14.4 Write Vitest unit tests for Zod schemas (100% coverage)
+    - `frontend/src/types/__tests__/schemas.test.ts`
+    - `loginRequestSchema`: valid input passes; empty username fails; empty password fails
+    - `expenseReportCreateSchema`: valid input passes; empty title fails; empty purpose fails; `total_amount=0` fails; `total_amount=-1` fails; non-number amount fails
+    - _Requirements: 3.4, 3.5_
+
+- [ ] 15. Implement API client layer
+  - [ ] 15.1 Create `frontend/src/api/client.ts` with a base `apiFetch` wrapper
+    - Sets `credentials: "include"` on all requests; throws typed `ApiError` on non-2xx responses; parses JSON response
+    - _Requirements: 1.1, 1.4_
+  - [ ] 15.2 Create `frontend/src/api/auth.ts` with `login(credentials: LoginRequest)`, `logout()`, `getSession()`
+    - `login`: `POST /auth/login`, returns `UserResponse`
+    - `logout`: `POST /auth/logout`
+    - `getSession`: `GET /auth/me`, returns `UserResponse | null` (returns `null` on 401)
+    - _Requirements: 1.1, 1.2, 1.3_
+  - [ ] 15.3 Create `frontend/src/api/reports.ts` with `listReports()` and `createReport(data: ExpenseReportCreate)`
+    - `listReports`: `GET /reports`, returns `ExpenseReportResponse[]`
+    - `createReport`: `POST /reports`, returns `ExpenseReportResponse`
+    - _Requirements: 2.1, 3.2_
+  - [ ]* 15.4 Write Vitest unit tests for API client functions (100% coverage)
+    - `frontend/src/api/__tests__/auth.test.ts` and `reports.test.ts`
+    - Mock `fetch` with `msw`; assert correct URL, method, headers, and body for each function
+    - Assert `login` returns parsed `UserResponse` on 200
+    - Assert `getSession` returns `null` on 401
+    - Assert `createReport` sends correct JSON body
+    - _Requirements: 1.1, 1.2, 2.1, 3.2_
+
+- [ ] 16. Implement custom hooks
+  - [ ] 16.1 Create `frontend/src/hooks/useAuth.ts`
+    - State: `user: UserResponse | null`, `isAuthenticated: boolean`, `isLoading: boolean`
+    - On mount: call `getSession()`; set `user` and `isAuthenticated`
+    - Expose `login(credentials)` → calls `api/auth.login`, updates state, returns result
+    - Expose `logout()` → calls `api/auth.logout`, clears state
+    - On any 401 from a protected call: clear state (redirect handled by `ProtectedRoute`)
+    - _Requirements: 1.1, 1.2, 1.4_
+  - [ ] 16.2 Create `frontend/src/hooks/useReports.ts`
+    - State: `reports: ExpenseReportResponse[]`, `isLoading: boolean`, `error: string | null`
+    - On mount: call `listReports()`; populate state
+    - Expose `createReport(data)` → calls `api/reports.createReport`, appends to list on success
+    - _Requirements: 2.1, 3.2_
+  - [ ]* 16.3 Write Vitest unit tests for hooks (100% coverage)
+    - `frontend/src/hooks/__tests__/useAuth.test.ts`
+      - Test session restoration on mount (mock `getSession` returning a user)
+      - Test `logout` clears user state
+      - Test `login` with valid credentials updates `isAuthenticated`
+    - `frontend/src/hooks/__tests__/useReports.test.ts`
+      - Test reports are fetched on mount
+      - Test `createReport` appends new report to list
+    - _Requirements: 1.1, 1.2, 1.4, 2.1, 3.2_
+
+- [ ] 17. Implement shared components
+  - [ ] 17.1 Create `frontend/src/components/ProtectedRoute.tsx`
+    - Uses `useAuth`; if `isLoading` render nothing (or spinner); if `!isAuthenticated` redirect to `/login` via `<Navigate>`; otherwise render `<Outlet />`
+    - _Requirements: 1.4_
+  - [ ] 17.2 Create `frontend/src/components/ReportCard.tsx`
+    - MUI `Card` displaying `title`, `purpose`, `total_amount` (formatted as currency), `status` chip
+    - Props: `report: ExpenseReportResponse`
+    - _Requirements: 2.1_
+  - [ ] 17.3 Create `frontend/src/components/ReportForm.tsx`
+    - Controlled MUI form with fields for Title, Purpose, Total Amount
+    - Uses `react-hook-form` + `zodResolver` (or manual Zod parse) with `expenseReportCreateSchema`
+    - Displays inline `FormHelperText` errors per field on invalid submit
+    - Props: `onSubmit(data: ExpenseReportFormData): Promise<void>`, `isSubmitting: boolean`
+    - _Requirements: 3.1, 3.4, 3.5_
+  - [ ] 17.4 Create `frontend/src/components/ErrorAlert.tsx`
+    - MUI `Alert` severity `"error"` rendering a string message
+    - Props: `message: string | null`; renders `null` when message is falsy
+    - _Requirements: 1.3, 3.4_
+  - [ ] 17.5 Create `frontend/src/components/EmptyState.tsx`
+    - MUI `Typography` + optional icon indicating no reports exist
+    - _Requirements: 2.3_
+
+- [ ] 18. Write shared component tests
+  - [ ]* 18.1 Write Vitest tests for `ProtectedRoute`
+    - `frontend/src/components/__tests__/ProtectedRoute.test.tsx`
+    - Test redirects to `/login` when `isAuthenticated` is `false`
+    - Test renders children when `isAuthenticated` is `true`
+    - _Requirements: 1.4_
+  - [ ]* 18.2 Write Vitest tests for `ReportForm`
+    - `frontend/src/components/__tests__/ReportForm.test.tsx`
+    - Test submitting with all fields empty shows inline validation errors for each field
+    - Test submitting with `total_amount=0` shows validation error
+    - Test submitting with valid data calls `onSubmit` with correct payload
+    - _Requirements: 3.1, 3.4, 3.5_
+  - [ ]* 18.3 Write Vitest property-based tests for `ReportForm` using fast-check
+    - `frontend/src/components/__tests__/ReportForm.property.test.tsx`
+    - Generate arbitrary non-empty strings for title/purpose and positive numbers for amount; assert `onSubmit` is called (Zod accepts the input)
+    - Generate empty strings or non-positive numbers; assert `onSubmit` is NOT called (Zod rejects)
+    - Configure `{ numRuns: 100 }`
+    - **Validates: Property 7 (frontend side) — Requirements 3.4, 3.5**
+
+- [ ] 19. Implement pages
+  - [ ] 19.1 Create `frontend/src/pages/LoginPage.tsx`
+    - MUI `Container` + `Paper` layout with username and password `TextField` components
+    - Uses `useAuth` hook's `login` method on form submit
+    - On success: navigate to `/`
+    - On failure: render `<ErrorAlert message="Invalid username or password" />`
+    - _Requirements: 1.1, 1.2, 1.3_
+  - [ ] 19.2 Create `frontend/src/pages/DashboardPage.tsx`
+    - Uses `useReports` hook to fetch and display reports
+    - Renders a list of `<ReportCard>` components
+    - Renders `<EmptyState>` when `reports.length === 0`
+    - Renders `<ErrorAlert>` on fetch error
+    - MUI `Button` "Create New Report" navigates to `/reports/new`
+    - _Requirements: 2.1, 2.2, 2.3_
+  - [ ] 19.3 Create `frontend/src/pages/CreateReportPage.tsx`
+    - Renders `<ReportForm>` with `onSubmit` wired to `useReports().createReport`
+    - On success: navigate to `/`
+    - On API error: render `<ErrorAlert>`
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [ ] 20. Write page-level tests
+  - [ ]* 20.1 Write Vitest tests for `DashboardPage`
+    - `frontend/src/pages/__tests__/DashboardPage.test.tsx`
+    - Test renders `<EmptyState>` when report list is empty (mock `useReports` returning `[]`)
+    - Test renders `<ReportCard>` components when reports are present
+    - Test "Create New Report" button navigates to `/reports/new`
+    - _Requirements: 2.1, 2.2, 2.3_
+  - [ ]* 20.2 Write Vitest tests for `LoginPage`
+    - `frontend/src/pages/__tests__/LoginPage.test.tsx`
+    - Test successful login navigates to `/`
+    - Test failed login renders `<ErrorAlert>`
+    - _Requirements: 1.1, 1.2, 1.3_
+
+- [ ] 21. Set up React Router with ProtectedRoute guards
+  - Update `frontend/src/main.tsx` (or `App.tsx`) to configure `BrowserRouter` with routes:
+    - `/login` → `<LoginPage>` (public)
+    - `/` → `<ProtectedRoute>` wrapping `<DashboardPage>`
+    - `/reports/new` → `<ProtectedRoute>` wrapping `<CreateReportPage>`
+    - Catch-all redirect to `/`
+  - _Requirements: 1.4, 2.2, 3.3_
+
+- [ ] 22. Final checkpoint — ensure all tests pass
+  - Run `pytest` from `backend/`; all backend tests must pass.
+  - Run `npm test -- --run` from `frontend/`; all frontend tests must pass with coverage thresholds met.
+  - Ask the user if any questions arise.
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for a faster MVP
+- Red-green-refactor: write tests (or at minimum the test file skeleton) before or alongside each implementation step
+- All 7 correctness properties from the design are covered by property-based tests: Properties 1–2 in task 11.1, Property 3 in task 11.2, Properties 4–7 in task 11.3, and Property 7 (frontend side) in task 18.3
+- Backend property tests use `hypothesis` with `@settings(max_examples=100)`; frontend property tests use `fast-check` with `{ numRuns: 100 }`
+- The SQLite database file (`*.db`) must not be committed — confirmed in `.gitignore`
+- TypeScript types in `frontend/src/types/` mirror backend Pydantic schemas exactly; keep them in sync
+- Components never call `fetch` directly — all HTTP calls go through `frontend/src/api/`
+- **API-first**: populate `backend/docs/openapi.yaml` before implementing any router logic; FastAPI's `/docs` and `/openapi.json` must stay consistent with it
+- **Services layer**: all business logic and DB queries live in `app/services/`; routers are thin and only handle HTTP concerns
+- **Dependency separation**: production deps in `requirements.txt`, dev/test deps in `requirements.dev.txt`; install both for local development

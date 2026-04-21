@@ -1,0 +1,312 @@
+openapi: "3.0.3"
+info:
+  title: Expense Report API
+  description: >
+    API-first contract for the Expense Report Web App.
+    All endpoints are defined here before implementation.
+    FastAPI auto-generates /docs and /openapi.json from Pydantic schemas;
+    keep this file in sync with those schemas.
+  version: "0.1.0"
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+tags:
+  - name: auth
+    description: Authentication — login, logout, session management
+  - name: reports
+    description: Expense reports — list and create
+
+paths:
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Authenticate a user and establish a session
+      description: >
+        Validates the supplied credentials. On success, sets an HTTP-only
+        session cookie and returns the authenticated user's profile.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            example:
+              username: alice
+              password: secret123
+      responses:
+        "200":
+          description: Login successful — session cookie set
+          headers:
+            Set-Cookie:
+              description: HTTP-only session cookie
+              schema:
+                type: string
+                example: "session=<signed_token>; HttpOnly; SameSite=Lax; Path=/"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+              example:
+                id: 1
+                username: alice
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorDetail"
+              example:
+                detail: "Invalid username or password"
+        "422":
+          description: Validation error — missing or malformed fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Clear the current session
+      description: Invalidates the session cookie, effectively logging the user out.
+      operationId: logout
+      responses:
+        "200":
+          description: Session cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageDetail"
+              example:
+                detail: "Logged out"
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Return the currently authenticated user
+      description: >
+        Used by the frontend to restore session state on page load.
+        Returns 401 if no valid session cookie is present.
+      operationId: getMe
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Authenticated user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+              example:
+                id: 1
+                username: alice
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorDetail"
+              example:
+                detail: "Not authenticated"
+
+  /reports:
+    get:
+      tags: [reports]
+      summary: List the authenticated user's expense reports
+      description: >
+        Returns all expense reports whose owner_id matches the authenticated
+        user. Requires a valid session cookie.
+      operationId: listReports
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Array of expense reports belonging to the authenticated user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpenseReportResponse"
+              example:
+                - id: 1
+                  title: "Q1 Travel"
+                  purpose: "Client visit"
+                  total_amount: 450.00
+                  status: "Pending"
+                  owner_id: 1
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorDetail"
+              example:
+                detail: "Not authenticated"
+
+    post:
+      tags: [reports]
+      summary: Create a new expense report
+      description: >
+        Creates a new expense report for the authenticated user.
+        The report is saved with status "Pending". Requires a valid session cookie.
+      operationId: createReport
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseReportCreate"
+            example:
+              title: "Q2 Conference"
+              purpose: "Annual engineering summit"
+              total_amount: 1200.50
+      responses:
+        "201":
+          description: Report created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseReportResponse"
+              example:
+                id: 2
+                title: "Q2 Conference"
+                purpose: "Annual engineering summit"
+                total_amount: 1200.50
+                status: "Pending"
+                owner_id: 1
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorDetail"
+              example:
+                detail: "Not authenticated"
+        "422":
+          description: Validation error — missing fields or non-positive amount
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+              example:
+                detail:
+                  - loc: ["body", "title"]
+                    msg: "field required"
+                    type: "value_error.missing"
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: The user's login name
+        password:
+          type: string
+          minLength: 1
+          description: The user's plaintext password (transmitted over HTTPS only)
+
+    UserResponse:
+      type: object
+      required: [id, username]
+      properties:
+        id:
+          type: integer
+          description: Unique user identifier
+        username:
+          type: string
+          description: The user's login name
+
+    ExpenseReportCreate:
+      type: object
+      required: [title, purpose, total_amount]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Short descriptive title for the expense report
+        purpose:
+          type: string
+          minLength: 1
+          description: Explanation of the business purpose for the expenses
+        total_amount:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+          description: Total monetary amount (must be positive)
+
+    ExpenseReportResponse:
+      type: object
+      required: [id, title, purpose, total_amount, status, owner_id]
+      properties:
+        id:
+          type: integer
+          description: Unique report identifier
+        title:
+          type: string
+        purpose:
+          type: string
+        total_amount:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [Pending]
+          description: Current status of the report (always "Pending" on creation)
+        owner_id:
+          type: integer
+          description: ID of the user who owns this report
+
+    ErrorDetail:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+          description: Human-readable error message
+
+    MessageDetail:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+          description: Human-readable status message
+
+    ValidationError:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            required: [loc, msg, type]
+            properties:
+              loc:
+                type: array
+                items:
+                  type: string
+                description: Location of the validation failure (e.g. ["body", "title"])
+              msg:
+                type: string
+                description: Human-readable validation message
+              type:
+                type: string
+                description: Machine-readable error type code
