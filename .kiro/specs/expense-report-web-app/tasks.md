@@ -90,23 +90,37 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - Test with invalid/unknown user_id in session → raises 401
     - _Requirements: 1.4_
 
-- [ ] 7. Implement auth router and service
-  - [ ] 7.1 Create `backend/app/services/auth_service.py` login logic
+- [x] 7. Implement auth router and service
+  - [x] 7.1 Create `backend/app/services/auth_service.py` login logic
     - `authenticate_user(db, username, password) -> User | None`: query user by username, call `verify_password`, return user or `None`
     - Routers delegate credential verification to this service; no DB queries in the router
     - _Requirements: 1.1, 1.2, 1.3_
-  - [ ] 7.2 Create `backend/app/routers/auth.py` with `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
+  - [x] 7.2 Create `backend/app/routers/auth.py` with `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
     - `POST /auth/login`: validate `LoginRequest`, call `auth_service.authenticate_user`, set `request.session["user_id"]`, return `UserResponse`; return `401` on failure
     - `POST /auth/logout`: clear `request.session`, return `{"detail": "Logged out"}`
     - `GET /auth/me`: use `get_current_user` dependency, return `UserResponse`
     - _Requirements: 1.1, 1.2, 1.3_
-  - [ ] 7.3 Create `backend/app/main.py`
+  - [x] 7.3 Create `backend/app/main.py`
     - Instantiate `FastAPI` app
     - Add `SessionMiddleware` with a secret key
     - Register `auth` router with prefix `/auth`
     - Register global 500 exception handler
     - Call `Base.metadata.create_all` on startup
     - _Requirements: 1.1, 1.4_
+  - [x] 7.4 Write unit tests for auth service and router
+    - `backend/tests/unit/test_auth_service.py` (extend existing file)
+      - Test `authenticate_user` returns `User` when username exists and password matches
+      - Test `authenticate_user` returns `None` when username does not exist
+      - Test `authenticate_user` returns `None` when password does not match
+    - `backend/tests/unit/test_auth_router.py`
+      - Use FastAPI `TestClient` with a mocked `get_db` and in-memory DB; do NOT use `SessionMiddleware` secret from env
+      - Test `POST /auth/login` with valid credentials sets `request.session["user_id"]` and returns `UserResponse` shape
+      - Test `POST /auth/login` with wrong password returns `401`
+      - Test `POST /auth/login` with missing fields returns `422`
+      - Test `POST /auth/logout` clears the session and returns `{"detail": "Logged out"}`
+      - Test `GET /auth/me` with a valid session returns `UserResponse` shape
+      - Test `GET /auth/me` without a session returns `401`
+    - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
 - [ ] 8. Write auth integration tests
   - [ ] 8.1 Create `backend/tests/integration/test_auth.py` using `httpx.AsyncClient` with `ASGITransport`
@@ -128,6 +142,21 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - `GET /reports`: use `get_current_user`, call `report_service.get_reports_for_user`, return list of `ExpenseReportResponse`
     - `POST /reports`: use `get_current_user`, validate `ExpenseReportCreate`, call `report_service.create_report`, return `ExpenseReportResponse` with status `201`
     - Register router in `main.py` with prefix `/reports`
+    - _Requirements: 2.1, 3.2, 3.4, 3.5_
+  - [ ] 9.3 Write unit tests for report service and router
+    - `backend/tests/unit/test_report_service.py`
+      - Test `get_reports_for_user` returns only reports belonging to the given `user_id`
+      - Test `get_reports_for_user` returns an empty list when the user has no reports
+      - Test `create_report` persists a record with `status="Pending"` and correct `owner_id`
+      - Test `create_report` stores title, purpose, and total_amount exactly as provided
+    - `backend/tests/unit/test_reports_router.py`
+      - Use FastAPI `TestClient` with mocked `get_db` and overridden `get_current_user`
+      - Test `GET /reports` returns `200` and a list of `ExpenseReportResponse` for authenticated user
+      - Test `GET /reports` returns `401` when unauthenticated
+      - Test `POST /reports` with valid payload returns `201` and correct `ExpenseReportResponse` shape
+      - Test `POST /reports` with empty title returns `422`
+      - Test `POST /reports` with `total_amount=0` returns `422`
+      - Test `POST /reports` returns `401` when unauthenticated
     - _Requirements: 2.1, 3.2, 3.4, 3.5_
 
 - [ ] 10. Write reports integration tests
@@ -199,7 +228,7 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - `expenseReportCreateSchema`: `title` min 1 max 255, `purpose` min 1, `total_amount` positive number
     - Export inferred types: `LoginFormData`, `ExpenseReportFormData`
     - _Requirements: 3.4, 3.5_
-  - [ ]* 14.4 Write Vitest unit tests for Zod schemas (100% coverage)
+  - [ ] 14.4 Write Vitest unit tests for Zod schemas (100% coverage)
     - `frontend/src/types/__tests__/schemas.test.ts`
     - `loginRequestSchema`: valid input passes; empty username fails; empty password fails
     - `expenseReportCreateSchema`: valid input passes; empty title fails; empty purpose fails; `total_amount=0` fails; `total_amount=-1` fails; non-number amount fails
@@ -218,7 +247,7 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - `listReports`: `GET /reports`, returns `ExpenseReportResponse[]`
     - `createReport`: `POST /reports`, returns `ExpenseReportResponse`
     - _Requirements: 2.1, 3.2_
-  - [ ]* 15.4 Write Vitest unit tests for API client functions (100% coverage)
+  - [ ] 15.4 Write Vitest unit tests for API client functions (100% coverage)
     - `frontend/src/api/__tests__/auth.test.ts` and `reports.test.ts`
     - Mock `fetch` with `msw`; assert correct URL, method, headers, and body for each function
     - Assert `login` returns parsed `UserResponse` on 200
@@ -239,7 +268,7 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - On mount: call `listReports()`; populate state
     - Expose `createReport(data)` → calls `api/reports.createReport`, appends to list on success
     - _Requirements: 2.1, 3.2_
-  - [ ]* 16.3 Write Vitest unit tests for hooks (100% coverage)
+  - [ ] 16.3 Write Vitest unit tests for hooks (100% coverage)
     - `frontend/src/hooks/__tests__/useAuth.test.ts`
       - Test session restoration on mount (mock `getSession` returning a user)
       - Test `logout` clears user state
@@ -272,7 +301,7 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - _Requirements: 2.3_
 
 - [ ] 18. Write shared component tests
-  - [ ]* 18.1 Write Vitest tests for `ProtectedRoute`
+  - [ ] 18.1 Write Vitest tests for `ProtectedRoute`
     - `frontend/src/components/__tests__/ProtectedRoute.test.tsx`
     - Test redirects to `/login` when `isAuthenticated` is `false`
     - Test renders children when `isAuthenticated` is `true`
