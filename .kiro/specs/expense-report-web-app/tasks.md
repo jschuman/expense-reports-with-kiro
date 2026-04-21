@@ -52,38 +52,38 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
       - The `owner` back-populates correctly to the associated `User`
     - _Requirements: 1.1, 3.2_
 
-- [ ] 4. Implement Pydantic schemas
-  - [ ] 4.1 Create `backend/app/schemas/auth.py` with `LoginRequest` and `UserResponse`
+- [x] 4. Implement Pydantic schemas
+  - [x] 4.1 Create `backend/app/schemas/auth.py` with `LoginRequest` and `UserResponse`
     - `LoginRequest`: `username: str`, `password: str`
     - `UserResponse`: `id: int`, `username: str`, `model_config = ConfigDict(from_attributes=True)`
     - _Requirements: 1.1_
-  - [ ] 4.2 Create `backend/app/schemas/expense_report.py` with `ExpenseReportCreate` and `ExpenseReportResponse`
+  - [x] 4.2 Create `backend/app/schemas/expense_report.py` with `ExpenseReportCreate` and `ExpenseReportResponse`
     - `ExpenseReportCreate`: `title: str = Field(..., min_length=1, max_length=255)`, `purpose: str = Field(..., min_length=1)`, `total_amount: float = Field(..., gt=0)`
     - `ExpenseReportResponse`: `id`, `title`, `purpose`, `total_amount`, `status`, `owner_id`, `model_config = ConfigDict(from_attributes=True)`
     - _Requirements: 3.1, 3.4, 3.5_
-  - [ ] 4.3 Write unit tests for Pydantic schema validation
+  - [x] 4.3 Write unit tests for Pydantic schema validation
     - `backend/tests/unit/test_schemas.py`
     - Test `ExpenseReportCreate` rejects: empty title, empty purpose, `total_amount=0`, `total_amount=-1`
     - Test `ExpenseReportCreate` accepts: valid title, purpose, and positive amount
     - Test `LoginRequest` rejects missing fields
     - _Requirements: 3.4, 3.5_
 
-- [ ] 5. Implement password hashing utility
-  - [ ] 5.1 Create `backend/app/services/auth_service.py` with `hash_password` and `verify_password` using `passlib.context.CryptContext` (bcrypt, cost ≥ 12)
+- [x] 5. Implement password hashing utility
+  - [x] 5.1 Create `backend/app/services/auth_service.py` with `hash_password` and `verify_password` using `passlib.context.CryptContext` (bcrypt, cost ≥ 12)
     - Business logic for credential verification lives here; routers call this service, not `passlib` directly
     - _Requirements: 1.1_
-  - [ ]* 5.2 Write unit tests for password hashing
+  - [x] 5.2 Write unit tests for password hashing
     - `backend/tests/unit/test_auth_service.py`
     - Test `verify_password` returns `True` for correct password
     - Test `verify_password` returns `False` for incorrect password
     - Test `hash_password` never returns the plaintext password
     - _Requirements: 1.1_
 
-- [ ] 6. Implement auth dependency and session middleware
-  - [ ] 6.1 Create `backend/app/dependencies.py` with `get_current_user` FastAPI dependency
+- [x] 6. Implement auth dependency and session middleware
+  - [x] 6.1 Create `backend/app/dependencies.py` with `get_current_user` FastAPI dependency
     - Read `user_id` from `request.session`; query DB for user; raise `HTTPException(401)` if absent or not found
     - _Requirements: 1.4_
-  - [ ]* 6.2 Write unit tests for `get_current_user` dependency
+  - [x] 6.2 Write unit tests for `get_current_user` dependency
     - `backend/tests/unit/test_dependencies.py`
     - Test with valid session cookie → returns user
     - Test with missing session → raises 401
