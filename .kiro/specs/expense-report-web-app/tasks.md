@@ -122,8 +122,8 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
       - Test `GET /auth/me` without a session returns `401`
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 8. Write auth integration tests
-  - [ ] 8.1 Create `backend/tests/integration/test_auth.py` using `httpx.AsyncClient` with `ASGITransport`
+- [x] 8. Write auth integration tests
+  - [x] 8.1 Create `backend/tests/integration/test_auth.py` using `httpx.AsyncClient` with `ASGITransport`
     - `POST /auth/login` success: seed a user, submit correct credentials → `200`, cookie set, response matches `UserResponse` shape
     - `POST /auth/login` wrong password: → `401`, no session cookie
     - `POST /auth/login` missing fields: → `422`
