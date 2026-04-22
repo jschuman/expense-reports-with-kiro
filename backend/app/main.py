@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.db.database import create_tables
-from app.routers import auth
+from app.routers import auth, reports
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,7 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 app.include_router(auth.router, prefix="/auth")
+app.include_router(reports.router, prefix="/reports")
 
 # ---------------------------------------------------------------------------
 # Global exception handlers

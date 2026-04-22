@@ -132,18 +132,18 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - `GET /auth/me` without session: → `401`
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 9. Implement reports router and service
-  - [ ] 9.1 Create `backend/app/services/report_service.py` with report business logic
+- [x] 9. Implement reports router and service
+  - [x] 9.1 Create `backend/app/services/report_service.py` with report business logic
     - `get_reports_for_user(db, user_id) -> list[ExpenseReport]`: query reports filtered by `owner_id`
     - `create_report(db, user_id, data: ExpenseReportCreate) -> ExpenseReport`: create record with `status="Pending"`, commit, return ORM object
     - Routers delegate all DB interaction to this service
     - _Requirements: 2.1, 3.2_
-  - [ ] 9.2 Create `backend/app/routers/reports.py` with `GET /reports` and `POST /reports`
+  - [x] 9.2 Create `backend/app/routers/reports.py` with `GET /reports` and `POST /reports`
     - `GET /reports`: use `get_current_user`, call `report_service.get_reports_for_user`, return list of `ExpenseReportResponse`
     - `POST /reports`: use `get_current_user`, validate `ExpenseReportCreate`, call `report_service.create_report`, return `ExpenseReportResponse` with status `201`
     - Register router in `main.py` with prefix `/reports`
     - _Requirements: 2.1, 3.2, 3.4, 3.5_
-  - [ ] 9.3 Write unit tests for report service and router
+  - [x] 9.3 Write unit tests for report service and router
     - `backend/tests/unit/test_report_service.py`
       - Test `get_reports_for_user` returns only reports belonging to the given `user_id`
       - Test `get_reports_for_user` returns an empty list when the user has no reports

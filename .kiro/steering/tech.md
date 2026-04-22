@@ -50,6 +50,9 @@ uvicorn main:app --reload
 # Run tests
 pytest
 
+# any python scripts
+python3
+
 # View auto-generated API docs (dev server must be running)
 # http://localhost:8000/docs
 ```
