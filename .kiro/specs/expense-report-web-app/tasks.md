@@ -159,8 +159,8 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
       - Test `POST /reports` returns `401` when unauthenticated
     - _Requirements: 2.1, 3.2, 3.4, 3.5_
 
-- [ ] 10. Write reports integration tests
-  - [ ] 10.1 Create `backend/tests/integration/test_reports.py`
+- [x] 10. Write reports integration tests
+  - [x] 10.1 Create `backend/tests/integration/test_reports.py`
     - `GET /reports` success: seed user + reports, authenticate → `200`, array shape correct, only owner's reports returned
     - `GET /reports` unauthenticated: → `401`
     - `POST /reports` success: authenticate, submit valid payload → `201`, response shape correct, `status == "Pending"`, `owner_id` matches
