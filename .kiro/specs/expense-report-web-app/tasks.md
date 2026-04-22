@@ -201,7 +201,7 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - Minimum 100 iterations each
     - _Requirements: 2.1, 3.2, 3.4, 3.5_
 
-- [ ] 12. Backend checkpoint — ensure all tests pass
+- [x] 12. Backend checkpoint — ensure all tests pass
   - Run `pip install -r requirements.txt -r requirements.dev.txt` then `pytest` from `backend/`; all unit, integration, and property tests must pass before proceeding to frontend work.
   - Ask the user if any questions arise.
 
