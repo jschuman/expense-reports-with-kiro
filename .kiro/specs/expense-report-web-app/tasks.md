@@ -169,8 +169,8 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - `POST /reports` missing fields: → `422`
     - _Requirements: 2.1, 3.2, 3.4, 3.5_
 
-- [ ] 11. Write backend property-based tests
-  - [ ] 11.1 Create `backend/tests/property/test_auth_properties.py`
+- [x] 11. Write backend property-based tests
+  - [x] 11.1 Create `backend/tests/property/test_auth_properties.py`
     - **Property 1: Valid credentials always establish a session**
       - Use `@given` to generate valid username/password pairs; seed user with hashed password; assert `POST /auth/login` returns `200` and sets session cookie
       - **Validates: Requirements 1.1, 1.2**
@@ -179,13 +179,13 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
       - **Validates: Requirements 1.3**
     - Minimum 100 iterations each (`@settings(max_examples=100)`)
     - _Requirements: 1.1, 1.2, 1.3_
-  - [ ] 11.2 Create `backend/tests/property/test_protected_endpoints.py`
+  - [x] 11.2 Create `backend/tests/property/test_protected_endpoints.py`
     - **Property 3: Unauthenticated requests to protected endpoints are always rejected**
       - Use `@given` to sample from the list of protected routes (`GET /reports`, `POST /reports`, `GET /auth/me`); assert each returns `401` when called without a session cookie
       - **Validates: Requirements 1.4**
     - Minimum 100 iterations
     - _Requirements: 1.4_
-  - [ ] 11.3 Create `backend/tests/property/test_reports_properties.py`
+  - [x] 11.3 Create `backend/tests/property/test_reports_properties.py`
     - **Property 4: Dashboard returns exactly the authenticated user's reports**
       - Use `@given` to generate 2+ users each with distinct report sets; assert `GET /reports` for each user returns only their own reports (correct count and `owner_id`)
       - **Validates: Requirements 2.1**
