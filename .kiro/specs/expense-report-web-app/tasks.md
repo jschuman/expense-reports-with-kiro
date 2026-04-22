@@ -205,16 +205,16 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
   - Run `pip install -r requirements.txt -r requirements.dev.txt` then `pytest` from `backend/`; all unit, integration, and property tests must pass before proceeding to frontend work.
   - Ask the user if any questions arise.
 
-- [ ] 13. Scaffold frontend project
-  - [ ] 13.1 Initialise Vite + React + TypeScript project in `frontend/` using `npm create vite@5.2.0 frontend -- --template react-ts`
+- [x] 13. Scaffold frontend project
+  - [x] 13.1 Initialise Vite + React + TypeScript project in `frontend/` using `npm create vite@5.2.0 frontend -- --template react-ts`
     - _Requirements: all_
-  - [ ] 13.2 Install pinned frontend dependencies
+  - [x] 13.2 Install pinned frontend dependencies
     - Production: `@mui/material@5.15.18`, `@mui/icons-material@5.15.18`, `@emotion/react@11.11.4`, `@emotion/styled@11.11.5`, `react-router-dom@6.23.1`, `zod@3.23.8`
     - Dev: `vitest@1.6.0`, `@vitest/coverage-v8@1.6.0`, `@testing-library/react@15.0.7`, `@testing-library/user-event@14.5.2`, `@testing-library/jest-dom@6.4.5`, `fast-check@3.19.0`, `msw@2.3.0`
     - _Requirements: all_
-  - [ ] 13.3 Create directory structure: `frontend/src/pages/`, `frontend/src/components/`, `frontend/src/api/`, `frontend/src/types/`, `frontend/src/hooks/`
+  - [x] 13.3 Create directory structure: `frontend/src/pages/`, `frontend/src/components/`, `frontend/src/api/`, `frontend/src/types/`, `frontend/src/hooks/`
     - _Requirements: all_
-  - [ ] 13.4 Configure Vitest in `vite.config.ts` with `globals: true`, `environment: 'jsdom'`, `setupFiles: ['./src/setupTests.ts']`, and coverage thresholds (100% for `src/api/` and `src/hooks/`)
+  - [x] 13.4 Configure Vitest in `vite.config.ts` with `globals: true`, `environment: 'jsdom'`, `setupFiles: ['./src/setupTests.ts']`, and coverage thresholds (100% for `src/api/` and `src/hooks/`)
     - Create `frontend/src/setupTests.ts` importing `@testing-library/jest-dom`
     - _Requirements: all_
 
