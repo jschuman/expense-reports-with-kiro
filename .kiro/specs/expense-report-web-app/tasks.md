@@ -234,20 +234,20 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - `expenseReportCreateSchema`: valid input passes; empty title fails; empty purpose fails; `total_amount=0` fails; `total_amount=-1` fails; non-number amount fails
     - _Requirements: 3.4, 3.5_
 
-- [ ] 15. Implement API client layer
-  - [ ] 15.1 Create `frontend/src/api/client.ts` with a base `apiFetch` wrapper
+- [x] 15. Implement API client layer
+  - [x] 15.1 Create `frontend/src/api/client.ts` with a base `apiFetch` wrapper
     - Sets `credentials: "include"` on all requests; throws typed `ApiError` on non-2xx responses; parses JSON response
     - _Requirements: 1.1, 1.4_
-  - [ ] 15.2 Create `frontend/src/api/auth.ts` with `login(credentials: LoginRequest)`, `logout()`, `getSession()`
+  - [x] 15.2 Create `frontend/src/api/auth.ts` with `login(credentials: LoginRequest)`, `logout()`, `getSession()`
     - `login`: `POST /auth/login`, returns `UserResponse`
     - `logout`: `POST /auth/logout`
     - `getSession`: `GET /auth/me`, returns `UserResponse | null` (returns `null` on 401)
     - _Requirements: 1.1, 1.2, 1.3_
-  - [ ] 15.3 Create `frontend/src/api/reports.ts` with `listReports()` and `createReport(data: ExpenseReportCreate)`
+  - [x] 15.3 Create `frontend/src/api/reports.ts` with `listReports()` and `createReport(data: ExpenseReportCreate)`
     - `listReports`: `GET /reports`, returns `ExpenseReportResponse[]`
     - `createReport`: `POST /reports`, returns `ExpenseReportResponse`
     - _Requirements: 2.1, 3.2_
-  - [ ] 15.4 Write Vitest unit tests for API client functions (100% coverage)
+  - [x] 15.4 Write Vitest unit tests for API client functions (100% coverage)
     - `frontend/src/api/__tests__/auth.test.ts` and `reports.test.ts`
     - Mock `fetch` with `msw`; assert correct URL, method, headers, and body for each function
     - Assert `login` returns parsed `UserResponse` on 200
