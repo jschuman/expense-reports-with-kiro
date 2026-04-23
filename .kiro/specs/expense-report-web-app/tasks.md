@@ -367,7 +367,7 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - Catch-all redirect to `/`
   - _Requirements: 1.4, 2.2, 3.3_
 
-- [ ] 22. Final checkpoint — ensure all tests pass
+- [x] 22. Final checkpoint — ensure all tests pass
   - Run `pytest` from `backend/`; all backend tests must pass.
   - Run `npm test -- --run` from `frontend/`; all frontend tests must pass with coverage thresholds met.
   - Ask the user if any questions arise.
