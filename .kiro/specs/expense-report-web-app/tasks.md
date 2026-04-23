@@ -319,21 +319,21 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - Configure `{ numRuns: 100 }`
     - **Validates: Property 7 (frontend side) — Requirements 3.4, 3.5**
 
-- [ ] 19. Implement pages
-  - [ ] 19.1 Create `frontend/src/pages/LoginPage.tsx`
+- [x] 19. Implement pages
+  - [x] 19.1 Create `frontend/src/pages/LoginPage.tsx`
     - MUI `Container` + `Paper` layout with username and password `TextField` components
     - Uses `useAuth` hook's `login` method on form submit
     - On success: navigate to `/`
     - On failure: render `<ErrorAlert message="Invalid username or password" />`
     - _Requirements: 1.1, 1.2, 1.3_
-  - [ ] 19.2 Create `frontend/src/pages/DashboardPage.tsx`
+  - [x] 19.2 Create `frontend/src/pages/DashboardPage.tsx`
     - Uses `useReports` hook to fetch and display reports
     - Renders a list of `<ReportCard>` components
     - Renders `<EmptyState>` when `reports.length === 0`
     - Renders `<ErrorAlert>` on fetch error
     - MUI `Button` "Create New Report" navigates to `/reports/new`
     - _Requirements: 2.1, 2.2, 2.3_
-  - [ ] 19.3 Create `frontend/src/pages/CreateReportPage.tsx`
+  - [x] 19.3 Create `frontend/src/pages/CreateReportPage.tsx`
     - Renders `<ReportForm>` with `onSubmit` wired to `useReports().createReport`
     - On success: navigate to `/`
     - On API error: render `<ErrorAlert>`
@@ -346,7 +346,7 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - Test renders `<ReportCard>` components when reports are present
     - Test "Create New Report" button navigates to `/reports/new`
     - _Requirements: 2.1, 2.2, 2.3_
-  - [ ]* 20.2 Write Vitest tests for `LoginPage`
+  - [ ] 20.2 Write Vitest tests for `LoginPage`
     - `frontend/src/pages/__tests__/LoginPage.test.tsx`
     - Test successful login navigates to `/`
     - Test failed login renders `<ErrorAlert>`
