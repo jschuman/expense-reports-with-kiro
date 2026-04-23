@@ -1,0 +1,275 @@
+# Implementation Plan: Expense Report Fields Enhancement
+
+## Overview
+
+Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. The `purpose` field is renamed to `description` (now optional), five new fields are added to the `ExpenseReport` entity, a `GET /clients` endpoint is introduced, and all display components are updated. The SQLite DB is dropped and recreated — no migration needed. Red-green-refactor: tests are written alongside or before each implementation step. All 10 correctness properties from the design are covered by property-based tests.
+
+## Tasks
+
+- [ ] 1. Drop the existing database and update the OpenAPI contract
+  - Delete `backend/expense_reports.db` (and `expense_reports.db` at the repo root if present) so the schema is recreated cleanly on next startup
+  - Update `backend/docs/openapi.yaml` to reflect the new `ExpenseReportCreate` and `ExpenseReportResponse` shapes and the new `GET /clients` endpoint before touching any implementation code
+  - _Requirements: 3.1, 2.1, 4.1, 5.1, 6.1_
+
+- [ ] 2. Add `app/constants.py` and the clients router
+  - [ ] 2.1 Create `backend/app/constants.py` with the `CLIENTS` list (5 entries: "Acme Corp", "Globex Industries", "Initech", "Umbrella Ltd", "Hooli")
+    - _Requirements: 5.2_
+  - [ ] 2.2 Write unit tests for `constants.py`
+    - `backend/tests/unit/test_constants.py`
+    - Assert `CLIENTS` has between 3 and 5 entries
+    - Assert every entry is a non-empty string
+    - _Requirements: 5.2_
+  - [ ] 2.3 Create `backend/app/routers/clients.py` with `GET /clients`
+    - Requires a valid session (use `get_current_user` dependency)
+    - Returns `CLIENTS` as `list[str]`; status `200`
+    - _Requirements: 5.1_
+  - [ ] 2.4 Register the clients router in `backend/app/main.py` with prefix `/clients`
+    - _Requirements: 5.1_
+  - [ ] 2.5 Write unit tests for the clients router
+    - `backend/tests/unit/test_clients_router.py`
+    - Test `GET /clients` with a valid session returns `200` and the full list
+    - Test `GET /clients` without a session returns `401`
+    - _Requirements: 5.1_
+  - [ ] 2.6 Write integration tests for `GET /clients`
+    - `backend/tests/integration/test_clients.py`
+    - Authenticated request → `200`, response is a list of strings matching `CLIENTS`
+    - Unauthenticated request → `401`
+    - _Requirements: 5.1_
+
+- [ ] 3. Update the SQLAlchemy ORM model
+  - [ ] 3.1 Update `backend/app/models/expense_report.py`
+    - Rename `purpose` column to `description`; change to `nullable=True`
+    - Add `created_at: Mapped[datetime]` — `DateTime`, `nullable=False`
+    - Add `reimbursable_from_client: Mapped[bool]` — `Boolean`, `nullable=False`, `default=False`
+    - Add `client: Mapped[str | None]` — `String(255)`, `nullable=True`
+    - Add `admin_notes: Mapped[str | None]` — `Text`, `nullable=True`
+    - Import `Boolean`, `DateTime` from `sqlalchemy`; import `datetime` from `datetime`
+    - _Requirements: 3.1, 2.1, 4.1, 5.5, 6.1_
+  - [ ] 3.2 Update `backend/tests/unit/test_models.py`
+    - Add tests for the new ORM columns: `description` nullable, `created_at` non-null, `reimbursable_from_client` defaults to `False`, `client` nullable, `admin_notes` nullable
+    - _Requirements: 3.1, 2.1, 4.2, 5.5, 6.1_
+
+- [ ] 4. Update Pydantic schemas
+  - [ ] 4.1 Update `backend/app/schemas/expense_report.py`
+    - `ExpenseReportCreate`: replace `purpose` with `description: Optional[str] = Field(default=None)`; add `reimbursable_from_client: bool = Field(default=False)`; add `client: Optional[str] = Field(default=None)`; remove `purpose`
+    - Add `model_validator(mode="after")` that raises `ValueError` when `reimbursable_from_client=True` and `client` is absent, and when `client` is set to a value not in `CLIENTS`
+    - `ExpenseReportResponse`: replace `purpose` with `description: Optional[str]`; add `owner_username: str`, `created_at: datetime`, `reimbursable_from_client: bool`, `client: Optional[str]`, `admin_notes: Optional[str]`
+    - _Requirements: 3.1, 1.1, 2.1, 4.1, 5.3, 5.6, 6.1_
+  - [ ] 4.2 Update `backend/tests/unit/test_schemas.py`
+    - Test `ExpenseReportCreate` accepts: no description, empty description, valid client when reimbursable=True
+    - Test `ExpenseReportCreate` rejects: reimbursable=True with no client, client string not in `CLIENTS`
+    - Test `ExpenseReportResponse` includes all new fields
+    - _Requirements: 3.2, 3.4, 4.2, 5.3, 5.6_
+
+- [ ] 5. Update the report service
+  - [ ] 5.1 Update `backend/app/services/report_service.py`
+    - In `create_report`: set `created_at=datetime.now(timezone.utc)`, map `description`, `reimbursable_from_client`, `client`; set `admin_notes=None`; remove `purpose`
+    - After `db.refresh(report)`, eagerly load the `owner` relationship with `db.refresh(report, attribute_names=["owner"])`
+    - Update `get_reports_for_user` to also eagerly load `owner` (use `options(joinedload(...))` or a second refresh) so `owner_username` is accessible
+    - _Requirements: 1.1, 2.1, 3.2, 4.2, 5.5, 6.3_
+  - [ ] 5.2 Update `backend/tests/unit/test_report_service.py`
+    - Assert `created_at` is set to a UTC datetime on creation
+    - Assert `owner_id` is set from `user_id`
+    - Assert `description`, `reimbursable_from_client`, `client` are persisted correctly
+    - Assert `admin_notes` is always `None` after creation
+    - Assert `purpose` field no longer exists on the returned object
+    - _Requirements: 1.1, 2.1, 3.2, 4.2, 5.5, 6.3_
+
+- [ ] 6. Update the reports router
+  - [ ] 6.1 Update `backend/app/routers/reports.py`
+    - Add a `_to_response(report)` helper that builds `ExpenseReportResponse` from the ORM object, resolving `owner_username=report.owner.username`
+    - Use `_to_response` in both `list_reports` and `create_report` instead of `model_validate` directly
+    - _Requirements: 1.1, 1.3, 7.1_
+  - [ ] 6.2 Update `backend/tests/unit/test_reports_router.py`
+    - Assert `GET /reports` response includes `owner_username`, `created_at`, `reimbursable_from_client`, `client`, `admin_notes`
+    - Assert `POST /reports` with `reimbursable_from_client=true` and no `client` returns `422`
+    - Assert `POST /reports` with invalid `client` returns `422`
+    - Assert `POST /reports` with `reimbursable_from_client=false` and no `client` returns `201`
+    - Assert `purpose` field is absent from all responses
+    - _Requirements: 1.1, 3.1, 4.1, 5.3, 5.6, 7.1_
+
+- [ ] 7. Checkpoint — run all backend tests
+  - Run `pytest` from `backend/`; all unit tests must pass before proceeding to integration tests.
+  - Ask the user if any questions arise.
+
+- [ ] 8. Update backend integration tests
+  - [ ] 8.1 Update `backend/tests/integration/test_reports.py`
+    - Add success case: `POST /reports` with all new fields → `201` + correct response shape (includes `owner_username`, `created_at`, `reimbursable_from_client`, `client`, `admin_notes`)
+    - Add case: `POST /reports` with `reimbursable_from_client=true`, no `client` → `422`
+    - Add case: `POST /reports` with invalid `client` string → `422`
+    - Add case: `POST /reports` with `reimbursable_from_client=false`, no `client` → `201`
+    - Add case: `GET /reports` response includes `owner_username` in each record
+    - Remove or update any test that references `purpose`
+    - _Requirements: 1.1, 3.1, 4.1, 5.3, 5.6, 7.1_
+
+- [ ] 9. Write backend property-based tests for new properties
+  - [ ] 9.1 Write property tests for Properties 1, 2, 4, 6, 7, 10
+    - `backend/tests/property/test_reports_properties.py` — add new `@given` test functions (keep existing Property 4–7 tests, renaming if needed to avoid collision)
+    - **Property 1: Owner is always the session user**
+      - Generate random valid payloads; assert `owner_id == authenticated_user.id` on every response
+      - `# Feature: expense-report-fields, Property 1: Owner is always the session user`
+      - **Validates: Requirements 1.1, 1.2**
+    - **Property 2: Description round-trip**
+      - Generate `description` as `None`, `""`, and arbitrary strings; assert `GET /reports` returns the same value (or `null` for absent/empty)
+      - `# Feature: expense-report-fields, Property 2: Description round-trip`
+      - **Validates: Requirements 3.2, 3.3, 3.4**
+    - **Property 4: Reimbursable default is false**
+      - Generate valid payloads omitting `reimbursable_from_client`; assert response has `reimbursable_from_client == False`
+      - `# Feature: expense-report-fields, Property 4: Reimbursable default is false`
+      - **Validates: Requirements 4.2**
+    - **Property 6: Client required when reimbursable is true**
+      - Generate payloads with `reimbursable_from_client=True` and `client=None`; assert `422` and no new DB record
+      - `# Feature: expense-report-fields, Property 6: Client required when reimbursable is true`
+      - **Validates: Requirements 5.3**
+    - **Property 7: Client validation — only list values accepted**
+      - Generate arbitrary strings not in `CLIENTS`; assert `422` and no new DB record
+      - `# Feature: expense-report-fields, Property 7: Client validation — only list values accepted`
+      - **Validates: Requirements 5.6**
+    - **Property 10: Admin notes round-trip**
+      - Generate valid payloads (with or without any `admin_notes` attempt); assert returned `admin_notes` is always `null`
+      - `# Feature: expense-report-fields, Property 10: Admin notes round-trip`
+      - **Validates: Requirements 6.2, 6.3, 6.4**
+    - Minimum 100 iterations each (`@settings(max_examples=100)`)
+    - _Requirements: 1.1, 1.2, 3.2, 3.3, 3.4, 4.2, 5.3, 5.6, 6.2, 6.3, 6.4_
+
+- [ ] 10. Backend checkpoint — all tests pass
+  - Run `pytest` from `backend/`; all unit, integration, and property tests must pass before proceeding to frontend work.
+  - Ask the user if any questions arise.
+
+- [ ] 11. Update TypeScript types and Zod schema
+  - [ ] 11.1 Update `frontend/src/types/expenseReport.ts`
+    - `ExpenseReportCreate`: replace `purpose: string` with `description?: string`; add `reimbursable_from_client: boolean`; add `client?: string`
+    - `ExpenseReportResponse`: replace `purpose: string` with `description: string | null`; add `owner_username: string`, `created_at: string`, `reimbursable_from_client: boolean`, `client: string | null`, `admin_notes: string | null`
+    - _Requirements: 3.1, 1.3, 2.1, 4.1, 5.5, 6.1, 7.1_
+  - [ ] 11.2 Update `frontend/src/types/schemas.ts`
+    - Replace `purpose` with `description: z.string().optional()` in `expenseReportCreateSchema`
+    - Add `reimbursable_from_client: z.boolean().default(false)`
+    - Add `client: z.string().optional()`
+    - Add `.superRefine()` that adds a `ZodIssueCode.custom` error on `client` path when `reimbursable_from_client=true` and `client` is absent
+    - Update `ExpenseReportFormData` inferred type
+    - _Requirements: 3.2, 4.1, 5.3_
+  - [ ] 11.3 Update `frontend/src/types/__tests__/schemas.test.ts`
+    - Test `expenseReportCreateSchema` accepts: no description, empty description, valid client when reimbursable=true
+    - Test `expenseReportCreateSchema` rejects: reimbursable=true with no client
+    - Remove tests referencing `purpose`
+    - _Requirements: 3.2, 4.1, 5.3_
+
+- [ ] 12. Add `formatDate` utility and `clients` API + hook
+  - [ ] 12.1 Create `frontend/src/utils/formatDate.ts`
+    - Export `formatUtcDate(isoString: string): string` using `Intl.DateTimeFormat` with `undefined` locale and no explicit `timeZone` (browser default)
+    - Return `"—"` when `isoString` is falsy/null/undefined
+    - _Requirements: 2.3, 2.4, 7.3_
+  - [ ] 12.2 Write unit tests for `formatDate.ts`
+    - `frontend/src/utils/__tests__/formatDate.test.ts`
+    - Test a valid ISO 8601 UTC string returns a non-empty string with no `"T"` separator
+    - Test a null/undefined/empty input returns `"—"`
+    - 100% coverage
+    - _Requirements: 2.3, 7.3_
+  - [ ] 12.3 Create `frontend/src/api/clients.ts`
+    - Export `listClients(): Promise<string[]>` — `GET /clients` via `apiFetch`
+    - _Requirements: 5.1_
+  - [ ] 12.4 Write unit tests for `clients.ts`
+    - `frontend/src/api/__tests__/clients.test.ts`
+    - Mock `fetch` with msw; assert correct URL, method, credentials
+    - Assert returns `string[]` on `200`
+    - 100% coverage
+    - _Requirements: 5.1_
+  - [ ] 12.5 Create `frontend/src/hooks/useClients.ts`
+    - State: `clients: string[]`, `isLoading: boolean`, `error: string | null`
+    - On mount: call `listClients()`; populate state
+    - _Requirements: 5.1_
+  - [ ] 12.6 Write unit tests for `useClients.ts`
+    - `frontend/src/hooks/__tests__/useClients.test.ts`
+    - Test clients are fetched on mount and state is populated
+    - Test loading state transitions correctly
+    - Test error state when fetch fails
+    - 100% coverage
+    - _Requirements: 5.1_
+
+- [ ] 13. Update `ReportForm` component
+  - [ ] 13.1 Update `frontend/src/components/ReportForm.tsx`
+    - Replace `purpose` field with `description` (optional `TextField`, multiline, no required marker)
+    - Add `reimbursable_from_client` as an MUI `Checkbox` / `FormControlLabel` (default unchecked)
+    - Add `client` as an MUI `Select` dropdown populated from `useClients()`; conditionally rendered/enabled only when `reimbursable_from_client` is `true`; clear client value when checkbox is unchecked
+    - Wire all new fields through the Zod `expenseReportCreateSchema` validation
+    - Display inline `FormHelperText` error under the Client dropdown when reimbursable=true and no client is selected
+    - _Requirements: 3.1, 3.2, 4.1, 5.1, 5.3, 5.4_
+  - [ ] 13.2 Update `frontend/src/components/__tests__/ReportForm.test.tsx`
+    - Assert `description` field renders (optional, no asterisk)
+    - Assert `purpose` field is gone
+    - Assert client dropdown is hidden when reimbursable checkbox is unchecked
+    - Assert client dropdown appears when reimbursable checkbox is checked
+    - Assert inline error appears when reimbursable=true and no client selected on submit
+    - Assert valid submission (reimbursable=true + valid client) calls `onSubmit` with correct payload
+    - Assert unchecking reimbursable clears the client value before submission
+    - _Requirements: 3.1, 4.1, 5.1, 5.3, 5.4_
+
+- [ ] 14. Update `ReportCard` component
+  - [ ] 14.1 Update `frontend/src/components/ReportCard.tsx`
+    - Replace `report.purpose` with `report.description`
+    - Add display rows for: `owner_username`, `created_at` (formatted via `formatUtcDate`), `reimbursable_from_client` ("Yes" / "No"), `client`, `admin_notes`
+    - For `description`, `client`, and `admin_notes`: display `"—"` when the value is `null` or empty
+    - Format `total_amount` as currency (already done — keep)
+    - _Requirements: 1.3, 2.3, 3.5, 4.3, 5.7, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
+  - [ ] 14.2 Update `frontend/src/components/__tests__/ReportCard.test.tsx`
+    - Assert all new fields render for a fully-populated report
+    - Assert `"—"` renders for null `description`, `client`, and `admin_notes`
+    - Assert `"Yes"` / `"No"` renders for `reimbursable_from_client`
+    - Assert `created_at` is displayed as a human-readable string (not raw ISO)
+    - Assert `purpose` is no longer referenced
+    - _Requirements: 1.3, 2.3, 3.5, 4.3, 5.7, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
+
+- [ ] 15. Write frontend property-based tests
+  - [ ] 15.1 Write property tests for Properties 3, 5, 8, 9
+    - **Property 3: UTC datetime is formatted as human-readable local time**
+      - `frontend/src/utils/__tests__/formatDate.property.test.ts`
+      - Generate random valid ISO 8601 UTC strings; assert `formatUtcDate` output is non-empty and contains no `"T"` separator
+      - `// Feature: expense-report-fields, Property 3: UTC datetime is formatted as human-readable local time`
+      - `{ numRuns: 100 }`
+      - **Validates: Requirements 2.3, 7.3**
+    - **Property 5: Reimbursable boolean renders as "Yes" or "No"**
+      - `frontend/src/components/__tests__/ReportCard.property.test.tsx`
+      - Generate random boolean values for `reimbursable_from_client`; render `ReportCard`; assert `"Yes"` or `"No"` is present accordingly
+      - `// Feature: expense-report-fields, Property 5: Reimbursable boolean renders as "Yes" or "No"`
+      - `{ numRuns: 100 }`
+      - **Validates: Requirements 4.3, 7.4**
+    - **Property 8: Empty optional fields display a placeholder**
+      - `frontend/src/components/__tests__/ReportCard.property.test.tsx` (same file as Property 5)
+      - Generate `ExpenseReportResponse` objects with `null` for each combination of `description`, `client`, `admin_notes`; assert `"—"` appears for each null field
+      - `// Feature: expense-report-fields, Property 8: Empty optional fields display a placeholder`
+      - `{ numRuns: 100 }`
+      - **Validates: Requirements 3.5, 5.7, 6.5, 7.5**
+    - **Property 9: ReportCard renders all required fields**
+      - `frontend/src/components/__tests__/ReportCard.property.test.tsx` (same file)
+      - Generate fully-populated `ExpenseReportResponse` objects; assert rendered card contains `title`, `description`, formatted `total_amount`, `status`, `owner_username`, formatted `created_at`, reimbursable display value, `client`, `admin_notes`
+      - `// Feature: expense-report-fields, Property 9: ReportCard renders all required fields`
+      - `{ numRuns: 100 }`
+      - **Validates: Requirements 7.1, 7.2**
+    - _Requirements: 2.3, 3.5, 4.3, 5.7, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
+
+- [ ] 16. Update page-level components and hooks
+  - [ ] 16.1 Update `frontend/src/hooks/useReports.ts`
+    - The `createReport` function signature already accepts `ExpenseReportCreate` — no change needed to the hook logic, but verify the updated type flows through correctly
+    - _Requirements: 3.2, 4.1, 5.5_
+  - [ ] 16.2 Update `frontend/src/pages/CreateReportPage.tsx` if needed
+    - Ensure `onSubmit` passes the full updated `ExpenseReportFormData` (including new fields) to `useReports().createReport`
+    - _Requirements: 3.1, 4.1, 5.1_
+  - [ ] 16.3 Update `frontend/src/pages/__tests__/CreateReportPage.test.tsx`
+    - Assert new fields are passed through to `createReport` on valid submission
+    - _Requirements: 3.1, 4.1, 5.1_
+
+- [ ] 17. Final checkpoint — all tests pass
+  - Run `pytest` from `backend/`; all backend tests must pass.
+  - Run `npm test -- --run` from `frontend/`; all frontend tests must pass with coverage thresholds met.
+  - Ask the user if any questions arise.
+
+## Notes
+
+- Red-green-refactor: write tests alongside or before each implementation step
+- All 10 correctness properties from the design are covered: Properties 1, 2, 4, 6, 7, 10 in task 9.1 (backend); Properties 3, 5, 8, 9 in task 15.1 (frontend)
+- Backend property tests use `hypothesis` with `@settings(max_examples=100)`; frontend property tests use `fast-check` with `{ numRuns: 100 }`
+- The SQLite DB file must be deleted before first run — the schema is recreated automatically on startup via `create_tables()`
+- `owner_username` is resolved server-side via the ORM relationship — the client never sends it
+- `admin_notes` is not exposed in `ExpenseReportCreate` — it defaults to `null` on creation and is reserved for future admin tooling
+- When `reimbursable_from_client` is unchecked in the form, the client field must be cleared before Zod validation runs
+- `formatUtcDate` must handle `null`/`undefined` gracefully by returning `"—"` rather than throwing

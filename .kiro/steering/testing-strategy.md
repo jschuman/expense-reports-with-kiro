@@ -16,3 +16,5 @@ inclusion: always
 5. **Scope clarity**:
    - Vitest → React/TypeScript frontend only
    - pytest → Python FastAPI backend only
+
+6. **Testing tasks are always required**: When generating implementation task lists, all testing-related tasks (unit tests, integration tests, property-based tests, and test updates) MUST be marked as required. Testing tasks MUST NOT be marked as optional (i.e., never use the `*` marker on test tasks in tasks.md).
