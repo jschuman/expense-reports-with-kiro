@@ -218,17 +218,17 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - Create `frontend/src/setupTests.ts` importing `@testing-library/jest-dom`
     - _Requirements: all_
 
-- [ ] 14. Implement TypeScript types and Zod schemas
-  - [ ] 14.1 Create `frontend/src/types/auth.ts` with `LoginRequest` and `UserResponse` interfaces mirroring backend Pydantic schemas
+- [x] 14. Implement TypeScript types and Zod schemas
+  - [x] 14.1 Create `frontend/src/types/auth.ts` with `LoginRequest` and `UserResponse` interfaces mirroring backend Pydantic schemas
     - _Requirements: 1.1_
-  - [ ] 14.2 Create `frontend/src/types/expenseReport.ts` with `ExpenseReportCreate` and `ExpenseReportResponse` interfaces
+  - [x] 14.2 Create `frontend/src/types/expenseReport.ts` with `ExpenseReportCreate` and `ExpenseReportResponse` interfaces
     - _Requirements: 3.1, 3.2_
-  - [ ] 14.3 Create `frontend/src/types/schemas.ts` with Zod schemas `loginRequestSchema` and `expenseReportCreateSchema`
+  - [x] 14.3 Create `frontend/src/types/schemas.ts` with Zod schemas `loginRequestSchema` and `expenseReportCreateSchema`
     - `loginRequestSchema`: `username` min 1, `password` min 1
     - `expenseReportCreateSchema`: `title` min 1 max 255, `purpose` min 1, `total_amount` positive number
     - Export inferred types: `LoginFormData`, `ExpenseReportFormData`
     - _Requirements: 3.4, 3.5_
-  - [ ] 14.4 Write Vitest unit tests for Zod schemas (100% coverage)
+  - [x] 14.4 Write Vitest unit tests for Zod schemas (100% coverage)
     - `frontend/src/types/__tests__/schemas.test.ts`
     - `loginRequestSchema`: valid input passes; empty username fails; empty password fails
     - `expenseReportCreateSchema`: valid input passes; empty title fails; empty purpose fails; `total_amount=0` fails; `total_amount=-1` fails; non-number amount fails
