@@ -300,19 +300,19 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - MUI `Typography` + optional icon indicating no reports exist
     - _Requirements: 2.3_
 
-- [ ] 18. Write shared component tests
-  - [ ] 18.1 Write Vitest tests for `ProtectedRoute`
+- [x] 18. Write shared component tests
+  - [x] 18.1 Write Vitest tests for `ProtectedRoute`
     - `frontend/src/components/__tests__/ProtectedRoute.test.tsx`
     - Test redirects to `/login` when `isAuthenticated` is `false`
     - Test renders children when `isAuthenticated` is `true`
     - _Requirements: 1.4_
-  - [ ] 18.2 Write Vitest tests for `ReportForm`
+  - [x] 18.2 Write Vitest tests for `ReportForm`
     - `frontend/src/components/__tests__/ReportForm.test.tsx`
     - Test submitting with all fields empty shows inline validation errors for each field
     - Test submitting with `total_amount=0` shows validation error
     - Test submitting with valid data calls `onSubmit` with correct payload
     - _Requirements: 3.1, 3.4, 3.5_
-  - [ ]* 18.3 Write Vitest property-based tests for `ReportForm` using fast-check
+  - [x] 18.3 Write Vitest property-based tests for `ReportForm` using fast-check
     - `frontend/src/components/__tests__/ReportForm.property.test.tsx`
     - Generate arbitrary non-empty strings for title/purpose and positive numbers for amount; assert `onSubmit` is called (Zod accepts the input)
     - Generate empty strings or non-positive numbers; assert `onSubmit` is NOT called (Zod rejects)
