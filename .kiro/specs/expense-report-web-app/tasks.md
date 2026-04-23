@@ -278,25 +278,25 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
       - Test `createReport` appends new report to list
     - _Requirements: 1.1, 1.2, 1.4, 2.1, 3.2_
 
-- [ ] 17. Implement shared components
-  - [ ] 17.1 Create `frontend/src/components/ProtectedRoute.tsx`
+- [x] 17. Implement shared components
+  - [x] 17.1 Create `frontend/src/components/ProtectedRoute.tsx`
     - Uses `useAuth`; if `isLoading` render nothing (or spinner); if `!isAuthenticated` redirect to `/login` via `<Navigate>`; otherwise render `<Outlet />`
     - _Requirements: 1.4_
-  - [ ] 17.2 Create `frontend/src/components/ReportCard.tsx`
+  - [x] 17.2 Create `frontend/src/components/ReportCard.tsx`
     - MUI `Card` displaying `title`, `purpose`, `total_amount` (formatted as currency), `status` chip
     - Props: `report: ExpenseReportResponse`
     - _Requirements: 2.1_
-  - [ ] 17.3 Create `frontend/src/components/ReportForm.tsx`
+  - [x] 17.3 Create `frontend/src/components/ReportForm.tsx`
     - Controlled MUI form with fields for Title, Purpose, Total Amount
     - Uses `react-hook-form` + `zodResolver` (or manual Zod parse) with `expenseReportCreateSchema`
     - Displays inline `FormHelperText` errors per field on invalid submit
     - Props: `onSubmit(data: ExpenseReportFormData): Promise<void>`, `isSubmitting: boolean`
     - _Requirements: 3.1, 3.4, 3.5_
-  - [ ] 17.4 Create `frontend/src/components/ErrorAlert.tsx`
+  - [x] 17.4 Create `frontend/src/components/ErrorAlert.tsx`
     - MUI `Alert` severity `"error"` rendering a string message
     - Props: `message: string | null`; renders `null` when message is falsy
     - _Requirements: 1.3, 3.4_
-  - [ ] 17.5 Create `frontend/src/components/EmptyState.tsx`
+  - [x] 17.5 Create `frontend/src/components/EmptyState.tsx`
     - MUI `Typography` + optional icon indicating no reports exist
     - _Requirements: 2.3_
 
@@ -306,7 +306,7 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - Test redirects to `/login` when `isAuthenticated` is `false`
     - Test renders children when `isAuthenticated` is `true`
     - _Requirements: 1.4_
-  - [ ]* 18.2 Write Vitest tests for `ReportForm`
+  - [ ] 18.2 Write Vitest tests for `ReportForm`
     - `frontend/src/components/__tests__/ReportForm.test.tsx`
     - Test submitting with all fields empty shows inline validation errors for each field
     - Test submitting with `total_amount=0` shows validation error
