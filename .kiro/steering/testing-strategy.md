@@ -7,7 +7,7 @@ inclusion: always
 
 2. **Frontend Unit Tests**: Use Vitest. Every utility function in `frontend/src/` requires 100% coverage.
 
-3. **Backend Unit Tests**: Use pytest. Test individual route handlers, Pydantic schema validation, and database logic in isolation.
+3. **Backend Unit Tests**: Use pytest. Test individual route handlers, Pydantic schema validation, and database logic in isolation. 100% coverage is required across all backend source files (`backend/app/`).
 
 4. **Integration Tests**: Every FastAPI endpoint must have at minimum:
    - A test for the successful response (correct status code and response shape)

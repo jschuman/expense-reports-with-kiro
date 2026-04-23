@@ -339,18 +339,25 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - On API error: render `<ErrorAlert>`
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 20. Write page-level tests
-  - [ ] 20.1 Write Vitest tests for `DashboardPage`
+- [-] 20. Write page-level tests
+  - [x] 20.1 Write Vitest tests for `DashboardPage`
     - `frontend/src/pages/__tests__/DashboardPage.test.tsx`
     - Test renders `<EmptyState>` when report list is empty (mock `useReports` returning `[]`)
     - Test renders `<ReportCard>` components when reports are present
     - Test "Create New Report" button navigates to `/reports/new`
     - _Requirements: 2.1, 2.2, 2.3_
-  - [ ] 20.2 Write Vitest tests for `LoginPage`
+  - [x] 20.2 Write Vitest tests for `LoginPage`
     - `frontend/src/pages/__tests__/LoginPage.test.tsx`
     - Test successful login navigates to `/`
     - Test failed login renders `<ErrorAlert>`
     - _Requirements: 1.1, 1.2, 1.3_
+  - [x] 20.3 Write Vitest tests for `CreateReportPage`
+    - `frontend/src/pages/__tests__/CreateReportPage.test.tsx`
+    - Mock `useReports` hook and `useNavigate`
+    - Test successful form submission calls `createReport` and navigates to `/`
+    - Test API error on submission renders `<ErrorAlert>` with the error message and does NOT navigate
+    - Test `isSubmitting` prop is passed as `true` to `<ReportForm>` while submission is in flight
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
 - [ ] 21. Set up React Router with ProtectedRoute guards
   - Update `frontend/src/main.tsx` (or `App.tsx`) to configure `BrowserRouter` with routes:
