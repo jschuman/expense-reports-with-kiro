@@ -359,7 +359,7 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - Test `isSubmitting` prop is passed as `true` to `<ReportForm>` while submission is in flight
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 21. Set up React Router with ProtectedRoute guards
+- [x] 21. Set up React Router with ProtectedRoute guards
   - Update `frontend/src/main.tsx` (or `App.tsx`) to configure `BrowserRouter` with routes:
     - `/login` → `<LoginPage>` (public)
     - `/` → `<ProtectedRoute>` wrapping `<DashboardPage>`
