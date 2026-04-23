@@ -255,20 +255,20 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - Assert `createReport` sends correct JSON body
     - _Requirements: 1.1, 1.2, 2.1, 3.2_
 
-- [ ] 16. Implement custom hooks
-  - [ ] 16.1 Create `frontend/src/hooks/useAuth.ts`
+- [x] 16. Implement custom hooks
+  - [x] 16.1 Create `frontend/src/hooks/useAuth.ts`
     - State: `user: UserResponse | null`, `isAuthenticated: boolean`, `isLoading: boolean`
     - On mount: call `getSession()`; set `user` and `isAuthenticated`
     - Expose `login(credentials)` → calls `api/auth.login`, updates state, returns result
     - Expose `logout()` → calls `api/auth.logout`, clears state
     - On any 401 from a protected call: clear state (redirect handled by `ProtectedRoute`)
     - _Requirements: 1.1, 1.2, 1.4_
-  - [ ] 16.2 Create `frontend/src/hooks/useReports.ts`
+  - [x] 16.2 Create `frontend/src/hooks/useReports.ts`
     - State: `reports: ExpenseReportResponse[]`, `isLoading: boolean`, `error: string | null`
     - On mount: call `listReports()`; populate state
     - Expose `createReport(data)` → calls `api/reports.createReport`, appends to list on success
     - _Requirements: 2.1, 3.2_
-  - [ ] 16.3 Write Vitest unit tests for hooks (100% coverage)
+  - [x] 16.3 Write Vitest unit tests for hooks (100% coverage)
     - `frontend/src/hooks/__tests__/useAuth.test.ts`
       - Test session restoration on mount (mock `getSession` returning a user)
       - Test `logout` clears user state
@@ -340,7 +340,7 @@ Full-stack implementation following an API-first, red-green-refactor approach. B
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
 - [ ] 20. Write page-level tests
-  - [ ]* 20.1 Write Vitest tests for `DashboardPage`
+  - [ ] 20.1 Write Vitest tests for `DashboardPage`
     - `frontend/src/pages/__tests__/DashboardPage.test.tsx`
     - Test renders `<EmptyState>` when report list is empty (mock `useReports` returning `[]`)
     - Test renders `<ReportCard>` components when reports are present
