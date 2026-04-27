@@ -6,7 +6,7 @@ info:
     All endpoints are defined here before implementation.
     FastAPI auto-generates /docs and /openapi.json from Pydantic schemas;
     keep this file in sync with those schemas.
-  version: "0.1.0"
+  version: "0.2.0"
 
 servers:
   - url: http://localhost:8000
@@ -17,6 +17,8 @@ tags:
     description: Authentication — login, logout, session management
   - name: reports
     description: Expense reports — list and create
+  - name: clients
+    description: Client list — returns the predefined list of available clients
 
 paths:
   /auth/login:
@@ -134,10 +136,15 @@ paths:
               example:
                 - id: 1
                   title: "Q1 Travel"
-                  purpose: "Client visit"
+                  description: "Client visit to NYC"
                   total_amount: 450.00
                   status: "Pending"
                   owner_id: 1
+                  owner_username: "alice"
+                  created_at: "2026-04-01T09:00:00Z"
+                  reimbursable_from_client: false
+                  client: null
+                  admin_notes: null
         "401":
           description: No valid session
           content:
@@ -153,6 +160,8 @@ paths:
       description: >
         Creates a new expense report for the authenticated user.
         The report is saved with status "Pending". Requires a valid session cookie.
+        When reimbursable_from_client is true, client must be provided and must be
+        a value from the predefined client list (GET /clients).
       operationId: createReport
       security:
         - cookieAuth: []
@@ -163,9 +172,11 @@ paths:
             schema:
               $ref: "#/components/schemas/ExpenseReportCreate"
             example:
-              title: "Q2 Conference"
-              purpose: "Annual engineering summit"
-              total_amount: 1200.50
+              title: "Q2 Travel"
+              description: "Client visit to NYC"
+              total_amount: 850.00
+              reimbursable_from_client: true
+              client: "Acme Corp"
       responses:
         "201":
           description: Report created successfully
@@ -174,12 +185,17 @@ paths:
               schema:
                 $ref: "#/components/schemas/ExpenseReportResponse"
               example:
-                id: 2
-                title: "Q2 Conference"
-                purpose: "Annual engineering summit"
-                total_amount: 1200.50
+                id: 7
+                title: "Q2 Travel"
+                description: "Client visit to NYC"
+                total_amount: 850.00
                 status: "Pending"
                 owner_id: 1
+                owner_username: "alice"
+                created_at: "2026-05-01T14:32:00Z"
+                reimbursable_from_client: true
+                client: "Acme Corp"
+                admin_notes: null
         "401":
           description: No valid session
           content:
@@ -189,16 +205,53 @@ paths:
               example:
                 detail: "Not authenticated"
         "422":
-          description: Validation error — missing fields or non-positive amount
+          description: >
+            Validation error — missing fields, non-positive amount,
+            reimbursable_from_client=true with no client, or client not in the
+            predefined list.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
               example:
                 detail:
-                  - loc: ["body", "title"]
-                    msg: "field required"
-                    type: "value_error.missing"
+                  - loc: ["body", "client"]
+                    msg: "client is required when reimbursable_from_client is true"
+                    type: "value_error"
+
+  /clients:
+    get:
+      tags: [clients]
+      summary: Return the predefined list of available clients
+      description: >
+        Returns the system-managed list of client names that can be selected
+        when creating a reimbursable expense report. Requires a valid session cookie.
+      operationId: listClients
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Array of client name strings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              example:
+                - "Acme Corp"
+                - "Globex Industries"
+                - "Initech"
+                - "Umbrella Ltd"
+                - "Hooli"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorDetail"
+              example:
+                detail: "Not authenticated"
 
 components:
   securitySchemes:
@@ -234,37 +287,64 @@ components:
 
     ExpenseReportCreate:
       type: object
-      required: [title, purpose, total_amount]
+      required: [title, total_amount]
       properties:
         title:
           type: string
           minLength: 1
           maxLength: 255
           description: Short descriptive title for the expense report
-        purpose:
+        description:
           type: string
-          minLength: 1
-          description: Explanation of the business purpose for the expenses
+          nullable: true
+          description: >
+            Optional free-text description of the expense report.
+            Replaces the former "purpose" field. May be absent or empty.
         total_amount:
           type: number
           format: float
           exclusiveMinimum: 0
           description: Total monetary amount (must be positive)
+        reimbursable_from_client:
+          type: boolean
+          default: false
+          description: >
+            Whether this expense is to be reimbursed by a client.
+            When true, client must also be provided.
+        client:
+          type: string
+          nullable: true
+          description: >
+            The client to be billed. Must be a value from GET /clients.
+            Required when reimbursable_from_client is true.
+            Must be absent or null when reimbursable_from_client is false.
 
     ExpenseReportResponse:
       type: object
-      required: [id, title, purpose, total_amount, status, owner_id]
+      required:
+        - id
+        - title
+        - total_amount
+        - status
+        - owner_id
+        - owner_username
+        - created_at
+        - reimbursable_from_client
       properties:
         id:
           type: integer
           description: Unique report identifier
         title:
           type: string
-        purpose:
+          description: Short descriptive title for the expense report
+        description:
           type: string
+          nullable: true
+          description: Optional free-text description; null when not provided
         total_amount:
           type: number
           format: float
+          description: Total monetary amount
         status:
           type: string
           enum: [Pending]
@@ -272,6 +352,26 @@ components:
         owner_id:
           type: integer
           description: ID of the user who owns this report
+        owner_username:
+          type: string
+          description: Username of the user who owns this report
+        created_at:
+          type: string
+          format: date-time
+          description: UTC timestamp of when the report was created (ISO 8601)
+        reimbursable_from_client:
+          type: boolean
+          description: Whether this expense is to be reimbursed by a client
+        client:
+          type: string
+          nullable: true
+          description: The client associated with this report; null when not reimbursable
+        admin_notes:
+          type: string
+          nullable: true
+          description: >
+            Optional administrative annotations. Not user-settable at creation;
+            always null on creation. Reserved for future admin tooling.
 
     ErrorDetail:
       type: object

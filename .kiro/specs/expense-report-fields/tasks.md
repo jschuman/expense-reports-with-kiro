@@ -6,7 +6,7 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
 
 ## Tasks
 
-- [ ] 1. Drop the existing database and update the OpenAPI contract
+- [x] 1. Drop the existing database and update the OpenAPI contract
   - Delete `backend/expense_reports.db` (and `expense_reports.db` at the repo root if present) so the schema is recreated cleanly on next startup
   - Update `backend/docs/openapi.yaml` to reflect the new `ExpenseReportCreate` and `ExpenseReportResponse` shapes and the new `GET /clients` endpoint before touching any implementation code
   - _Requirements: 3.1, 2.1, 4.1, 5.1, 6.1_
