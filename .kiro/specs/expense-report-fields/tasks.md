@@ -61,13 +61,13 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Test `ExpenseReportResponse` includes all new fields
     - _Requirements: 3.2, 3.4, 4.2, 5.3, 5.6_
 
-- [ ] 5. Update the report service
-  - [ ] 5.1 Update `backend/app/services/report_service.py`
+- [x] 5. Update the report service
+  - [x] 5.1 Update `backend/app/services/report_service.py`
     - In `create_report`: set `created_at=datetime.now(timezone.utc)`, map `description`, `reimbursable_from_client`, `client`; set `admin_notes=None`; remove `purpose`
     - After `db.refresh(report)`, eagerly load the `owner` relationship with `db.refresh(report, attribute_names=["owner"])`
     - Update `get_reports_for_user` to also eagerly load `owner` (use `options(joinedload(...))` or a second refresh) so `owner_username` is accessible
     - _Requirements: 1.1, 2.1, 3.2, 4.2, 5.5, 6.3_
-  - [ ] 5.2 Update `backend/tests/unit/test_report_service.py`
+  - [x] 5.2 Update `backend/tests/unit/test_report_service.py`
     - Assert `created_at` is set to a UTC datetime on creation
     - Assert `owner_id` is set from `user_id`
     - Assert `description`, `reimbursable_from_client`, `client` are persisted correctly

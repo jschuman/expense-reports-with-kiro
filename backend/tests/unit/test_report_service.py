@@ -211,3 +211,27 @@ def test_create_report_purpose_field_does_not_exist(db_session, user_a):
     report = report_service.create_report(db_session, user_a.id, data)
 
     assert not hasattr(report, "purpose")
+
+
+def test_create_report_owner_username_accessible(db_session, user_a):
+    """create_report eagerly loads the owner relationship so owner.username is accessible."""
+    data = ExpenseReportCreate(title="Owner Check", total_amount=30.0)
+
+    report = report_service.create_report(db_session, user_a.id, data)
+
+    # owner relationship must be loaded — no lazy-load exception
+    assert report.owner is not None
+    assert report.owner.username == "alice"
+
+
+def test_get_reports_for_user_owner_username_accessible(db_session, user_a):
+    """get_reports_for_user eagerly loads owner so owner.username is accessible."""
+    data = ExpenseReportCreate(title="Eager Load Test", total_amount=75.0)
+    report_service.create_report(db_session, user_a.id, data)
+
+    results = report_service.get_reports_for_user(db_session, user_a.id)
+
+    assert len(results) == 1
+    # owner relationship must be loaded — no lazy-load exception
+    assert results[0].owner is not None
+    assert results[0].owner.username == "alice"

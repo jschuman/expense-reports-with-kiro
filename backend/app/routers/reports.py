@@ -47,9 +47,6 @@ def list_reports(
     Returns 401 when no valid session cookie is present (raised by get_current_user).
     """
     reports = report_service.get_reports_for_user(db, current_user.id)
-    # Eagerly load owner for each report so owner_username is accessible
-    for r in reports:
-        db.refresh(r, attribute_names=["owner"])
     return [_to_response(r) for r in reports]
 
 

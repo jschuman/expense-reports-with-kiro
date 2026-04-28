@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.expense_report import ExpenseReport
 from app.schemas.expense_report import ExpenseReportCreate
@@ -17,10 +17,13 @@ from app.schemas.expense_report import ExpenseReportCreate
 def get_reports_for_user(db: Session, user_id: int) -> list[ExpenseReport]:
     """Return all expense reports owned by *user_id*, ordered by id ascending.
 
-    Returns an empty list when the user has no reports.
+    The ``owner`` relationship is eagerly loaded so that ``owner_username``
+    is accessible without an additional query.  Returns an empty list when
+    the user has no reports.
     """
     return (
         db.query(ExpenseReport)
+        .options(joinedload(ExpenseReport.owner))
         .filter(ExpenseReport.owner_id == user_id)
         .order_by(ExpenseReport.id)
         .all()
