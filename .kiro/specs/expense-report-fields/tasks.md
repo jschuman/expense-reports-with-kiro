@@ -186,15 +186,15 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - 100% coverage
     - _Requirements: 5.1_
 
-- [ ] 13. Update `ReportForm` component
-  - [ ] 13.1 Update `frontend/src/components/ReportForm.tsx`
+- [x] 13. Update `ReportForm` component
+  - [x] 13.1 Update `frontend/src/components/ReportForm.tsx`
     - Replace `purpose` field with `description` (optional `TextField`, multiline, no required marker)
     - Add `reimbursable_from_client` as an MUI `Checkbox` / `FormControlLabel` (default unchecked)
     - Add `client` as an MUI `Select` dropdown populated from `useClients()`; conditionally rendered/enabled only when `reimbursable_from_client` is `true`; clear client value when checkbox is unchecked
     - Wire all new fields through the Zod `expenseReportCreateSchema` validation
     - Display inline `FormHelperText` error under the Client dropdown when reimbursable=true and no client is selected
     - _Requirements: 3.1, 3.2, 4.1, 5.1, 5.3, 5.4_
-  - [ ] 13.2 Update `frontend/src/components/__tests__/ReportForm.test.tsx`
+  - [x] 13.2 Update `frontend/src/components/__tests__/ReportForm.test.tsx`
     - Assert `description` field renders (optional, no asterisk)
     - Assert `purpose` field is gone
     - Assert client dropdown is hidden when reimbursable checkbox is unchecked
