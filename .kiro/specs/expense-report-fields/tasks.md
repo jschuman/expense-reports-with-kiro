@@ -219,8 +219,8 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Assert `purpose` is no longer referenced
     - _Requirements: 1.3, 2.3, 3.5, 4.3, 5.7, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 15. Write frontend property-based tests
-  - [ ] 15.1 Write property tests for Properties 3, 5, 8, 9
+- [x] 15. Write frontend property-based tests
+  - [x] 15.1 Write property tests for Properties 3, 5, 8, 9
     - **Property 3: UTC datetime is formatted as human-readable local time**
       - `frontend/src/utils/__tests__/formatDate.property.test.ts`
       - Generate random valid ISO 8601 UTC strings; assert `formatUtcDate` output is non-empty and contains no `"T"` separator
