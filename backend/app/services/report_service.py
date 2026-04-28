@@ -6,6 +6,8 @@ Routers are thin HTTP adapters that delegate to these functions.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from sqlalchemy.orm import Session
 
 from app.models.expense_report import ExpenseReport
@@ -33,17 +35,23 @@ def create_report(
     """Persist a new expense report and return the ORM object.
 
     The report is always created with ``status="Pending"`` and associated
-    with *user_id* as the owner.  The caller receives the refreshed ORM
-    object (with ``id`` populated) after the commit.
+    with *user_id* as the owner.  ``created_at`` is set server-side to the
+    current UTC time.  The caller receives the refreshed ORM object (with
+    ``id`` populated) after the commit.
     """
     report = ExpenseReport(
         title=data.title,
-        purpose=data.purpose,
+        description=data.description,
         total_amount=data.total_amount,
         status="Pending",
         owner_id=user_id,
+        created_at=datetime.now(timezone.utc),
+        reimbursable_from_client=data.reimbursable_from_client,
+        client=data.client,
+        admin_notes=None,
     )
     db.add(report)
     db.commit()
     db.refresh(report)
+    db.refresh(report, attribute_names=["owner"])
     return report

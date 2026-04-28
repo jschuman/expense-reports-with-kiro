@@ -11,11 +11,29 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.dependencies import get_current_user
+from app.models.expense_report import ExpenseReport
 from app.models.user import User
 from app.schemas.expense_report import ExpenseReportCreate, ExpenseReportResponse
 from app.services import report_service
 
 router = APIRouter(tags=["reports"])
+
+
+def _to_response(report: ExpenseReport) -> ExpenseReportResponse:
+    """Build an ExpenseReportResponse from an ORM object, resolving owner_username."""
+    return ExpenseReportResponse(
+        id=report.id,
+        title=report.title,
+        description=report.description,
+        total_amount=report.total_amount,
+        status=report.status,
+        owner_id=report.owner_id,
+        owner_username=report.owner.username,
+        created_at=report.created_at,
+        reimbursable_from_client=report.reimbursable_from_client,
+        client=report.client,
+        admin_notes=report.admin_notes,
+    )
 
 
 @router.get("", response_model=List[ExpenseReportResponse])
@@ -29,7 +47,10 @@ def list_reports(
     Returns 401 when no valid session cookie is present (raised by get_current_user).
     """
     reports = report_service.get_reports_for_user(db, current_user.id)
-    return [ExpenseReportResponse.model_validate(r) for r in reports]
+    # Eagerly load owner for each report so owner_username is accessible
+    for r in reports:
+        db.refresh(r, attribute_names=["owner"])
+    return [_to_response(r) for r in reports]
 
 
 @router.post("", response_model=ExpenseReportResponse, status_code=status.HTTP_201_CREATED)
@@ -40,13 +61,12 @@ def create_report(
 ) -> ExpenseReportResponse:
     """Create a new expense report for the authenticated user.
 
-    The report is saved with status="Pending" and owner_id set to the
-    current user's id.
+    The report is saved with status="Pending", owner_id set to the current
+    user's id, and created_at set to the current UTC time.
 
     Returns 201 with the created ExpenseReportResponse on success.
     Returns 401 when no valid session cookie is present.
-    Returns 422 when the request body fails Pydantic validation
-    (empty title/purpose, non-positive total_amount).
+    Returns 422 when the request body fails Pydantic validation.
     """
     report = report_service.create_report(db, current_user.id, data)
-    return ExpenseReportResponse.model_validate(report)
+    return _to_response(report)

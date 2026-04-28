@@ -7,12 +7,17 @@ Tests cover:
 - POST /reports  empty title → 422
 - POST /reports  non-positive amount (total_amount=0, total_amount=-5) → 422
 - POST /reports  missing fields → 422
+- POST /reports  reimbursable=true, no client → 422
+- POST /reports  invalid client string → 422
+- POST /reports  reimbursable=false, no client → 201
 
-Requirements: 2.1, 3.2, 3.4, 3.5
+Requirements: 1.1, 2.1, 3.1, 3.2, 3.4, 4.1, 5.3, 5.6, 7.1
 """
 
-import pytest
+from datetime import datetime, timezone
+
 import httpx
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -30,13 +35,7 @@ from app.services.auth_service import hash_password
 
 @pytest.fixture()
 async def async_client():
-    """Yield an httpx.AsyncClient backed by a fresh in-memory SQLite DB.
-
-    The ``get_db`` dependency is overridden so every request uses the same
-    in-memory engine as the seed step, keeping data visible across calls.
-    StaticPool ensures all connections share the same underlying SQLite
-    connection so tables created by ``create_all`` are always visible.
-    """
+    """Yield an httpx.AsyncClient backed by a fresh in-memory SQLite DB."""
     import app.models as _models  # noqa: F401 — register all ORM models with Base
 
     engine = create_engine(
@@ -80,51 +79,41 @@ async def seeded_user(async_client):
 
 
 @pytest.fixture()
-async def authenticated_client(async_client, seeded_user):
-    """Return an async_client that already has a valid session cookie."""
-    response = await async_client.post(
-        "/auth/login",
-        json={"username": seeded_user["username"], "password": seeded_user["password"]},
-    )
-    assert response.status_code == 200
-    return async_client, seeded_user
-
-
-@pytest.fixture()
 async def seeded_reports(async_client, seeded_user):
-    """Seed two reports for seeded_user and one report for a second user.
-
-    Returns a dict with the owner's user info and their report data so tests
-    can assert isolation (the second user's report must NOT appear in the
-    owner's GET /reports response).
-    """
+    """Seed two reports for seeded_user and one for a second user."""
+    now = datetime.now(timezone.utc)
     session = async_client._test_session_factory()  # type: ignore[attr-defined]
     try:
-        # Second user — reports must NOT appear in seeded_user's list
         other_user = User(username="otheruser", hashed_password=hash_password("otherpass"))
         session.add(other_user)
         session.flush()
 
         report1 = ExpenseReport(
             title="Q1 Travel",
-            purpose="Client visit",
+            description="Client visit",
             total_amount=450.00,
             status="Pending",
             owner_id=seeded_user["id"],
+            created_at=now,
+            reimbursable_from_client=False,
         )
         report2 = ExpenseReport(
             title="Office Supplies",
-            purpose="Stationery restock",
+            description="Stationery restock",
             total_amount=75.50,
             status="Pending",
             owner_id=seeded_user["id"],
+            created_at=now,
+            reimbursable_from_client=False,
         )
         other_report = ExpenseReport(
             title="Other User Report",
-            purpose="Should not appear",
+            description="Should not appear",
             total_amount=999.99,
             status="Pending",
             owner_id=other_user.id,
+            created_at=now,
+            reimbursable_from_client=False,
         )
         session.add_all([report1, report2, other_report])
         session.commit()
@@ -134,8 +123,8 @@ async def seeded_reports(async_client, seeded_user):
         return {
             "user": seeded_user,
             "reports": [
-                {"title": report1.title, "purpose": report1.purpose, "total_amount": report1.total_amount},
-                {"title": report2.title, "purpose": report2.purpose, "total_amount": report2.total_amount},
+                {"title": report1.title, "description": report1.description, "total_amount": report1.total_amount},
+                {"title": report2.title, "description": report2.description, "total_amount": report2.total_amount},
             ],
         }
     finally:
@@ -152,7 +141,6 @@ async def test_get_reports_success_returns_200_and_array(
     async_client, seeded_user, seeded_reports
 ):
     """Authenticated user with reports → 200, correct array shape, only owner's reports."""
-    # Authenticate
     await async_client.post(
         "/auth/login",
         json={"username": seeded_user["username"], "password": seeded_user["password"]},
@@ -163,15 +151,20 @@ async def test_get_reports_success_returns_200_and_array(
     assert response.status_code == 200
     body = response.json()
     assert isinstance(body, list)
-    # Exactly the two reports seeded for this user — not the other user's report
     assert len(body) == 2
     for report in body:
         assert report["owner_id"] == seeded_user["id"]
         assert "id" in report
         assert "title" in report
-        assert "purpose" in report
+        assert "description" in report
         assert "total_amount" in report
         assert "status" in report
+        assert "owner_username" in report
+        assert "created_at" in report
+        assert "reimbursable_from_client" in report
+        assert "client" in report
+        assert "admin_notes" in report
+        assert "purpose" not in report
 
 
 @pytest.mark.asyncio
@@ -187,8 +180,7 @@ async def test_get_reports_returns_only_owner_reports(
     response = await async_client.get("/reports")
 
     assert response.status_code == 200
-    body = response.json()
-    titles = {r["title"] for r in body}
+    titles = {r["title"] for r in response.json()}
     assert "Other User Report" not in titles
 
 
@@ -215,7 +207,7 @@ async def test_get_reports_empty_list_when_no_reports(async_client, seeded_user)
 
 
 # ---------------------------------------------------------------------------
-# POST /reports
+# POST /reports — success cases
 # ---------------------------------------------------------------------------
 
 
@@ -223,23 +215,35 @@ async def test_get_reports_empty_list_when_no_reports(async_client, seeded_user)
 async def test_create_report_success_returns_201_and_response_shape(
     async_client, seeded_user
 ):
-    """Valid payload → 201, correct ExpenseReportResponse shape."""
+    """Valid payload → 201, correct ExpenseReportResponse shape including all new fields."""
     await async_client.post(
         "/auth/login",
         json={"username": seeded_user["username"], "password": seeded_user["password"]},
     )
 
-    payload = {"title": "Conference Trip", "purpose": "Annual tech conference", "total_amount": 1200.00}
+    payload = {
+        "title": "Conference Trip",
+        "description": "Annual tech conference",
+        "total_amount": 1200.00,
+        "reimbursable_from_client": True,
+        "client": "Acme Corp",
+    }
     response = await async_client.post("/reports", json=payload)
 
     assert response.status_code == 201
     body = response.json()
     assert body["title"] == payload["title"]
-    assert body["purpose"] == payload["purpose"]
+    assert body["description"] == payload["description"]
     assert body["total_amount"] == payload["total_amount"]
     assert body["status"] == "Pending"
     assert body["owner_id"] == seeded_user["id"]
+    assert body["owner_username"] == seeded_user["username"]
+    assert "created_at" in body
+    assert body["reimbursable_from_client"] is True
+    assert body["client"] == "Acme Corp"
+    assert body["admin_notes"] is None
     assert "id" in body
+    assert "purpose" not in body
 
 
 @pytest.mark.asyncio
@@ -252,7 +256,7 @@ async def test_create_report_status_is_pending(async_client, seeded_user):
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Team Lunch", "purpose": "Quarterly team event", "total_amount": 250.00},
+        json={"title": "Team Lunch", "total_amount": 250.00},
     )
 
     assert response.status_code == 201
@@ -269,7 +273,7 @@ async def test_create_report_owner_id_matches_authenticated_user(async_client, s
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Software License", "purpose": "Annual subscription", "total_amount": 99.99},
+        json={"title": "Software License", "total_amount": 99.99},
     )
 
     assert response.status_code == 201
@@ -277,19 +281,8 @@ async def test_create_report_owner_id_matches_authenticated_user(async_client, s
 
 
 @pytest.mark.asyncio
-async def test_create_report_unauthenticated_returns_401(async_client):
-    """POST /reports without a session cookie → 401."""
-    response = await async_client.post(
-        "/reports",
-        json={"title": "Some Report", "purpose": "Some purpose", "total_amount": 100.00},
-    )
-
-    assert response.status_code == 401
-
-
-@pytest.mark.asyncio
-async def test_create_report_empty_title_returns_422(async_client, seeded_user):
-    """Empty title → 422 Unprocessable Entity, no record created."""
+async def test_create_report_reimbursable_false_no_client_returns_201(async_client, seeded_user):
+    """POST /reports with reimbursable_from_client=false and no client → 201."""
     await async_client.post(
         "/auth/login",
         json={"username": seeded_user["username"], "password": seeded_user["password"]},
@@ -297,12 +290,43 @@ async def test_create_report_empty_title_returns_422(async_client, seeded_user):
 
     response = await async_client.post(
         "/reports",
-        json={"title": "", "purpose": "Valid purpose", "total_amount": 100.00},
+        json={"title": "Office Supplies", "total_amount": 30.0, "reimbursable_from_client": False},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["client"] is None
+
+
+# ---------------------------------------------------------------------------
+# POST /reports — validation failures (422)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_create_report_unauthenticated_returns_401(async_client):
+    """POST /reports without a session cookie → 401."""
+    response = await async_client.post(
+        "/reports",
+        json={"title": "Some Report", "total_amount": 100.00},
+    )
+
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_create_report_empty_title_returns_422(async_client, seeded_user):
+    """Empty title → 422, no record created."""
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    response = await async_client.post(
+        "/reports",
+        json={"title": "", "total_amount": 100.00},
     )
 
     assert response.status_code == 422
-
-    # Confirm no report was persisted
     list_response = await async_client.get("/reports")
     assert list_response.json() == []
 
@@ -317,11 +341,10 @@ async def test_create_report_zero_amount_returns_422(async_client, seeded_user):
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Valid Title", "purpose": "Valid purpose", "total_amount": 0},
+        json={"title": "Valid Title", "total_amount": 0},
     )
 
     assert response.status_code == 422
-
     list_response = await async_client.get("/reports")
     assert list_response.json() == []
 
@@ -336,11 +359,51 @@ async def test_create_report_negative_amount_returns_422(async_client, seeded_us
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Valid Title", "purpose": "Valid purpose", "total_amount": -5},
+        json={"title": "Valid Title", "total_amount": -5},
     )
 
     assert response.status_code == 422
+    list_response = await async_client.get("/reports")
+    assert list_response.json() == []
 
+
+@pytest.mark.asyncio
+async def test_create_report_reimbursable_true_no_client_returns_422(async_client, seeded_user):
+    """POST /reports with reimbursable_from_client=true and no client → 422."""
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    response = await async_client.post(
+        "/reports",
+        json={"title": "Client Trip", "total_amount": 500.0, "reimbursable_from_client": True},
+    )
+
+    assert response.status_code == 422
+    list_response = await async_client.get("/reports")
+    assert list_response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_create_report_invalid_client_returns_422(async_client, seeded_user):
+    """POST /reports with a client string not in CLIENTS → 422."""
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    response = await async_client.post(
+        "/reports",
+        json={
+            "title": "Client Trip",
+            "total_amount": 500.0,
+            "reimbursable_from_client": True,
+            "client": "Unknown Corp",
+        },
+    )
+
+    assert response.status_code == 422
     list_response = await async_client.get("/reports")
     assert list_response.json() == []
 
@@ -355,23 +418,7 @@ async def test_create_report_missing_title_returns_422(async_client, seeded_user
 
     response = await async_client.post(
         "/reports",
-        json={"purpose": "Valid purpose", "total_amount": 100.00},
-    )
-
-    assert response.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_create_report_missing_purpose_returns_422(async_client, seeded_user):
-    """Missing purpose field → 422."""
-    await async_client.post(
-        "/auth/login",
-        json={"username": seeded_user["username"], "password": seeded_user["password"]},
-    )
-
-    response = await async_client.post(
-        "/reports",
-        json={"title": "Valid Title", "total_amount": 100.00},
+        json={"total_amount": 100.00},
     )
 
     assert response.status_code == 422
@@ -387,7 +434,7 @@ async def test_create_report_missing_amount_returns_422(async_client, seeded_use
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Valid Title", "purpose": "Valid purpose"},
+        json={"title": "Valid Title"},
     )
 
     assert response.status_code == 422

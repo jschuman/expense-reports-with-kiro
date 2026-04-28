@@ -6,6 +6,8 @@ Uses FastAPI TestClient with:
   or left as-is / removed to test unauthenticated behaviour
 """
 
+from datetime import datetime, timezone
+
 import pytest
 from fastapi import Request
 from fastapi.testclient import TestClient
@@ -45,13 +47,9 @@ def _make_engine_and_session():
 
 @pytest.fixture()
 def auth_client():
-    """TestClient with get_db overridden and get_current_user returning a seeded user.
-
-    Simulates an authenticated request context.
-    """
+    """TestClient with get_db overridden and get_current_user returning a seeded user."""
     engine, TestSession = _make_engine_and_session()
 
-    # Seed a user that get_current_user will return
     session = TestSession()
     user = User(username="alice", hashed_password=hash_password("pw"))
     session.add(user)
@@ -67,10 +65,7 @@ def auth_client():
         finally:
             s.close()
 
-    def override_get_current_user(
-        request: Request,
-        db=None,  # not used — we bypass the real dependency
-    ) -> User:
+    def override_get_current_user(request: Request, db=None) -> User:
         s = TestSession()
         try:
             return s.get(User, user_id)
@@ -91,10 +86,7 @@ def auth_client():
 
 @pytest.fixture()
 def unauth_client():
-    """TestClient with get_db overridden but NO get_current_user override.
-
-    Simulates an unauthenticated request (no session cookie).
-    """
+    """TestClient with get_db overridden but NO get_current_user override."""
     engine, TestSession = _make_engine_and_session()
 
     def override_get_db():
@@ -120,22 +112,26 @@ def unauth_client():
 
 def test_get_reports_returns_200_and_list_for_authenticated_user(auth_client):
     """GET /reports returns 200 and a list of ExpenseReportResponse for the current user."""
-    # Seed two reports for the authenticated user
+    now = datetime.now(timezone.utc)
     session = auth_client._test_session_factory()
     session.add_all([
         ExpenseReport(
             title="Trip A",
-            purpose="Client",
+            description="Client",
             total_amount=100.0,
             status="Pending",
             owner_id=auth_client._seeded_user_id,
+            created_at=now,
+            reimbursable_from_client=False,
         ),
         ExpenseReport(
             title="Trip B",
-            purpose="Conference",
+            description="Conference",
             total_amount=200.0,
             status="Pending",
             owner_id=auth_client._seeded_user_id,
+            created_at=now,
+            reimbursable_from_client=False,
         ),
     ])
     session.commit()
@@ -147,15 +143,20 @@ def test_get_reports_returns_200_and_list_for_authenticated_user(auth_client):
     body = response.json()
     assert isinstance(body, list)
     assert len(body) == 2
-    # Verify response shape
     for item in body:
         assert "id" in item
         assert "title" in item
-        assert "purpose" in item
+        assert "description" in item
         assert "total_amount" in item
         assert "status" in item
         assert "owner_id" in item
+        assert "owner_username" in item
+        assert "created_at" in item
+        assert "reimbursable_from_client" in item
+        assert "client" in item
+        assert "admin_notes" in item
         assert item["owner_id"] == auth_client._seeded_user_id
+        assert "purpose" not in item
 
 
 def test_get_reports_returns_empty_list_when_user_has_no_reports(auth_client):
@@ -187,7 +188,7 @@ def test_post_reports_with_valid_payload_returns_201_and_response_shape(auth_cli
     """POST /reports with a valid payload returns 201 and correct ExpenseReportResponse."""
     payload = {
         "title": "Q1 Travel",
-        "purpose": "Client visit",
+        "description": "Client visit",
         "total_amount": 450.00,
     }
 
@@ -196,21 +197,85 @@ def test_post_reports_with_valid_payload_returns_201_and_response_shape(auth_cli
     assert response.status_code == 201
     body = response.json()
     assert body["title"] == "Q1 Travel"
-    assert body["purpose"] == "Client visit"
+    assert body["description"] == "Client visit"
     assert body["total_amount"] == pytest.approx(450.00)
     assert body["status"] == "Pending"
     assert body["owner_id"] == auth_client._seeded_user_id
+    assert body["owner_username"] == "alice"
+    assert "created_at" in body
+    assert body["reimbursable_from_client"] is False
+    assert body["client"] is None
+    assert body["admin_notes"] is None
     assert "id" in body
+    assert "purpose" not in body
 
 
 def test_post_reports_status_is_always_pending(auth_client):
     """POST /reports always creates a report with status='Pending'."""
-    payload = {"title": "Meals", "purpose": "Team lunch", "total_amount": 75.50}
+    payload = {"title": "Meals", "total_amount": 75.50}
 
     response = auth_client.post("/reports", json=payload)
 
     assert response.status_code == 201
     assert response.json()["status"] == "Pending"
+
+
+def test_post_reports_with_reimbursable_true_and_valid_client_returns_201(auth_client):
+    """POST /reports with reimbursable_from_client=true and a valid client returns 201."""
+    payload = {
+        "title": "Client Trip",
+        "total_amount": 500.0,
+        "reimbursable_from_client": True,
+        "client": "Acme Corp",
+    }
+
+    response = auth_client.post("/reports", json=payload)
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["reimbursable_from_client"] is True
+    assert body["client"] == "Acme Corp"
+
+
+def test_post_reports_with_reimbursable_true_and_no_client_returns_422(auth_client):
+    """POST /reports with reimbursable_from_client=true and no client returns 422."""
+    payload = {
+        "title": "Client Trip",
+        "total_amount": 500.0,
+        "reimbursable_from_client": True,
+    }
+
+    response = auth_client.post("/reports", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_post_reports_with_invalid_client_returns_422(auth_client):
+    """POST /reports with a client string not in CLIENTS returns 422."""
+    payload = {
+        "title": "Client Trip",
+        "total_amount": 500.0,
+        "reimbursable_from_client": True,
+        "client": "Unknown Corp",
+    }
+
+    response = auth_client.post("/reports", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_post_reports_with_reimbursable_false_and_no_client_returns_201(auth_client):
+    """POST /reports with reimbursable_from_client=false and no client returns 201."""
+    payload = {
+        "title": "Office Supplies",
+        "total_amount": 30.0,
+        "reimbursable_from_client": False,
+    }
+
+    response = auth_client.post("/reports", json=payload)
+
+    assert response.status_code == 201
+    assert response.json()["client"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -219,8 +284,8 @@ def test_post_reports_status_is_always_pending(auth_client):
 
 
 def test_post_reports_with_empty_title_returns_422(auth_client):
-    """POST /reports with an empty title returns 422 (Pydantic min_length=1)."""
-    payload = {"title": "", "purpose": "Some purpose", "total_amount": 100.0}
+    """POST /reports with an empty title returns 422."""
+    payload = {"title": "", "total_amount": 100.0}
 
     response = auth_client.post("/reports", json=payload)
 
@@ -228,8 +293,8 @@ def test_post_reports_with_empty_title_returns_422(auth_client):
 
 
 def test_post_reports_with_zero_total_amount_returns_422(auth_client):
-    """POST /reports with total_amount=0 returns 422 (Pydantic gt=0)."""
-    payload = {"title": "Valid Title", "purpose": "Some purpose", "total_amount": 0}
+    """POST /reports with total_amount=0 returns 422."""
+    payload = {"title": "Valid Title", "total_amount": 0}
 
     response = auth_client.post("/reports", json=payload)
 
@@ -238,16 +303,7 @@ def test_post_reports_with_zero_total_amount_returns_422(auth_client):
 
 def test_post_reports_with_negative_total_amount_returns_422(auth_client):
     """POST /reports with a negative total_amount returns 422."""
-    payload = {"title": "Valid Title", "purpose": "Some purpose", "total_amount": -10.0}
-
-    response = auth_client.post("/reports", json=payload)
-
-    assert response.status_code == 422
-
-
-def test_post_reports_with_empty_purpose_returns_422(auth_client):
-    """POST /reports with an empty purpose returns 422 (Pydantic min_length=1)."""
-    payload = {"title": "Valid Title", "purpose": "", "total_amount": 100.0}
+    payload = {"title": "Valid Title", "total_amount": -10.0}
 
     response = auth_client.post("/reports", json=payload)
 
@@ -268,7 +324,7 @@ def test_post_reports_with_missing_fields_returns_422(auth_client):
 
 def test_post_reports_returns_401_when_unauthenticated(unauth_client):
     """POST /reports returns 401 when no valid session cookie is present."""
-    payload = {"title": "Q1 Travel", "purpose": "Client visit", "total_amount": 450.0}
+    payload = {"title": "Q1 Travel", "total_amount": 450.0}
 
     response = unauth_client.post("/reports", json=payload)
 

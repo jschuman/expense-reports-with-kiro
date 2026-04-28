@@ -1,20 +1,43 @@
 """Pydantic schemas for expense report endpoints."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ExpenseReportCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
-    purpose: str = Field(..., min_length=1)
+    description: Optional[str] = Field(default=None)
     total_amount: float = Field(..., gt=0)
+    reimbursable_from_client: bool = Field(default=False)
+    client: Optional[str] = Field(default=None)
+
+    @model_validator(mode="after")
+    def validate_client(self) -> "ExpenseReportCreate":
+        if self.reimbursable_from_client and not self.client:
+            raise ValueError("client is required when reimbursable_from_client is true")
+        if self.client is not None:
+            from app.constants import CLIENTS
+
+            if self.client not in CLIENTS:
+                raise ValueError(f"client must be one of: {CLIENTS}")
+        return self
 
 
 class ExpenseReportResponse(BaseModel):
     id: int
     title: str
-    purpose: str
+    description: Optional[str]
     total_amount: float
     status: str
     owner_id: int
+    owner_username: str
+    created_at: datetime
+    reimbursable_from_client: bool
+    client: Optional[str]
+    admin_notes: Optional[str]
 
     model_config = ConfigDict(from_attributes=True)

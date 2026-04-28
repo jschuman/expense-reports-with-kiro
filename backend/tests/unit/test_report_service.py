@@ -4,6 +4,8 @@ Uses an in-memory SQLite database with a fresh schema per test so each
 test is fully isolated.
 """
 
+from datetime import datetime, timezone
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -68,27 +70,35 @@ def user_b(db_session):
 
 def test_get_reports_for_user_returns_only_that_users_reports(db_session, user_a, user_b):
     """get_reports_for_user returns only reports whose owner_id matches user_id."""
-    # Seed two reports for alice and one for bob
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
     r1 = ExpenseReport(
         title="Alice Report 1",
-        purpose="Travel",
+        description="Travel",
         total_amount=100.0,
         status="Pending",
         owner_id=user_a.id,
+        created_at=now,
+        reimbursable_from_client=False,
     )
     r2 = ExpenseReport(
         title="Alice Report 2",
-        purpose="Meals",
+        description="Meals",
         total_amount=50.0,
         status="Pending",
         owner_id=user_a.id,
+        created_at=now,
+        reimbursable_from_client=False,
     )
     r3 = ExpenseReport(
         title="Bob Report 1",
-        purpose="Supplies",
+        description="Supplies",
         total_amount=200.0,
         status="Pending",
         owner_id=user_b.id,
+        created_at=now,
+        reimbursable_from_client=False,
     )
     db_session.add_all([r1, r2, r3])
     db_session.commit()
@@ -116,7 +126,7 @@ def test_get_reports_for_user_returns_empty_list_when_no_reports(db_session, use
 
 def test_create_report_persists_with_pending_status_and_correct_owner(db_session, user_a):
     """create_report saves a record with status='Pending' and the given owner_id."""
-    data = ExpenseReportCreate(title="Q1 Travel", purpose="Client visit", total_amount=450.0)
+    data = ExpenseReportCreate(title="Q1 Travel", total_amount=450.0)
 
     report = report_service.create_report(db_session, user_a.id, data)
 
@@ -124,7 +134,6 @@ def test_create_report_persists_with_pending_status_and_correct_owner(db_session
     assert report.status == "Pending"
     assert report.owner_id == user_a.id
 
-    # Verify it is actually persisted in the DB
     persisted = db_session.get(ExpenseReport, report.id)
     assert persisted is not None
     assert persisted.status == "Pending"
@@ -132,15 +141,73 @@ def test_create_report_persists_with_pending_status_and_correct_owner(db_session
 
 
 def test_create_report_stores_fields_exactly_as_provided(db_session, user_a):
-    """create_report stores title, purpose, and total_amount without modification."""
+    """create_report stores title, description, and total_amount without modification."""
     data = ExpenseReportCreate(
         title="Conference Expenses",
-        purpose="Annual tech conference",
+        description="Annual tech conference",
         total_amount=1234.56,
     )
 
     report = report_service.create_report(db_session, user_a.id, data)
 
     assert report.title == "Conference Expenses"
-    assert report.purpose == "Annual tech conference"
+    assert report.description == "Annual tech conference"
     assert report.total_amount == pytest.approx(1234.56)
+
+
+def test_create_report_sets_created_at_to_utc_datetime(db_session, user_a):
+    """create_report sets created_at to a UTC datetime on creation."""
+    before = datetime.now(timezone.utc)
+    data = ExpenseReportCreate(title="Lunch", total_amount=20.0)
+
+    report = report_service.create_report(db_session, user_a.id, data)
+
+    after = datetime.now(timezone.utc)
+    # created_at should be between before and after
+    # SQLite stores without timezone info, so compare naive
+    created_naive = report.created_at.replace(tzinfo=None) if report.created_at.tzinfo else report.created_at
+    before_naive = before.replace(tzinfo=None)
+    after_naive = after.replace(tzinfo=None)
+    assert before_naive <= created_naive <= after_naive
+
+
+def test_create_report_admin_notes_is_none(db_session, user_a):
+    """create_report always sets admin_notes to None — it is not user-settable."""
+    data = ExpenseReportCreate(title="Misc", total_amount=10.0)
+
+    report = report_service.create_report(db_session, user_a.id, data)
+
+    assert report.admin_notes is None
+
+
+def test_create_report_reimbursable_defaults_to_false(db_session, user_a):
+    """create_report stores reimbursable_from_client=False when not provided."""
+    data = ExpenseReportCreate(title="Misc", total_amount=10.0)
+
+    report = report_service.create_report(db_session, user_a.id, data)
+
+    assert report.reimbursable_from_client is False
+
+
+def test_create_report_stores_reimbursable_and_client(db_session, user_a):
+    """create_report persists reimbursable_from_client and client correctly."""
+    data = ExpenseReportCreate(
+        title="Client Trip",
+        total_amount=500.0,
+        reimbursable_from_client=True,
+        client="Acme Corp",
+    )
+
+    report = report_service.create_report(db_session, user_a.id, data)
+
+    assert report.reimbursable_from_client is True
+    assert report.client == "Acme Corp"
+
+
+def test_create_report_purpose_field_does_not_exist(db_session, user_a):
+    """The old 'purpose' field must not exist on the returned ORM object."""
+    data = ExpenseReportCreate(title="Misc", total_amount=10.0)
+
+    report = report_service.create_report(db_session, user_a.id, data)
+
+    assert not hasattr(report, "purpose")

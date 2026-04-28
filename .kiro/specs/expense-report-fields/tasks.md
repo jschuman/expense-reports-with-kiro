@@ -49,13 +49,13 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Add tests for the new ORM columns: `description` nullable, `created_at` non-null, `reimbursable_from_client` defaults to `False`, `client` nullable, `admin_notes` nullable
     - _Requirements: 3.1, 2.1, 4.2, 5.5, 6.1_
 
-- [ ] 4. Update Pydantic schemas
-  - [ ] 4.1 Update `backend/app/schemas/expense_report.py`
+- [x] 4. Update Pydantic schemas
+  - [x] 4.1 Update `backend/app/schemas/expense_report.py`
     - `ExpenseReportCreate`: replace `purpose` with `description: Optional[str] = Field(default=None)`; add `reimbursable_from_client: bool = Field(default=False)`; add `client: Optional[str] = Field(default=None)`; remove `purpose`
     - Add `model_validator(mode="after")` that raises `ValueError` when `reimbursable_from_client=True` and `client` is absent, and when `client` is set to a value not in `CLIENTS`
     - `ExpenseReportResponse`: replace `purpose` with `description: Optional[str]`; add `owner_username: str`, `created_at: datetime`, `reimbursable_from_client: bool`, `client: Optional[str]`, `admin_notes: Optional[str]`
     - _Requirements: 3.1, 1.1, 2.1, 4.1, 5.3, 5.6, 6.1_
-  - [ ] 4.2 Update `backend/tests/unit/test_schemas.py`
+  - [x] 4.2 Update `backend/tests/unit/test_schemas.py`
     - Test `ExpenseReportCreate` accepts: no description, empty description, valid client when reimbursable=True
     - Test `ExpenseReportCreate` rejects: reimbursable=True with no client, client string not in `CLIENTS`
     - Test `ExpenseReportResponse` includes all new fields
