@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Read Tech Steering Before Task",
+  "description": "Reads the tech steering doc (.kiro/steering/tech.md) into context before any spec task begins executing, ensuring the agent always has the correct tech stack, build commands, and development approach available.",
+  "version": "1",
+  "when": {
+    "type": "preTaskExecution"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Before starting this task, read the file `.kiro/steering/tech.md` and keep its contents in mind throughout the task execution. Pay particular attention to the correct test and build commands for both frontend and backend."
+  }
+}

@@ -75,12 +75,12 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Assert `purpose` field no longer exists on the returned object
     - _Requirements: 1.1, 2.1, 3.2, 4.2, 5.5, 6.3_
 
-- [ ] 6. Update the reports router
-  - [ ] 6.1 Update `backend/app/routers/reports.py`
+- [x] 6. Update the reports router
+  - [x] 6.1 Update `backend/app/routers/reports.py`
     - Add a `_to_response(report)` helper that builds `ExpenseReportResponse` from the ORM object, resolving `owner_username=report.owner.username`
     - Use `_to_response` in both `list_reports` and `create_report` instead of `model_validate` directly
     - _Requirements: 1.1, 1.3, 7.1_
-  - [ ] 6.2 Update `backend/tests/unit/test_reports_router.py`
+  - [x] 6.2 Update `backend/tests/unit/test_reports_router.py`
     - Assert `GET /reports` response includes `owner_username`, `created_at`, `reimbursable_from_client`, `client`, `admin_notes`
     - Assert `POST /reports` with `reimbursable_from_client=true` and no `client` returns `422`
     - Assert `POST /reports` with invalid `client` returns `422`
@@ -88,12 +88,12 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Assert `purpose` field is absent from all responses
     - _Requirements: 1.1, 3.1, 4.1, 5.3, 5.6, 7.1_
 
-- [ ] 7. Checkpoint — run all backend tests
+- [x] 7. Checkpoint — run all backend tests
   - Run `pytest` from `backend/`; all unit tests must pass before proceeding to integration tests.
   - Ask the user if any questions arise.
 
-- [ ] 8. Update backend integration tests
-  - [ ] 8.1 Update `backend/tests/integration/test_reports.py`
+- [x] 8. Update backend integration tests
+  - [x] 8.1 Update `backend/tests/integration/test_reports.py`
     - Add success case: `POST /reports` with all new fields → `201` + correct response shape (includes `owner_username`, `created_at`, `reimbursable_from_client`, `client`, `admin_notes`)
     - Add case: `POST /reports` with `reimbursable_from_client=true`, no `client` → `422`
     - Add case: `POST /reports` with invalid `client` string → `422`
