@@ -154,31 +154,31 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Remove tests referencing `purpose`
     - _Requirements: 3.2, 4.1, 5.3_
 
-- [ ] 12. Add `formatDate` utility and `clients` API + hook
-  - [ ] 12.1 Create `frontend/src/utils/formatDate.ts`
+- [x] 12. Add `formatDate` utility and `clients` API + hook
+  - [x] 12.1 Create `frontend/src/utils/formatDate.ts`
     - Export `formatUtcDate(isoString: string): string` using `Intl.DateTimeFormat` with `undefined` locale and no explicit `timeZone` (browser default)
     - Return `"—"` when `isoString` is falsy/null/undefined
     - _Requirements: 2.3, 2.4, 7.3_
-  - [ ] 12.2 Write unit tests for `formatDate.ts`
+  - [x] 12.2 Write unit tests for `formatDate.ts`
     - `frontend/src/utils/__tests__/formatDate.test.ts`
     - Test a valid ISO 8601 UTC string returns a non-empty string with no `"T"` separator
     - Test a null/undefined/empty input returns `"—"`
     - 100% coverage
     - _Requirements: 2.3, 7.3_
-  - [ ] 12.3 Create `frontend/src/api/clients.ts`
+  - [x] 12.3 Create `frontend/src/api/clients.ts`
     - Export `listClients(): Promise<string[]>` — `GET /clients` via `apiFetch`
     - _Requirements: 5.1_
-  - [ ] 12.4 Write unit tests for `clients.ts`
+  - [x] 12.4 Write unit tests for `clients.ts`
     - `frontend/src/api/__tests__/clients.test.ts`
     - Mock `fetch` with msw; assert correct URL, method, credentials
     - Assert returns `string[]` on `200`
     - 100% coverage
     - _Requirements: 5.1_
-  - [ ] 12.5 Create `frontend/src/hooks/useClients.ts`
+  - [x] 12.5 Create `frontend/src/hooks/useClients.ts`
     - State: `clients: string[]`, `isLoading: boolean`, `error: string | null`
     - On mount: call `listClients()`; populate state
     - _Requirements: 5.1_
-  - [ ] 12.6 Write unit tests for `useClients.ts`
+  - [x] 12.6 Write unit tests for `useClients.ts`
     - `frontend/src/hooks/__tests__/useClients.test.ts`
     - Test clients are fetched on mount and state is populated
     - Test loading state transitions correctly
