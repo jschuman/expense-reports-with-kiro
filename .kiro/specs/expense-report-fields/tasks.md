@@ -258,7 +258,7 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Assert new fields are passed through to `createReport` on valid submission
     - _Requirements: 3.1, 4.1, 5.1_
 
-- [ ] 17. Final checkpoint — all tests pass
+- [x] 17. Final checkpoint — all tests pass
   - Run `pytest` from `backend/`; all backend tests must pass.
   - Run `npm test -- --run` from `frontend/`; all frontend tests must pass with coverage thresholds met.
   - Ask the user if any questions arise.

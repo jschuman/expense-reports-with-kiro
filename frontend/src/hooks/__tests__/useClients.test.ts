@@ -174,4 +174,31 @@ describe('cleanup on unmount', () => {
     // State should remain at initial values (no update after unmount)
     expect(result.current.clients).toEqual([]);
   });
+
+  it('does not update state when component unmounts before listClients rejects', async () => {
+    let rejectRequest!: () => void;
+    const requestGate = new Promise<void>((res) => {
+      rejectRequest = res;
+    });
+
+    server.use(
+      http.get('/clients', async () => {
+        await requestGate;
+        return HttpResponse.json({ detail: 'Server error' }, { status: 500 });
+      }),
+    );
+
+    const { result, unmount } = renderHook(() => useClients());
+    expect(result.current.isLoading).toBe(true);
+
+    // Unmount before the error arrives — cancelled flag is set to true
+    unmount();
+
+    // Let the error through and flush microtasks
+    rejectRequest();
+    await new Promise((r) => setTimeout(r, 50));
+
+    // State should remain at initial values (no error update after unmount)
+    expect(result.current.error).toBeNull();
+  });
 });
