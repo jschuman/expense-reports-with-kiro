@@ -247,14 +247,14 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
       - **Validates: Requirements 7.1, 7.2**
     - _Requirements: 2.3, 3.5, 4.3, 5.7, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 16. Update page-level components and hooks
-  - [ ] 16.1 Update `frontend/src/hooks/useReports.ts`
+- [x] 16. Update page-level components and hooks
+  - [x] 16.1 Update `frontend/src/hooks/useReports.ts`
     - The `createReport` function signature already accepts `ExpenseReportCreate` — no change needed to the hook logic, but verify the updated type flows through correctly
     - _Requirements: 3.2, 4.1, 5.5_
-  - [ ] 16.2 Update `frontend/src/pages/CreateReportPage.tsx` if needed
+  - [x] 16.2 Update `frontend/src/pages/CreateReportPage.tsx` if needed
     - Ensure `onSubmit` passes the full updated `ExpenseReportFormData` (including new fields) to `useReports().createReport`
     - _Requirements: 3.1, 4.1, 5.1_
-  - [ ] 16.3 Update `frontend/src/pages/__tests__/CreateReportPage.test.tsx`
+  - [x] 16.3 Update `frontend/src/pages/__tests__/CreateReportPage.test.tsx`
     - Assert new fields are passed through to `createReport` on valid submission
     - _Requirements: 3.1, 4.1, 5.1_
 
