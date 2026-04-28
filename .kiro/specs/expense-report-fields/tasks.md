@@ -36,8 +36,8 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Unauthenticated request → `401`
     - _Requirements: 5.1_
 
-- [ ] 3. Update the SQLAlchemy ORM model
-  - [ ] 3.1 Update `backend/app/models/expense_report.py`
+- [x] 3. Update the SQLAlchemy ORM model
+  - [x] 3.1 Update `backend/app/models/expense_report.py`
     - Rename `purpose` column to `description`; change to `nullable=True`
     - Add `created_at: Mapped[datetime]` — `DateTime`, `nullable=False`
     - Add `reimbursable_from_client: Mapped[bool]` — `Boolean`, `nullable=False`, `default=False`
@@ -45,7 +45,7 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Add `admin_notes: Mapped[str | None]` — `Text`, `nullable=True`
     - Import `Boolean`, `DateTime` from `sqlalchemy`; import `datetime` from `datetime`
     - _Requirements: 3.1, 2.1, 4.1, 5.5, 6.1_
-  - [ ] 3.2 Update `backend/tests/unit/test_models.py`
+  - [x] 3.2 Update `backend/tests/unit/test_models.py`
     - Add tests for the new ORM columns: `description` nullable, `created_at` non-null, `reimbursable_from_client` defaults to `False`, `client` nullable, `admin_notes` nullable
     - _Requirements: 3.1, 2.1, 4.2, 5.5, 6.1_
 

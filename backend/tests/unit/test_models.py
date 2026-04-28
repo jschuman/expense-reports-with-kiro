@@ -5,6 +5,7 @@ fully isolated from one another and from the on-disk development database.
 """
 
 import pytest
+from datetime import datetime, timezone
 from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
@@ -67,9 +68,10 @@ def make_user(username: str = "alice", hashed_password: str = "hashed_pw") -> Us
 def make_report(owner_id: int, **kwargs) -> ExpenseReport:
     defaults = {
         "title": "Q1 Travel",
-        "purpose": "Client visit",
+        "description": None,
         "total_amount": 450.00,
         "owner_id": owner_id,
+        "created_at": datetime.now(timezone.utc),
     }
     defaults.update(kwargs)
     return ExpenseReport(**defaults)
@@ -140,7 +142,7 @@ class TestExpenseReportModel:
         fetched = db_session.query(ExpenseReport).filter_by(title="Q1 Travel").one()
         assert fetched.id is not None
         assert fetched.title == "Q1 Travel"
-        assert fetched.purpose == "Client visit"
+        assert fetched.description is None
         assert fetched.total_amount == 450.00
         assert fetched.owner_id == user.id
 
@@ -153,9 +155,9 @@ class TestExpenseReportModel:
         # Do NOT pass status — rely on the column default.
         report = ExpenseReport(
             title="No Status",
-            purpose="Testing default",
             total_amount=100.0,
             owner_id=user.id,
+            created_at=datetime.now(timezone.utc),
         )
         db_session.add(report)
         db_session.commit()
@@ -199,3 +201,109 @@ class TestExpenseReportModel:
         db_session.expire(user)
         assert len(user.reports) == 1
         assert user.reports[0].title == "Q1 Travel"
+
+    def test_description_is_nullable(self, db_session):
+        """description column should accept None (nullable)."""
+        user = make_user()
+        db_session.add(user)
+        db_session.commit()
+
+        report = make_report(owner_id=user.id, description=None)
+        db_session.add(report)
+        db_session.commit()
+
+        fetched = db_session.query(ExpenseReport).filter_by(title="Q1 Travel").one()
+        assert fetched.description is None
+
+    def test_description_stores_value_when_provided(self, db_session):
+        """description column should store and return a string value."""
+        user = make_user()
+        db_session.add(user)
+        db_session.commit()
+
+        report = make_report(owner_id=user.id, description="Client visit to NYC")
+        db_session.add(report)
+        db_session.commit()
+
+        fetched = db_session.query(ExpenseReport).filter_by(title="Q1 Travel").one()
+        assert fetched.description == "Client visit to NYC"
+
+    def test_created_at_is_stored_and_non_null(self, db_session):
+        """created_at must be stored and returned as a non-null datetime."""
+        user = make_user()
+        db_session.add(user)
+        db_session.commit()
+
+        now = datetime.now(timezone.utc)
+        report = make_report(owner_id=user.id, created_at=now)
+        db_session.add(report)
+        db_session.commit()
+
+        fetched = db_session.query(ExpenseReport).filter_by(title="Q1 Travel").one()
+        assert fetched.created_at is not None
+        assert isinstance(fetched.created_at, datetime)
+
+    def test_reimbursable_from_client_defaults_to_false(self, db_session):
+        """reimbursable_from_client should default to False when not provided."""
+        user = make_user()
+        db_session.add(user)
+        db_session.commit()
+
+        report = make_report(owner_id=user.id)
+        db_session.add(report)
+        db_session.commit()
+
+        fetched = db_session.query(ExpenseReport).filter_by(title="Q1 Travel").one()
+        assert fetched.reimbursable_from_client is False
+
+    def test_client_is_nullable(self, db_session):
+        """client column should accept None (nullable)."""
+        user = make_user()
+        db_session.add(user)
+        db_session.commit()
+
+        report = make_report(owner_id=user.id, client=None)
+        db_session.add(report)
+        db_session.commit()
+
+        fetched = db_session.query(ExpenseReport).filter_by(title="Q1 Travel").one()
+        assert fetched.client is None
+
+    def test_client_stores_value_when_provided(self, db_session):
+        """client column should store and return a string value."""
+        user = make_user()
+        db_session.add(user)
+        db_session.commit()
+
+        report = make_report(owner_id=user.id, client="Acme Corp")
+        db_session.add(report)
+        db_session.commit()
+
+        fetched = db_session.query(ExpenseReport).filter_by(title="Q1 Travel").one()
+        assert fetched.client == "Acme Corp"
+
+    def test_admin_notes_is_nullable(self, db_session):
+        """admin_notes column should accept None (nullable)."""
+        user = make_user()
+        db_session.add(user)
+        db_session.commit()
+
+        report = make_report(owner_id=user.id, admin_notes=None)
+        db_session.add(report)
+        db_session.commit()
+
+        fetched = db_session.query(ExpenseReport).filter_by(title="Q1 Travel").one()
+        assert fetched.admin_notes is None
+
+    def test_admin_notes_stores_value_when_provided(self, db_session):
+        """admin_notes column should store and return a string value."""
+        user = make_user()
+        db_session.add(user)
+        db_session.commit()
+
+        report = make_report(owner_id=user.id, admin_notes="Approved by finance")
+        db_session.add(report)
+        db_session.commit()
+
+        fetched = db_session.query(ExpenseReport).filter_by(title="Q1 Travel").one()
+        assert fetched.admin_notes == "Approved by finance"
