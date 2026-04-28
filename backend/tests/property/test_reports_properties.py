@@ -35,6 +35,16 @@ from app.services.auth_service import hash_password
 
 
 # ---------------------------------------------------------------------------
+# Pre-computed password hash for test users
+# ---------------------------------------------------------------------------
+
+# Pre-compute a bcrypt hash once at module load time to avoid expensive hashing in tests.
+# bcrypt with 12 rounds takes ~200-400ms per hash. With 100 examples per property test,
+# this optimization reduces test execution time from ~5 minutes to ~30 seconds.
+_TEST_PASSWORD_HASH = hash_password("test_password")
+
+
+# ---------------------------------------------------------------------------
 # Helper function to create test client
 # ---------------------------------------------------------------------------
 
@@ -104,7 +114,7 @@ async def test_property_dashboard_returns_only_user_reports(num_users, reports_p
             for i in range(num_users):
                 user = User(
                     username=f"user_{i}",
-                    hashed_password=hash_password(f"pass_{i}"),
+                    hashed_password=_TEST_PASSWORD_HASH,
                 )
                 session.add(user)
                 session.flush()
@@ -123,7 +133,7 @@ async def test_property_dashboard_returns_only_user_reports(num_users, reports_p
 
                 session.commit()
                 session.refresh(user)
-                users.append({"id": user.id, "username": user.username, "password": f"pass_{i}"})
+                users.append({"id": user.id, "username": user.username, "password": "test_password"})
         finally:
             session.close()
 
@@ -191,7 +201,7 @@ async def test_property_report_creation_round_trip_preserves_fields(
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="roundtrip_user", hashed_password=hash_password("roundtrip_pass"))
+            user = User(username="roundtrip_user", hashed_password=_TEST_PASSWORD_HASH)
             session.add(user)
             session.commit()
             session.refresh(user)
@@ -201,7 +211,7 @@ async def test_property_report_creation_round_trip_preserves_fields(
 
         login_response = await async_client.post(
             "/auth/login",
-            json={"username": "roundtrip_user", "password": "roundtrip_pass"},
+            json={"username": "roundtrip_user", "password": "test_password"},
         )
         assert login_response.status_code == 200
 
@@ -258,7 +268,7 @@ async def test_property_invalid_reports_always_rejected(invalid_field):
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="invalid_user", hashed_password=hash_password("invalid_pass"))
+            user = User(username="invalid_user", hashed_password=_TEST_PASSWORD_HASH)
             session.add(user)
             session.commit()
         finally:
@@ -266,7 +276,7 @@ async def test_property_invalid_reports_always_rejected(invalid_field):
 
         login_response = await async_client.post(
             "/auth/login",
-            json={"username": "invalid_user", "password": "invalid_pass"},
+            json={"username": "invalid_user", "password": "test_password"},
         )
         assert login_response.status_code == 200
 
@@ -326,7 +336,7 @@ async def test_property_zod_pydantic_validation_agree(title, total_amount):
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="zod_user", hashed_password=hash_password("zod_pass"))
+            user = User(username="zod_user", hashed_password=_TEST_PASSWORD_HASH)
             session.add(user)
             session.commit()
         finally:
@@ -334,7 +344,7 @@ async def test_property_zod_pydantic_validation_agree(title, total_amount):
 
         login_response = await async_client.post(
             "/auth/login",
-            json={"username": "zod_user", "password": "zod_pass"},
+            json={"username": "zod_user", "password": "test_password"},
         )
         assert login_response.status_code == 200
 
@@ -389,7 +399,7 @@ async def test_property_owner_is_always_session_user(title, total_amount):
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="owner_prop_user", hashed_password=hash_password("owner_prop_pass"))
+            user = User(username="owner_prop_user", hashed_password=_TEST_PASSWORD_HASH)
             session.add(user)
             session.commit()
             session.refresh(user)
@@ -399,7 +409,7 @@ async def test_property_owner_is_always_session_user(title, total_amount):
 
         login_resp = await async_client.post(
             "/auth/login",
-            json={"username": "owner_prop_user", "password": "owner_prop_pass"},
+            json={"username": "owner_prop_user", "password": "test_password"},
         )
         assert login_resp.status_code == 200
 
@@ -459,7 +469,7 @@ async def test_property_description_round_trip(description, total_amount):
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="desc_rt_user", hashed_password=hash_password("desc_rt_pass"))
+            user = User(username="desc_rt_user", hashed_password=_TEST_PASSWORD_HASH)
             session.add(user)
             session.commit()
         finally:
@@ -467,7 +477,7 @@ async def test_property_description_round_trip(description, total_amount):
 
         login_resp = await async_client.post(
             "/auth/login",
-            json={"username": "desc_rt_user", "password": "desc_rt_pass"},
+            json={"username": "desc_rt_user", "password": "test_password"},
         )
         assert login_resp.status_code == 200
 
@@ -534,7 +544,7 @@ async def test_property_reimbursable_default_is_false(title, total_amount):
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="reimb_default_user", hashed_password=hash_password("reimb_default_pass"))
+            user = User(username="reimb_default_user", hashed_password=_TEST_PASSWORD_HASH)
             session.add(user)
             session.commit()
         finally:
@@ -542,7 +552,7 @@ async def test_property_reimbursable_default_is_false(title, total_amount):
 
         login_resp = await async_client.post(
             "/auth/login",
-            json={"username": "reimb_default_user", "password": "reimb_default_pass"},
+            json={"username": "reimb_default_user", "password": "test_password"},
         )
         assert login_resp.status_code == 200
 
@@ -591,7 +601,7 @@ async def test_property_client_required_when_reimbursable_true(title, total_amou
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="client_req_user", hashed_password=hash_password("client_req_pass"))
+            user = User(username="client_req_user", hashed_password=_TEST_PASSWORD_HASH)
             session.add(user)
             session.commit()
         finally:
@@ -599,7 +609,7 @@ async def test_property_client_required_when_reimbursable_true(title, total_amou
 
         login_resp = await async_client.post(
             "/auth/login",
-            json={"username": "client_req_user", "password": "client_req_pass"},
+            json={"username": "client_req_user", "password": "test_password"},
         )
         assert login_resp.status_code == 200
 
@@ -665,7 +675,7 @@ async def test_property_client_validation_only_list_values_accepted(title, total
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="client_val_user", hashed_password=hash_password("client_val_pass"))
+            user = User(username="client_val_user", hashed_password=_TEST_PASSWORD_HASH)
             session.add(user)
             session.commit()
         finally:
@@ -673,7 +683,7 @@ async def test_property_client_validation_only_list_values_accepted(title, total
 
         login_resp = await async_client.post(
             "/auth/login",
-            json={"username": "client_val_user", "password": "client_val_pass"},
+            json={"username": "client_val_user", "password": "test_password"},
         )
         assert login_resp.status_code == 200
 
@@ -735,7 +745,7 @@ async def test_property_admin_notes_always_null_on_creation(title, total_amount)
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="admin_notes_user", hashed_password=hash_password("admin_notes_pass"))
+            user = User(username="admin_notes_user", hashed_password=_TEST_PASSWORD_HASH)
             session.add(user)
             session.commit()
         finally:
@@ -743,7 +753,7 @@ async def test_property_admin_notes_always_null_on_creation(title, total_amount)
 
         login_resp = await async_client.post(
             "/auth/login",
-            json={"username": "admin_notes_user", "password": "admin_notes_pass"},
+            json={"username": "admin_notes_user", "password": "test_password"},
         )
         assert login_resp.status_code == 200
 
