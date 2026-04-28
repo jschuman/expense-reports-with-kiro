@@ -11,26 +11,26 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
   - Update `backend/docs/openapi.yaml` to reflect the new `ExpenseReportCreate` and `ExpenseReportResponse` shapes and the new `GET /clients` endpoint before touching any implementation code
   - _Requirements: 3.1, 2.1, 4.1, 5.1, 6.1_
 
-- [ ] 2. Add `app/constants.py` and the clients router
-  - [ ] 2.1 Create `backend/app/constants.py` with the `CLIENTS` list (5 entries: "Acme Corp", "Globex Industries", "Initech", "Umbrella Ltd", "Hooli")
+- [x] 2. Add `app/constants.py` and the clients router
+  - [x] 2.1 Create `backend/app/constants.py` with the `CLIENTS` list (5 entries: "Acme Corp", "Globex Industries", "Initech", "Umbrella Ltd", "Hooli")
     - _Requirements: 5.2_
-  - [ ] 2.2 Write unit tests for `constants.py`
+  - [x] 2.2 Write unit tests for `constants.py`
     - `backend/tests/unit/test_constants.py`
     - Assert `CLIENTS` has between 3 and 5 entries
     - Assert every entry is a non-empty string
     - _Requirements: 5.2_
-  - [ ] 2.3 Create `backend/app/routers/clients.py` with `GET /clients`
+  - [x] 2.3 Create `backend/app/routers/clients.py` with `GET /clients`
     - Requires a valid session (use `get_current_user` dependency)
     - Returns `CLIENTS` as `list[str]`; status `200`
     - _Requirements: 5.1_
-  - [ ] 2.4 Register the clients router in `backend/app/main.py` with prefix `/clients`
+  - [x] 2.4 Register the clients router in `backend/app/main.py` with prefix `/clients`
     - _Requirements: 5.1_
-  - [ ] 2.5 Write unit tests for the clients router
+  - [x] 2.5 Write unit tests for the clients router
     - `backend/tests/unit/test_clients_router.py`
     - Test `GET /clients` with a valid session returns `200` and the full list
     - Test `GET /clients` without a session returns `401`
     - _Requirements: 5.1_
-  - [ ] 2.6 Write integration tests for `GET /clients`
+  - [x] 2.6 Write integration tests for `GET /clients`
     - `backend/tests/integration/test_clients.py`
     - Authenticated request → `200`, response is a list of strings matching `CLIENTS`
     - Unauthenticated request → `401`
