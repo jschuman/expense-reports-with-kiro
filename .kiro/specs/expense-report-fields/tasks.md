@@ -136,19 +136,19 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
   - Run `pytest` from `backend/`; all unit, integration, and property tests must pass before proceeding to frontend work.
   - Ask the user if any questions arise.
 
-- [ ] 11. Update TypeScript types and Zod schema
-  - [ ] 11.1 Update `frontend/src/types/expenseReport.ts`
+- [x] 11. Update TypeScript types and Zod schema
+  - [x] 11.1 Update `frontend/src/types/expenseReport.ts`
     - `ExpenseReportCreate`: replace `purpose: string` with `description?: string`; add `reimbursable_from_client: boolean`; add `client?: string`
     - `ExpenseReportResponse`: replace `purpose: string` with `description: string | null`; add `owner_username: string`, `created_at: string`, `reimbursable_from_client: boolean`, `client: string | null`, `admin_notes: string | null`
     - _Requirements: 3.1, 1.3, 2.1, 4.1, 5.5, 6.1, 7.1_
-  - [ ] 11.2 Update `frontend/src/types/schemas.ts`
+  - [x] 11.2 Update `frontend/src/types/schemas.ts`
     - Replace `purpose` with `description: z.string().optional()` in `expenseReportCreateSchema`
     - Add `reimbursable_from_client: z.boolean().default(false)`
     - Add `client: z.string().optional()`
     - Add `.superRefine()` that adds a `ZodIssueCode.custom` error on `client` path when `reimbursable_from_client=true` and `client` is absent
     - Update `ExpenseReportFormData` inferred type
     - _Requirements: 3.2, 4.1, 5.3_
-  - [ ] 11.3 Update `frontend/src/types/__tests__/schemas.test.ts`
+  - [x] 11.3 Update `frontend/src/types/__tests__/schemas.test.ts`
     - Test `expenseReportCreateSchema` accepts: no description, empty description, valid client when reimbursable=true
     - Test `expenseReportCreateSchema` rejects: reimbursable=true with no client
     - Remove tests referencing `purpose`

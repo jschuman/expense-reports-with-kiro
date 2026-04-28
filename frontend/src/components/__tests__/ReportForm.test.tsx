@@ -25,10 +25,11 @@ describe('ReportForm', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Title is required')).toBeInTheDocument();
-      expect(screen.getByText('Purpose is required')).toBeInTheDocument();
       expect(screen.getByText('Amount must be a number')).toBeInTheDocument();
     });
 
+    // description is optional — no required error expected
+    expect(screen.queryByText('Purpose is required')).not.toBeInTheDocument();
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
@@ -56,7 +57,6 @@ describe('ReportForm', () => {
     render(<ReportForm onSubmit={mockOnSubmit} isSubmitting={false} />);
 
     await user.type(screen.getByLabelText(/title/i), 'Q1 Travel');
-    await user.type(screen.getByLabelText(/purpose/i), 'Client visit');
     await user.type(screen.getByLabelText(/total amount/i), '450.50');
 
     await user.click(screen.getByRole('button', { name: /submit report/i }));
@@ -65,8 +65,8 @@ describe('ReportForm', () => {
       expect(mockOnSubmit).toHaveBeenCalledOnce();
       expect(mockOnSubmit).toHaveBeenCalledWith({
         title: 'Q1 Travel',
-        purpose: 'Client visit',
         total_amount: 450.50,
+        reimbursable_from_client: false,
       });
     });
   });

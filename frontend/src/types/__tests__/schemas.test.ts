@@ -71,21 +71,86 @@ describe('expenseReportCreateSchema', () => {
   it('should accept valid expense report data', () => {
     const validInput = {
       title: 'Q1 Travel Expenses',
-      purpose: 'Client visit to New York office',
+      description: 'Client visit to New York office',
       total_amount: 450.75,
+      reimbursable_from_client: false,
     };
 
     const result = expenseReportCreateSchema.safeParse(validInput);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual(validInput);
+      expect(result.data.title).toBe(validInput.title);
+      expect(result.data.description).toBe(validInput.description);
+      expect(result.data.total_amount).toBe(validInput.total_amount);
+      expect(result.data.reimbursable_from_client).toBe(false);
+    }
+  });
+
+  it('should accept expense report with no description', () => {
+    const validInput = {
+      title: 'Q1 Travel Expenses',
+      total_amount: 450.75,
+      reimbursable_from_client: false,
+    };
+
+    const result = expenseReportCreateSchema.safeParse(validInput);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.description).toBeUndefined();
+    }
+  });
+
+  it('should accept expense report with empty description', () => {
+    const validInput = {
+      title: 'Q1 Travel Expenses',
+      description: '',
+      total_amount: 450.75,
+      reimbursable_from_client: false,
+    };
+
+    const result = expenseReportCreateSchema.safeParse(validInput);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.description).toBe('');
+    }
+  });
+
+  it('should accept valid client when reimbursable is true', () => {
+    const validInput = {
+      title: 'Q1 Travel Expenses',
+      description: 'Client visit',
+      total_amount: 450.75,
+      reimbursable_from_client: true,
+      client: 'Acme Corp',
+    };
+
+    const result = expenseReportCreateSchema.safeParse(validInput);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.client).toBe('Acme Corp');
+    }
+  });
+
+  it('should reject reimbursable=true with no client', () => {
+    const invalidInput = {
+      title: 'Q1 Travel Expenses',
+      description: 'Client visit',
+      total_amount: 450.75,
+      reimbursable_from_client: true,
+    };
+
+    const result = expenseReportCreateSchema.safeParse(invalidInput);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const clientError = result.error.issues.find(issue => issue.path.includes('client'));
+      expect(clientError).toBeDefined();
+      expect(clientError?.message).toBe('Client is required when reimbursable from client is selected');
     }
   });
 
   it('should reject empty title', () => {
     const invalidInput = {
       title: '',
-      purpose: 'Client visit',
       total_amount: 450.75,
     };
 
@@ -100,7 +165,6 @@ describe('expenseReportCreateSchema', () => {
   it('should reject title exceeding 255 characters', () => {
     const invalidInput = {
       title: 'a'.repeat(256),
-      purpose: 'Client visit',
       total_amount: 450.75,
     };
 
@@ -115,7 +179,6 @@ describe('expenseReportCreateSchema', () => {
   it('should accept title with exactly 255 characters', () => {
     const validInput = {
       title: 'a'.repeat(255),
-      purpose: 'Client visit',
       total_amount: 450.75,
     };
 
@@ -123,25 +186,22 @@ describe('expenseReportCreateSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('should reject empty purpose', () => {
-    const invalidInput = {
+  it('should default reimbursable_from_client to false when omitted', () => {
+    const validInput = {
       title: 'Q1 Travel',
-      purpose: '',
       total_amount: 450.75,
     };
 
-    const result = expenseReportCreateSchema.safeParse(invalidInput);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].path).toContain('purpose');
-      expect(result.error.issues[0].message).toBe('Purpose is required');
+    const result = expenseReportCreateSchema.safeParse(validInput);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.reimbursable_from_client).toBe(false);
     }
   });
 
   it('should reject total_amount of zero', () => {
     const invalidInput = {
       title: 'Q1 Travel',
-      purpose: 'Client visit',
       total_amount: 0,
     };
 
@@ -156,7 +216,6 @@ describe('expenseReportCreateSchema', () => {
   it('should reject negative total_amount', () => {
     const invalidInput = {
       title: 'Q1 Travel',
-      purpose: 'Client visit',
       total_amount: -1,
     };
 
@@ -171,7 +230,6 @@ describe('expenseReportCreateSchema', () => {
   it('should reject non-number total_amount (string)', () => {
     const invalidInput = {
       title: 'Q1 Travel',
-      purpose: 'Client visit',
       total_amount: 'not a number',
     };
 
@@ -186,7 +244,6 @@ describe('expenseReportCreateSchema', () => {
   it('should reject non-number total_amount (null)', () => {
     const invalidInput = {
       title: 'Q1 Travel',
-      purpose: 'Client visit',
       total_amount: null,
     };
 
@@ -196,17 +253,6 @@ describe('expenseReportCreateSchema', () => {
 
   it('should reject missing title field', () => {
     const invalidInput = {
-      purpose: 'Client visit',
-      total_amount: 450.75,
-    };
-
-    const result = expenseReportCreateSchema.safeParse(invalidInput);
-    expect(result.success).toBe(false);
-  });
-
-  it('should reject missing purpose field', () => {
-    const invalidInput = {
-      title: 'Q1 Travel',
       total_amount: 450.75,
     };
 
@@ -217,7 +263,6 @@ describe('expenseReportCreateSchema', () => {
   it('should reject missing total_amount field', () => {
     const invalidInput = {
       title: 'Q1 Travel',
-      purpose: 'Client visit',
     };
 
     const result = expenseReportCreateSchema.safeParse(invalidInput);
@@ -227,8 +272,8 @@ describe('expenseReportCreateSchema', () => {
   it('should accept very small positive amounts', () => {
     const validInput = {
       title: 'Coffee',
-      purpose: 'Team meeting',
       total_amount: 0.01,
+      reimbursable_from_client: false,
     };
 
     const result = expenseReportCreateSchema.safeParse(validInput);
@@ -238,8 +283,8 @@ describe('expenseReportCreateSchema', () => {
   it('should accept large amounts', () => {
     const validInput = {
       title: 'Annual Conference',
-      purpose: 'Company-wide event',
       total_amount: 999999.99,
+      reimbursable_from_client: false,
     };
 
     const result = expenseReportCreateSchema.safeParse(validInput);
