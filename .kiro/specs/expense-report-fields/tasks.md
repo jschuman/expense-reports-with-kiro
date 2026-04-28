@@ -204,14 +204,14 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Assert unchecking reimbursable clears the client value before submission
     - _Requirements: 3.1, 4.1, 5.1, 5.3, 5.4_
 
-- [ ] 14. Update `ReportCard` component
-  - [ ] 14.1 Update `frontend/src/components/ReportCard.tsx`
+- [x] 14. Update `ReportCard` component
+  - [x] 14.1 Update `frontend/src/components/ReportCard.tsx`
     - Replace `report.purpose` with `report.description`
     - Add display rows for: `owner_username`, `created_at` (formatted via `formatUtcDate`), `reimbursable_from_client` ("Yes" / "No"), `client`, `admin_notes`
     - For `description`, `client`, and `admin_notes`: display `"—"` when the value is `null` or empty
     - Format `total_amount` as currency (already done — keep)
     - _Requirements: 1.3, 2.3, 3.5, 4.3, 5.7, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
-  - [ ] 14.2 Update `frontend/src/components/__tests__/ReportCard.test.tsx`
+  - [x] 14.2 Update `frontend/src/components/__tests__/ReportCard.test.tsx`
     - Assert all new fields render for a fully-populated report
     - Assert `"—"` renders for null `description`, `client`, and `admin_notes`
     - Assert `"Yes"` / `"No"` renders for `reimbursable_from_client`
