@@ -132,7 +132,7 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Minimum 100 iterations each (`@settings(max_examples=100)`)
     - _Requirements: 1.1, 1.2, 3.2, 3.3, 3.4, 4.2, 5.3, 5.6, 6.2, 6.3, 6.4_
 
-- [ ] 10. Backend checkpoint — all tests pass
+- [x] 10. Backend checkpoint — all tests pass
   - Run `pytest` from `backend/`; all unit, integration, and property tests must pass before proceeding to frontend work.
   - Ask the user if any questions arise.
 
