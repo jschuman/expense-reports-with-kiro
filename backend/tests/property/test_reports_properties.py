@@ -1,11 +1,20 @@
 """Property-based tests for expense reports using hypothesis.
 
-Property 4: Dashboard returns exactly the authenticated user's reports
-Property 5: Report creation round-trip preserves all fields
-Property 6: Reports with invalid fields are always rejected
-Property 7: Zod and Pydantic validation agree on valid inputs
+Original properties (pre-expense-report-fields feature):
+  Property 4: Dashboard returns exactly the authenticated user's reports
+  Property 5: Report creation round-trip preserves all fields
+  Property 6: Reports with invalid fields are always rejected
+  Property 7: Zod and Pydantic validation agree on valid inputs
 
-Requirements: 1.1, 2.1, 3.2, 3.4, 3.5
+New properties (expense-report-fields feature):
+  Property 1: Owner is always the session user
+  Property 2: Description round-trip
+  Property 4 (new): Reimbursable default is false
+  Property 6 (new): Client required when reimbursable is true
+  Property 7 (new): Client validation — only list values accepted
+  Property 10: Admin notes round-trip
+
+Requirements: 1.1, 1.2, 2.1, 3.2, 3.3, 3.4, 3.5, 4.2, 5.3, 5.6, 6.2, 6.3, 6.4
 """
 
 from datetime import datetime, timezone
@@ -17,6 +26,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.constants import CLIENTS
 from app.db.database import Base, get_db
 from app.main import app
 from app.models.expense_report import ExpenseReport
@@ -334,6 +344,431 @@ async def test_property_zod_pydantic_validation_agree(title, total_amount):
 
         assert response.status_code == 201, (
             f"Expected 201 for Zod-valid input, got {response.status_code}: {response.text}"
+        )
+    finally:
+        await async_client.aclose()
+        cleanup_test_client(async_client)
+
+
+# ---------------------------------------------------------------------------
+# Feature: expense-report-fields
+# Property 1: Owner is always the session user
+# **Validates: Requirements 1.1, 1.2**
+# ---------------------------------------------------------------------------
+
+# Shared strategy for valid report titles
+_valid_title_st = st.text(
+    alphabet=st.characters(min_codepoint=33, max_codepoint=126, blacklist_categories=("Cc", "Cs")),
+    min_size=1,
+    max_size=255,
+)
+
+# Shared strategy for valid total_amount values
+_valid_amount_st = st.floats(min_value=0.01, max_value=1_000_000.0, allow_nan=False, allow_infinity=False)
+
+
+@pytest.mark.asyncio
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(
+    title=_valid_title_st,
+    total_amount=_valid_amount_st,
+)
+async def test_property_owner_is_always_session_user(title, total_amount):
+    """Property 1: Owner is always the session user.
+
+    # Feature: expense-report-fields, Property 1: Owner is always the session user
+
+    For any authenticated user and any valid report creation payload, the owner_id on
+    the returned ExpenseReportResponse SHALL equal the authenticated user's id,
+    regardless of any owner_id value present in the request body.
+
+    **Validates: Requirements 1.1, 1.2**
+    """
+    async_client = create_test_client()
+
+    try:
+        session = async_client._test_session_factory()  # type: ignore[attr-defined]
+        try:
+            user = User(username="owner_prop_user", hashed_password=hash_password("owner_prop_pass"))
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            user_id = user.id
+        finally:
+            session.close()
+
+        login_resp = await async_client.post(
+            "/auth/login",
+            json={"username": "owner_prop_user", "password": "owner_prop_pass"},
+        )
+        assert login_resp.status_code == 200
+
+        payload = {"title": title, "total_amount": total_amount}
+        create_resp = await async_client.post("/reports", json=payload)
+        assert create_resp.status_code == 201, (
+            f"Expected 201, got {create_resp.status_code}: {create_resp.text}"
+        )
+
+        report = create_resp.json()
+        assert report["owner_id"] == user_id, (
+            f"owner_id {report['owner_id']} != authenticated user id {user_id}"
+        )
+        assert report["owner_username"] == "owner_prop_user", (
+            f"owner_username '{report['owner_username']}' != 'owner_prop_user'"
+        )
+    finally:
+        await async_client.aclose()
+        cleanup_test_client(async_client)
+
+
+# ---------------------------------------------------------------------------
+# Feature: expense-report-fields
+# Property 2: Description round-trip
+# **Validates: Requirements 3.2, 3.3, 3.4**
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(
+    description=st.one_of(
+        st.none(),
+        st.just(""),
+        st.text(
+            alphabet=st.characters(min_codepoint=32, max_codepoint=126, blacklist_categories=("Cc", "Cs")),
+            min_size=1,
+            max_size=500,
+        ),
+    ),
+    total_amount=_valid_amount_st,
+)
+async def test_property_description_round_trip(description, total_amount):
+    """Property 2: Description round-trip.
+
+    # Feature: expense-report-fields, Property 2: Description round-trip
+
+    For any valid report creation payload — whether description is absent, empty, or a
+    non-empty string — submitting the report and retrieving it via GET /reports SHALL
+    return a record whose description field equals the submitted value (or null when
+    absent/empty).
+
+    **Validates: Requirements 3.2, 3.3, 3.4**
+    """
+    async_client = create_test_client()
+
+    try:
+        session = async_client._test_session_factory()  # type: ignore[attr-defined]
+        try:
+            user = User(username="desc_rt_user", hashed_password=hash_password("desc_rt_pass"))
+            session.add(user)
+            session.commit()
+        finally:
+            session.close()
+
+        login_resp = await async_client.post(
+            "/auth/login",
+            json={"username": "desc_rt_user", "password": "desc_rt_pass"},
+        )
+        assert login_resp.status_code == 200
+
+        payload: dict = {"title": "Description Round-Trip Report", "total_amount": total_amount}
+        if description is not None:
+            payload["description"] = description
+
+        create_resp = await async_client.post("/reports", json=payload)
+        assert create_resp.status_code == 201, (
+            f"Expected 201, got {create_resp.status_code}: {create_resp.text}"
+        )
+
+        created = create_resp.json()
+        report_id = created["id"]
+
+        get_resp = await async_client.get("/reports")
+        assert get_resp.status_code == 200
+
+        reports = get_resp.json()
+        matching = [r for r in reports if r["id"] == report_id]
+        assert len(matching) == 1, f"Expected exactly 1 matching report, got {len(matching)}"
+
+        retrieved = matching[0]
+
+        # None and empty string both map to null/None in the response
+        if description is None or description == "":
+            assert retrieved["description"] is None, (
+                f"Expected null description for absent/empty input, got '{retrieved['description']}'"
+            )
+        else:
+            assert retrieved["description"] == description, (
+                f"Description round-trip failed: sent '{description}', got '{retrieved['description']}'"
+            )
+    finally:
+        await async_client.aclose()
+        cleanup_test_client(async_client)
+
+
+# ---------------------------------------------------------------------------
+# Feature: expense-report-fields
+# Property 4 (new): Reimbursable default is false
+# **Validates: Requirements 4.2**
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(
+    title=_valid_title_st,
+    total_amount=_valid_amount_st,
+)
+async def test_property_reimbursable_default_is_false(title, total_amount):
+    """Property 4 (new): Reimbursable default is false.
+
+    # Feature: expense-report-fields, Property 4: Reimbursable default is false
+
+    For any valid report creation payload that omits reimbursable_from_client, the
+    returned ExpenseReportResponse SHALL have reimbursable_from_client equal to false.
+
+    **Validates: Requirements 4.2**
+    """
+    async_client = create_test_client()
+
+    try:
+        session = async_client._test_session_factory()  # type: ignore[attr-defined]
+        try:
+            user = User(username="reimb_default_user", hashed_password=hash_password("reimb_default_pass"))
+            session.add(user)
+            session.commit()
+        finally:
+            session.close()
+
+        login_resp = await async_client.post(
+            "/auth/login",
+            json={"username": "reimb_default_user", "password": "reimb_default_pass"},
+        )
+        assert login_resp.status_code == 200
+
+        # Deliberately omit reimbursable_from_client from the payload
+        payload = {"title": title, "total_amount": total_amount}
+        create_resp = await async_client.post("/reports", json=payload)
+        assert create_resp.status_code == 201, (
+            f"Expected 201, got {create_resp.status_code}: {create_resp.text}"
+        )
+
+        report = create_resp.json()
+        assert report["reimbursable_from_client"] is False, (
+            f"Expected reimbursable_from_client=False when omitted, got {report['reimbursable_from_client']}"
+        )
+    finally:
+        await async_client.aclose()
+        cleanup_test_client(async_client)
+
+
+# ---------------------------------------------------------------------------
+# Feature: expense-report-fields
+# Property 6 (new): Client required when reimbursable is true
+# **Validates: Requirements 5.3**
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(
+    title=_valid_title_st,
+    total_amount=_valid_amount_st,
+)
+async def test_property_client_required_when_reimbursable_true(title, total_amount):
+    """Property 6 (new): Client required when reimbursable is true.
+
+    # Feature: expense-report-fields, Property 6: Client required when reimbursable is true
+
+    For any report creation payload where reimbursable_from_client is True and client is
+    absent or null, the API SHALL return 422 and SHALL NOT persist any record to the
+    database.
+
+    **Validates: Requirements 5.3**
+    """
+    async_client = create_test_client()
+
+    try:
+        session = async_client._test_session_factory()  # type: ignore[attr-defined]
+        try:
+            user = User(username="client_req_user", hashed_password=hash_password("client_req_pass"))
+            session.add(user)
+            session.commit()
+        finally:
+            session.close()
+
+        login_resp = await async_client.post(
+            "/auth/login",
+            json={"username": "client_req_user", "password": "client_req_pass"},
+        )
+        assert login_resp.status_code == 200
+
+        # Capture report count before the invalid attempt
+        before_resp = await async_client.get("/reports")
+        assert before_resp.status_code == 200
+        count_before = len(before_resp.json())
+
+        # reimbursable=True with no client — must be rejected
+        payload = {
+            "title": title,
+            "total_amount": total_amount,
+            "reimbursable_from_client": True,
+            # client intentionally omitted
+        }
+        create_resp = await async_client.post("/reports", json=payload)
+        assert create_resp.status_code == 422, (
+            f"Expected 422 when reimbursable=True and client absent, got {create_resp.status_code}"
+        )
+
+        # Confirm no new record was persisted
+        after_resp = await async_client.get("/reports")
+        assert after_resp.status_code == 200
+        count_after = len(after_resp.json())
+        assert count_after == count_before, (
+            f"DB record count changed from {count_before} to {count_after} after rejected request"
+        )
+    finally:
+        await async_client.aclose()
+        cleanup_test_client(async_client)
+
+
+# ---------------------------------------------------------------------------
+# Feature: expense-report-fields
+# Property 7 (new): Client validation — only list values accepted
+# **Validates: Requirements 5.6**
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(
+    title=_valid_title_st,
+    total_amount=_valid_amount_st,
+    invalid_client=st.text(
+        alphabet=st.characters(min_codepoint=32, max_codepoint=126, blacklist_categories=("Cc", "Cs")),
+        min_size=1,
+        max_size=255,
+    ).filter(lambda s: s not in CLIENTS),
+)
+async def test_property_client_validation_only_list_values_accepted(title, total_amount, invalid_client):
+    """Property 7 (new): Client validation — only list values accepted.
+
+    # Feature: expense-report-fields, Property 7: Client validation — only list values accepted
+
+    For any report creation payload where client is set to a string not present in
+    CLIENTS, the API SHALL return 422 and SHALL NOT persist any record to the database.
+
+    **Validates: Requirements 5.6**
+    """
+    async_client = create_test_client()
+
+    try:
+        session = async_client._test_session_factory()  # type: ignore[attr-defined]
+        try:
+            user = User(username="client_val_user", hashed_password=hash_password("client_val_pass"))
+            session.add(user)
+            session.commit()
+        finally:
+            session.close()
+
+        login_resp = await async_client.post(
+            "/auth/login",
+            json={"username": "client_val_user", "password": "client_val_pass"},
+        )
+        assert login_resp.status_code == 200
+
+        # Capture report count before the invalid attempt
+        before_resp = await async_client.get("/reports")
+        assert before_resp.status_code == 200
+        count_before = len(before_resp.json())
+
+        # client value not in CLIENTS — must be rejected regardless of reimbursable flag
+        payload = {
+            "title": title,
+            "total_amount": total_amount,
+            "reimbursable_from_client": True,
+            "client": invalid_client,
+        }
+        create_resp = await async_client.post("/reports", json=payload)
+        assert create_resp.status_code == 422, (
+            f"Expected 422 for client='{invalid_client}' (not in CLIENTS), got {create_resp.status_code}"
+        )
+
+        # Confirm no new record was persisted
+        after_resp = await async_client.get("/reports")
+        assert after_resp.status_code == 200
+        count_after = len(after_resp.json())
+        assert count_after == count_before, (
+            f"DB record count changed from {count_before} to {count_after} after rejected request"
+        )
+    finally:
+        await async_client.aclose()
+        cleanup_test_client(async_client)
+
+
+# ---------------------------------------------------------------------------
+# Feature: expense-report-fields
+# Property 10: Admin notes round-trip
+# **Validates: Requirements 6.2, 6.3, 6.4**
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(
+    title=_valid_title_st,
+    total_amount=_valid_amount_st,
+)
+async def test_property_admin_notes_always_null_on_creation(title, total_amount):
+    """Property 10: Admin notes round-trip.
+
+    # Feature: expense-report-fields, Property 10: Admin notes round-trip
+
+    For any report creation payload — whether admin_notes is absent or a non-empty
+    string — the returned ExpenseReportResponse SHALL have admin_notes equal to null
+    (since admin notes are not user-settable at creation time).
+
+    **Validates: Requirements 6.2, 6.3, 6.4**
+    """
+    async_client = create_test_client()
+
+    try:
+        session = async_client._test_session_factory()  # type: ignore[attr-defined]
+        try:
+            user = User(username="admin_notes_user", hashed_password=hash_password("admin_notes_pass"))
+            session.add(user)
+            session.commit()
+        finally:
+            session.close()
+
+        login_resp = await async_client.post(
+            "/auth/login",
+            json={"username": "admin_notes_user", "password": "admin_notes_pass"},
+        )
+        assert login_resp.status_code == 200
+
+        # Payload without admin_notes (it is not part of ExpenseReportCreate)
+        payload = {"title": title, "total_amount": total_amount}
+        create_resp = await async_client.post("/reports", json=payload)
+        assert create_resp.status_code == 201, (
+            f"Expected 201, got {create_resp.status_code}: {create_resp.text}"
+        )
+
+        report = create_resp.json()
+        assert report["admin_notes"] is None, (
+            f"Expected admin_notes=null on creation, got '{report['admin_notes']}'"
+        )
+
+        # Verify the same via GET /reports
+        get_resp = await async_client.get("/reports")
+        assert get_resp.status_code == 200
+
+        reports = get_resp.json()
+        matching = [r for r in reports if r["id"] == report["id"]]
+        assert len(matching) == 1
+
+        assert matching[0]["admin_notes"] is None, (
+            f"Expected admin_notes=null in GET /reports, got '{matching[0]['admin_notes']}'"
         )
     finally:
         await async_client.aclose()

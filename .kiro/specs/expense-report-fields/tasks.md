@@ -102,8 +102,8 @@ Incremental enhancement of the existing FastAPI + React/TypeScript + MUI app. Th
     - Remove or update any test that references `purpose`
     - _Requirements: 1.1, 3.1, 4.1, 5.3, 5.6, 7.1_
 
-- [ ] 9. Write backend property-based tests for new properties
-  - [ ] 9.1 Write property tests for Properties 1, 2, 4, 6, 7, 10
+- [x] 9. Write backend property-based tests for new properties
+  - [x] 9.1 Write property tests for Properties 1, 2, 4, 6, 7, 10
     - `backend/tests/property/test_reports_properties.py` — add new `@given` test functions (keep existing Property 4–7 tests, renaming if needed to avoid collision)
     - **Property 1: Owner is always the session user**
       - Generate random valid payloads; assert `owner_id == authenticated_user.id` on every response

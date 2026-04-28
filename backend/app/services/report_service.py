@@ -44,7 +44,7 @@ def create_report(
     """
     report = ExpenseReport(
         title=data.title,
-        description=data.description,
+        description=data.description or None,
         total_amount=data.total_amount,
         status="Pending",
         owner_id=user_id,
