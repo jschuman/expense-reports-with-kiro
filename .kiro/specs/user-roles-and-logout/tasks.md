@@ -162,21 +162,21 @@ This implementation adds role-based access control (RBAC) and logout functionali
   - Test logout endpoint clears session
   - Ask the user if questions arise
 
-- [ ] 12. Implement logout functionality tests
-  - [ ] 12.1 Write integration tests for logout
+- [x] 12. Implement logout functionality tests
+  - [x] 12.1 Write integration tests for logout
     - Test POST /auth/logout clears session
     - Test protected endpoints return 401 after logout
     - Test logout is idempotent (can logout twice)
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
   
-  - [ ] 12.2 Write property test for logout session clearing
+  - [x] 12.2 Write property test for logout session clearing
     - **Property 4: Logout Session Clearing**
     - **Validates: Requirements 4.1**
     - Test that logout clears all session data
     - Use Hypothesis to generate different session states
     - _Requirements: 4.1_
   
-  - [ ] 12.3 Write property test for protected endpoint authorization
+  - [x] 12.3 Write property test for protected endpoint authorization
     - **Property 5: Protected Endpoint Authorization**
     - **Validates: Requirements 4.4**
     - Test that protected endpoints reject invalid sessions
