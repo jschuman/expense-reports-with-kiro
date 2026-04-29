@@ -443,3 +443,119 @@ async def test_property_role_retrieved_correctly_from_session(role_name):
     finally:
         await async_client.aclose()
         cleanup_test_client(async_client)
+
+
+# ---------------------------------------------------------------------------
+# Feature: user-roles-and-logout
+# Property 7: Authentication Response Includes Role
+# **Validates: Requirements 7.1, 7.2**
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(
+    role_name=st.sampled_from(["User", "Admin"]),
+)
+async def test_property_authentication_response_includes_role(role_name):
+    """Property 7: Authentication Response Includes Role.
+
+    # Feature: user-roles-and-logout, Property 7: Authentication Response Includes Role
+
+    For any user with any assigned role, when that user successfully authenticates
+    (via POST /auth/login or GET /auth/me), the authentication response SHALL include
+    a role field containing the user's role name as a string.
+
+    Specifically:
+    - POST /auth/login response SHALL include role field matching the user's assigned role
+    - GET /auth/me response SHALL include role field matching the user's assigned role
+    - The role field value SHALL be the role name string (e.g., 'User' or 'Admin')
+
+    **Validates: Requirements 7.1, 7.2**
+    """
+    async_client = create_test_client()
+
+    role_id = 2 if role_name == "Admin" else 1
+
+    try:
+        session = async_client._test_session_factory()  # type: ignore[attr-defined]
+        try:
+            user = User(
+                username="auth_role_test_user",
+                hashed_password=_TEST_PASSWORD_HASH,
+                role_id=role_id,
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            user_id = user.id
+        finally:
+            session.close()
+
+        # --- Property 7a: POST /auth/login response includes role field ---
+        login_response = await async_client.post(
+            "/auth/login",
+            json={"username": "auth_role_test_user", "password": "test_password"},
+        )
+
+        assert login_response.status_code == 200, (
+            f"Login failed for user with role '{role_name}': {login_response.text}"
+        )
+
+        login_body = login_response.json()
+
+        # role field must be present
+        assert "role" in login_body, (
+            f"POST /auth/login response missing 'role' field for role '{role_name}'"
+        )
+
+        # role field must be a string
+        assert isinstance(login_body["role"], str), (
+            f"POST /auth/login 'role' field must be a string, got {type(login_body['role'])}"
+        )
+
+        # role field must match the assigned role name
+        assert login_body["role"] == role_name, (
+            f"POST /auth/login 'role' field is '{login_body['role']}', expected '{role_name}'"
+        )
+
+        # id and username must also be present (full UserResponse shape)
+        assert login_body["id"] == user_id
+        assert login_body["username"] == "auth_role_test_user"
+
+        # --- Property 7b: GET /auth/me response includes role field ---
+        me_response = await async_client.get("/auth/me")
+
+        assert me_response.status_code == 200, (
+            f"GET /auth/me failed after login for role '{role_name}': {me_response.text}"
+        )
+
+        me_body = me_response.json()
+
+        # role field must be present
+        assert "role" in me_body, (
+            f"GET /auth/me response missing 'role' field for role '{role_name}'"
+        )
+
+        # role field must be a string
+        assert isinstance(me_body["role"], str), (
+            f"GET /auth/me 'role' field must be a string, got {type(me_body['role'])}"
+        )
+
+        # role field must match the assigned role name
+        assert me_body["role"] == role_name, (
+            f"GET /auth/me 'role' field is '{me_body['role']}', expected '{role_name}'"
+        )
+
+        # id and username must also be present (full UserResponse shape)
+        assert me_body["id"] == user_id
+        assert me_body["username"] == "auth_role_test_user"
+
+        # --- Consistency: login and /me must return the same role ---
+        assert login_body["role"] == me_body["role"], (
+            f"POST /auth/login role '{login_body['role']}' does not match "
+            f"GET /auth/me role '{me_body['role']}'"
+        )
+    finally:
+        await async_client.aclose()
+        cleanup_test_client(async_client)

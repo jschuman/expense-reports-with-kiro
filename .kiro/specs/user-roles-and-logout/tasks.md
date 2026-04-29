@@ -126,30 +126,30 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Test UserResponse with different role values
     - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 10. Update auth router to return role information
-  - [ ] 10.1 Modify login endpoint in backend/app/routers/auth.py
+- [x] 10. Update auth router to return role information
+  - [x] 10.1 Modify login endpoint in backend/app/routers/auth.py
     - Eagerly load role relationship before returning UserResponse
     - Ensure role field is included in response
     - _Requirements: 7.1_
   
-  - [ ] 10.2 Modify /me endpoint in backend/app/routers/auth.py
+  - [x] 10.2 Modify /me endpoint in backend/app/routers/auth.py
     - Eagerly load role relationship before returning UserResponse
     - Ensure role field is included in response
     - _Requirements: 7.2_
   
-  - [ ] 10.3 Write unit tests for auth router
+  - [x] 10.3 Write unit tests for auth router
     - Test login response includes role field
     - Test /me response includes role field
     - Test logout clears session
     - _Requirements: 7.1, 7.2, 4.1_
   
-  - [ ] 10.4 Write integration tests for auth with roles
+  - [x] 10.4 Write integration tests for auth with roles
     - Test POST /auth/login returns role field
     - Test GET /auth/me returns role field
     - Test authentication fails for user without role
     - _Requirements: 7.1, 7.2, 6.4_
   
-  - [ ] 10.5 Write property test for authentication response includes role
+  - [x] 10.5 Write property test for authentication response includes role
     - **Property 7: Authentication Response Includes Role**
     - **Validates: Requirements 7.1, 7.2**
     - Test that authentication responses include role field

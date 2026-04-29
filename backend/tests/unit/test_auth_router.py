@@ -74,7 +74,7 @@ def client():
 
 @pytest.fixture()
 def seeded_user(client):
-    """Insert a known user into the shared in-memory DB and return their credentials.
+    """Insert a known User-role user into the shared in-memory DB and return their credentials.
 
     Depends on `client` so both fixtures share the same SQLAlchemy engine.
     """
@@ -84,7 +84,24 @@ def seeded_user(client):
         session.add(user)
         session.commit()
         session.refresh(user)
-        return {"id": user.id, "username": "testuser", "password": "testpass"}
+        return {"id": user.id, "username": "testuser", "password": "testpass", "role": "User"}
+    finally:
+        session.close()
+
+
+@pytest.fixture()
+def seeded_admin(client):
+    """Insert a known Admin-role user into the shared in-memory DB and return their credentials.
+
+    Depends on `client` so both fixtures share the same SQLAlchemy engine.
+    """
+    session = client._test_session_factory()  # type: ignore[attr-defined]
+    try:
+        admin = User(username="adminuser", hashed_password=hash_password("adminpass"), role_id=2)
+        session.add(admin)
+        session.commit()
+        session.refresh(admin)
+        return {"id": admin.id, "username": "adminuser", "password": "adminpass", "role": "Admin"}
     finally:
         session.close()
 
@@ -105,6 +122,7 @@ def test_login_with_valid_credentials_returns_200_and_user_response(client, seed
     body = response.json()
     assert body["id"] == seeded_user["id"]
     assert body["username"] == seeded_user["username"]
+    assert body["role"] == "User"
     # Session cookie must be present
     assert "session" in client.cookies
 
@@ -193,6 +211,7 @@ def test_me_with_valid_session_returns_user_response(client, seeded_user):
     body = response.json()
     assert body["id"] == seeded_user["id"]
     assert body["username"] == seeded_user["username"]
+    assert body["role"] == "User"
 
 
 def test_me_without_session_returns_401(client):
@@ -200,3 +219,137 @@ def test_me_without_session_returns_401(client):
     response = client.get("/auth/me")
 
     assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Role field in login and /me responses (Requirements 7.1, 7.2)
+# ---------------------------------------------------------------------------
+
+
+def test_login_response_includes_role_field_for_user_role(client, seeded_user):
+    """POST /auth/login response includes role field with value 'User'.
+
+    Requirements: 7.1
+    """
+    response = client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "role" in body
+    assert body["role"] == "User"
+
+
+def test_login_response_includes_role_field_for_admin_role(client, seeded_admin):
+    """POST /auth/login response includes role field with value 'Admin'.
+
+    Requirements: 7.1
+    """
+    response = client.post(
+        "/auth/login",
+        json={"username": seeded_admin["username"], "password": seeded_admin["password"]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "role" in body
+    assert body["role"] == "Admin"
+
+
+def test_me_response_includes_role_field_for_user_role(client, seeded_user):
+    """GET /auth/me response includes role field with value 'User'.
+
+    Requirements: 7.2
+    """
+    client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    response = client.get("/auth/me")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "role" in body
+    assert body["role"] == "User"
+
+
+def test_me_response_includes_role_field_for_admin_role(client, seeded_admin):
+    """GET /auth/me response includes role field with value 'Admin'.
+
+    Requirements: 7.2
+    """
+    client.post(
+        "/auth/login",
+        json={"username": seeded_admin["username"], "password": seeded_admin["password"]},
+    )
+
+    response = client.get("/auth/me")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "role" in body
+    assert body["role"] == "Admin"
+
+
+def test_login_response_shape_includes_all_required_fields(client, seeded_user):
+    """POST /auth/login response contains id, username, and role fields.
+
+    Requirements: 7.1
+    """
+    response = client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "id" in body
+    assert "username" in body
+    assert "role" in body
+
+
+def test_me_response_shape_includes_all_required_fields(client, seeded_user):
+    """GET /auth/me response contains id, username, and role fields.
+
+    Requirements: 7.2
+    """
+    client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    response = client.get("/auth/me")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "id" in body
+    assert "username" in body
+    assert "role" in body
+
+
+def test_logout_clears_session_and_me_returns_401(client, seeded_user):
+    """POST /auth/logout clears session; GET /auth/me returns 401 afterwards.
+
+    Requirements: 4.1
+    """
+    # Log in
+    client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    # Verify session is active
+    me_before = client.get("/auth/me")
+    assert me_before.status_code == 200
+
+    # Log out
+    logout_response = client.post("/auth/logout")
+    assert logout_response.status_code == 200
+    assert logout_response.json() == {"detail": "Logged out"}
+
+    # Session must be cleared
+    me_after = client.get("/auth/me")
+    assert me_after.status_code == 401
