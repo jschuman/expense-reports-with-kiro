@@ -9,6 +9,7 @@ export default defineConfig({
     proxy: {
       '/auth': 'http://localhost:8000',
       '/reports': 'http://localhost:8000',
+      '/clients': 'http://localhost:8000',
     },
   },
   test: {
