@@ -156,7 +156,7 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Use Hypothesis to generate users with different roles
     - _Requirements: 7.1, 7.2_
 
-- [ ] 11. Checkpoint - Verify backend implementation
+- [x] 11. Checkpoint - Verify backend implementation
   - Ensure all backend tests pass
   - Verify API endpoints return correct data for Admin and User roles
   - Test logout endpoint clears session
