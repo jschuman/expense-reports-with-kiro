@@ -317,3 +317,129 @@ async def test_property_user_sees_only_own_reports(num_other_users, own_reports,
     finally:
         await async_client.aclose()
         cleanup_test_client(async_client)
+
+
+# ---------------------------------------------------------------------------
+# Feature: user-roles-and-logout
+# Property 6: Role Retrieval from Session
+# **Validates: Requirements 5.1**
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(
+    role_name=st.sampled_from(["User", "Admin"]),
+)
+async def test_property_role_retrieved_correctly_from_session(role_name):
+    """Property 6: Role Retrieval from Session.
+
+    # Feature: user-roles-and-logout, Property 6: Role Retrieval from Session
+
+    For any authenticated user with any assigned role, when the system processes a
+    request to GET /reports, the system SHALL correctly retrieve the user's role from
+    the database based on the session's user_id, and the role-based filtering SHALL
+    match the role assigned to that user at creation time.
+
+    Concretely:
+    - A user created with Admin role (role_id=2) SHALL receive all reports.
+    - A user created with User role (role_id=1) SHALL receive only their own reports.
+
+    **Validates: Requirements 5.1**
+    """
+    async_client = create_test_client()
+    now = datetime.now(timezone.utc)
+
+    role_id = 2 if role_name == "Admin" else 1
+
+    try:
+        session = async_client._test_session_factory()  # type: ignore[attr-defined]
+
+        try:
+            # Create the test user with the generated role
+            test_user = User(
+                username="role_test_user",
+                hashed_password=_TEST_PASSWORD_HASH,
+                role_id=role_id,
+            )
+            session.add(test_user)
+            session.flush()
+
+            # Create a second user (always User role) with a report
+            other_user = User(
+                username="other_role_user",
+                hashed_password=_TEST_PASSWORD_HASH,
+                role_id=1,
+            )
+            session.add(other_user)
+            session.flush()
+
+            # Create one report for the test user and one for the other user
+            own_report = ExpenseReport(
+                title="Test User Own Report",
+                total_amount=100.0,
+                status="Pending",
+                owner_id=test_user.id,
+                created_at=now,
+                reimbursable_from_client=False,
+            )
+            other_report = ExpenseReport(
+                title="Other User Report",
+                total_amount=200.0,
+                status="Pending",
+                owner_id=other_user.id,
+                created_at=now,
+                reimbursable_from_client=False,
+            )
+            session.add_all([own_report, other_report])
+            session.commit()
+            session.refresh(test_user)
+            test_user_id = test_user.id
+        finally:
+            session.close()
+
+        # Login as the test user — this establishes the session
+        login_response = await async_client.post(
+            "/auth/login",
+            json={"username": "role_test_user", "password": "test_password"},
+        )
+        assert login_response.status_code == 200, (
+            f"Login failed for user with role '{role_name}': {login_response.text}"
+        )
+
+        # GET /reports — the system must retrieve the role from the session
+        response = await async_client.get("/reports")
+        assert response.status_code == 200
+
+        reports = response.json()
+
+        if role_name == "Admin":
+            # Admin role: system must retrieve Admin role from session and return ALL reports
+            assert len(reports) == 2, (
+                f"Admin user should see 2 reports (own + other), got {len(reports)}"
+            )
+            owner_ids = {r["owner_id"] for r in reports}
+            assert test_user_id in owner_ids, (
+                "Admin should see their own report"
+            )
+            # Verify owner_username is present for all reports (role correctly applied)
+            for report in reports:
+                assert "owner_username" in report
+                assert report["owner_username"] is not None
+        else:
+            # User role: system must retrieve User role from session and return ONLY own reports
+            assert len(reports) == 1, (
+                f"User role user should see 1 report (own only), got {len(reports)}"
+            )
+            assert reports[0]["owner_id"] == test_user_id, (
+                f"User role user should only see their own report. "
+                f"Got owner_id {reports[0]['owner_id']}, expected {test_user_id}"
+            )
+            # Verify the other user's report is NOT present
+            owner_ids = {r["owner_id"] for r in reports}
+            assert owner_ids == {test_user_id}, (
+                f"User role user must not see other users' reports. Got owner_ids: {owner_ids}"
+            )
+    finally:
+        await async_client.aclose()
+        cleanup_test_client(async_client)

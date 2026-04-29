@@ -87,28 +87,28 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Use Hypothesis to generate multiple users and reports
     - _Requirements: 3.1, 5.3_
 
-- [ ] 8. Update reports router for role-based filtering
-  - [ ] 8.1 Modify list_reports endpoint in backend/app/routers/reports.py
+- [x] 8. Update reports router for role-based filtering
+  - [x] 8.1 Modify list_reports endpoint in backend/app/routers/reports.py
     - Add role-based branching logic (Admin vs User)
     - Eagerly load role relationship for current_user
     - Call get_all_reports for Admin role
     - Call get_reports_for_user for User role
     - _Requirements: 2.1, 3.1, 5.1, 5.2_
   
-  - [ ] 8.2 Write unit tests for reports router
+  - [x] 8.2 Write unit tests for reports router
     - Test list_reports with Admin role returns all reports
     - Test list_reports with User role returns filtered reports
     - Test role-based branching logic
     - _Requirements: 2.1, 3.1, 5.1, 5.2_
   
-  - [ ] 8.3 Write integration tests for role-based report access
+  - [x] 8.3 Write integration tests for role-based report access
     - Test end-to-end: Admin login → GET /reports → receives all reports
     - Test end-to-end: User login → GET /reports → receives only own reports
     - Test that reports include owner_username for admin users
     - Test that user cannot see other users' reports
     - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 3.3, 5.2, 5.3_
   
-  - [ ] 8.4 Write property test for role retrieval from session
+  - [x] 8.4 Write property test for role retrieval from session
     - **Property 6: Role Retrieval from Session**
     - **Validates: Requirements 5.1**
     - Test that system correctly retrieves role from session
