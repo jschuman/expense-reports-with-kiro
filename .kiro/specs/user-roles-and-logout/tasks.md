@@ -189,13 +189,13 @@ This implementation adds role-based access control (RBAC) and logout functionali
   - Verify documentation matches implementation
   - _Requirements: 2.1, 3.1, 7.1, 7.2_
 
-- [ ] 14. Create frontend User type
-  - [ ] 14.1 Create frontend/src/types/user.ts
+- [x] 14. Create frontend User type
+  - [x] 14.1 Create frontend/src/types/user.ts
     - Define User interface with id, username, and role fields
     - Add JSDoc comments explaining each field
     - _Requirements: 7.1, 7.2, 7.4_
   
-  - [ ] 14.2 Write unit tests for User type
+  - [x] 14.2 Write unit tests for User type
     - Test User type structure matches backend UserResponse
     - _Requirements: 7.1, 7.2_
 
