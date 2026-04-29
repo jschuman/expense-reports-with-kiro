@@ -43,14 +43,14 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Test relationship to User model
     - _Requirements: 1.1, 1.2_
 
-- [ ] 5. Modify User model to include role relationship
-  - [ ] 5.1 Update backend/app/models/user.py
+- [x] 5. Modify User model to include role relationship
+  - [x] 5.1 Update backend/app/models/user.py
     - Add role_id foreign key column
     - Add role relationship to Role entity
     - Import Role type for type checking
     - _Requirements: 1.3, 1.5_
   
-  - [ ] 5.2 Write unit tests for User model with role
+  - [x] 5.2 Write unit tests for User model with role
     - Test User model with role_id foreign key
     - Test role relationship loading
     - Test that user without role_id fails validation

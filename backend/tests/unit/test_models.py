@@ -194,6 +194,50 @@ class TestUserModel:
         fetched = db_session.query(User).filter_by(username="alice").one()
         assert fetched.reports == []
 
+    def test_user_with_role_id_foreign_key(self, db_session):
+        """A User with a valid role_id should persist and reference the correct role."""
+        admin_role = db_session.query(Role).filter_by(name="Admin").one()
+        
+        user = make_user(username="adminuser", role_id=admin_role.id)
+        db_session.add(user)
+        db_session.commit()
+
+        fetched = db_session.query(User).filter_by(username="adminuser").one()
+        assert fetched.role_id == admin_role.id
+        assert fetched.role_id == 2  # Admin role has id=2
+
+    def test_user_role_relationship_loads_correctly(self, db_session):
+        """The role relationship on User should eagerly load the associated Role."""
+        user_role = db_session.query(Role).filter_by(name="User").one()
+        
+        user = make_user(username="regularuser", role_id=user_role.id)
+        db_session.add(user)
+        db_session.commit()
+
+        fetched = db_session.query(User).filter_by(username="regularuser").one()
+        # Access the role relationship
+        assert fetched.role is not None
+        assert fetched.role.name == "User"
+        assert fetched.role.id == user_role.id
+
+    def test_user_without_role_id_fails_validation(self, db_session):
+        """Creating a User without role_id must raise IntegrityError due to NOT NULL constraint."""
+        # Attempt to create a user without role_id (violates NOT NULL constraint)
+        user = User(username="noroleuser", hashed_password="hashed_pw")
+        db_session.add(user)
+        
+        with pytest.raises(IntegrityError):
+            db_session.commit()
+
+    def test_user_with_invalid_role_id_fails_validation(self, db_session):
+        """Creating a User with non-existent role_id must raise IntegrityError due to FK constraint."""
+        # Attempt to create a user with a role_id that doesn't exist
+        user = make_user(username="invalidrole", role_id=9999)
+        db_session.add(user)
+        
+        with pytest.raises(IntegrityError):
+            db_session.commit()
+
 
 # ---------------------------------------------------------------------------
 # ExpenseReport model tests
