@@ -88,6 +88,68 @@ def make_report(owner_id: int, **kwargs) -> ExpenseReport:
 
 
 # ---------------------------------------------------------------------------
+# Role model tests
+# ---------------------------------------------------------------------------
+
+
+class TestRoleModel:
+    def test_create_role_persists_and_is_retrievable(self, db_session):
+        """A Role created with valid fields should be saved and queryable."""
+        role = Role(name="Manager")
+        db_session.add(role)
+        db_session.commit()
+
+        fetched = db_session.query(Role).filter_by(name="Manager").one()
+        assert fetched.id is not None
+        assert fetched.name == "Manager"
+
+    def test_duplicate_role_name_raises_integrity_error(self, db_session):
+        """Inserting two Roles with the same name must raise IntegrityError."""
+        db_session.add(Role(name="Supervisor"))
+        db_session.commit()
+
+        db_session.add(Role(name="Supervisor"))
+        with pytest.raises(IntegrityError):
+            db_session.commit()
+
+    def test_role_users_relationship_empty_by_default(self, db_session):
+        """A newly created Role with no associated users should have an empty list."""
+        role = Role(name="Guest")
+        db_session.add(role)
+        db_session.commit()
+
+        fetched = db_session.query(Role).filter_by(name="Guest").one()
+        assert fetched.users == []
+
+    def test_role_users_relationship_populated(self, db_session):
+        """After adding a user with a role, the Role.users list should contain that user."""
+        # Use existing seeded role
+        role = db_session.query(Role).filter_by(name="User").one()
+        
+        user = make_user(username="testuser", role_id=role.id)
+        db_session.add(user)
+        db_session.commit()
+
+        # Expire the cached state so SQLAlchemy re-fetches from DB
+        db_session.expire(role)
+        assert len(role.users) >= 1
+        assert any(u.username == "testuser" for u in role.users)
+
+    def test_user_role_relationship_resolves_correctly(self, db_session):
+        """The role relationship on User should resolve to the correct Role."""
+        role = db_session.query(Role).filter_by(name="Admin").one()
+        
+        user = make_user(username="adminuser", role_id=role.id)
+        db_session.add(user)
+        db_session.commit()
+
+        fetched_user = db_session.query(User).filter_by(username="adminuser").one()
+        assert fetched_user.role is not None
+        assert fetched_user.role.id == role.id
+        assert fetched_user.role.name == "Admin"
+
+
+# ---------------------------------------------------------------------------
 # User model tests
 # ---------------------------------------------------------------------------
 

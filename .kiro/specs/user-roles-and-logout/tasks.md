@@ -29,15 +29,15 @@ This implementation adds role-based access control (RBAC) and logout functionali
   - Ensure seed script is idempotent (check if users exist before creating)
   - _Requirements: 1.3, 1.4, 6.2_
 
-- [ ] 4. Implement Role model
-  - [ ] 4.1 Create backend/app/models/role.py with Role ORM model
+- [x] 4. Implement Role model
+  - [x] 4.1 Create backend/app/models/role.py with Role ORM model
     - Define Role class with id and name columns
     - Add unique constraint on name column
     - Add index on name column
     - Define relationship to User model
     - _Requirements: 1.1, 1.2_
   
-  - [ ] 4.2 Write unit tests for Role model
+  - [x] 4.2 Write unit tests for Role model
     - Test Role model creation
     - Test unique constraint on role name
     - Test relationship to User model
