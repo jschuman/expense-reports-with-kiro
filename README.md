@@ -9,6 +9,7 @@ The Expense Report Web App allows authenticated users to create, view, and manag
 ### Key Features
 
 - **User Authentication**: Secure login system with session-based authentication
+- **Role-Based Access Control**: User and Admin roles with different report visibility permissions
 - **Expense Report Management**: Create and view expense reports with detailed information
 - **Client Reimbursement Tracking**: Mark expenses as client-reimbursable and associate them with specific clients
 - **Automatic Metadata**: Owner and creation timestamp are automatically recorded
@@ -91,13 +92,16 @@ The Expense Report Web App allows authenticated users to create, view, and manag
    # Install Python dependencies
    pip install -r requirements.txt
    
-   # Create the database and seed with a default user
+   # Run database migrations
+   alembic upgrade head
+   
+   # Seed the database with default users
    python3 seed.py
    ```
 
-   This creates a user with credentials:
-   - Username: `admin`
-   - Password: `password123`
+   This creates two users with different roles:
+   - Admin user: `admin` / `admin123`
+   - Regular user: `user` / `user123`
 
 3. **Set up the frontend**
 
@@ -136,9 +140,9 @@ The frontend will be available at: http://localhost:5173 (or the next available 
 ### First Login
 
 1. Navigate to http://localhost:5173
-2. Log in with the seeded credentials:
-   - Username: `admin`
-   - Password: `password123`
+2. Log in with one of the seeded credentials:
+   - **Admin**: `admin` / `admin123` (can view all expense reports)
+   - **User**: `user` / `user123` (can view only their own reports)
 3. You'll be redirected to the dashboard where you can create and view expense reports
 
 ## Development
@@ -179,15 +183,29 @@ The backend uses FastAPI's automatic OpenAPI documentation. When the backend is 
 
 The SQLite database file is located at `backend/expense_reports.db`.
 
+**Database migrations** are managed with Alembic:
+
+```bash
+cd backend
+
+# Apply all pending migrations
+alembic upgrade head
+
+# View migration history
+alembic history
+
+# Rollback one migration
+alembic downgrade -1
+```
+
 **To reset the database:**
 
 ```bash
 cd backend
 rm expense_reports.db    # Delete the database
-python3 seed.py          # Recreate and seed
+alembic upgrade head     # Run migrations to recreate schema
+python3 seed.py          # Seed with default users
 ```
-
-The database schema is automatically created on application startup via SQLAlchemy's `create_tables()` function.
 
 ## Available Clients
 

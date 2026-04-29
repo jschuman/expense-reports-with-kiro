@@ -6,7 +6,7 @@ This implementation adds role-based access control (RBAC) and logout functionali
 
 ## Tasks
 
-- [ ] 1. Create database migration for roles
+- [x] 1. Create database migration for roles
   - Create Alembic migration script to add roles table and role_id column to users
   - Migration must create roles table with id and name columns
   - Migration must insert "User" (id=1) and "Admin" (id=2) roles
@@ -24,8 +24,8 @@ This implementation adds role-based access control (RBAC) and logout functionali
 
 - [ ] 3. Update seed file to create users with roles
   - Modify backend/seed.py to query Role table for User and Admin roles
-  - Create two users: "admin" with Admin role and "user" with User role
-  - Set passwords: admin/admin123, user/user123
+  - Create three users: "admin" with Admin role and two "users" with User role
+  - Set passwords: admin/admin123, user1/user123, user2/user123
   - Ensure seed script is idempotent (check if users exist before creating)
   - _Requirements: 1.3, 1.4, 6.2_
 
