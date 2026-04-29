@@ -14,6 +14,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base, get_db
 from app.main import app
+from app.models.role import Role
 from app.models.user import User
 from app.services.auth_service import hash_password
 
@@ -44,6 +45,15 @@ def client():
     Base.metadata.create_all(bind=engine)
     TestSession = sessionmaker(bind=engine)
 
+    # Seed roles required by the User model's NOT NULL role_id constraint
+    session = TestSession()
+    try:
+        session.add(Role(id=1, name="User"))
+        session.add(Role(id=2, name="Admin"))
+        session.commit()
+    finally:
+        session.close()
+
     def override_get_db():
         session = TestSession()
         try:
@@ -70,7 +80,7 @@ def seeded_user(client):
     """
     session = client._test_session_factory()  # type: ignore[attr-defined]
     try:
-        user = User(username="testuser", hashed_password=hash_password("testpass"))
+        user = User(username="testuser", hashed_password=hash_password("testpass"), role_id=1)
         session.add(user)
         session.commit()
         session.refresh(user)
