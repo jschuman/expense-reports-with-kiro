@@ -115,13 +115,13 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Use Hypothesis to generate different role assignments
     - _Requirements: 5.1_
 
-- [ ] 9. Update auth schemas to include role field
-  - [ ] 9.1 Modify UserResponse in backend/app/schemas/auth.py
+- [x] 9. Update auth schemas to include role field
+  - [x] 9.1 Modify UserResponse in backend/app/schemas/auth.py
     - Add role field (string type) to UserResponse schema
     - Add docstring explaining role field
     - _Requirements: 7.1, 7.2, 7.3_
   
-  - [ ] 9.2 Write unit tests for auth schemas
+  - [x] 9.2 Write unit tests for auth schemas
     - Test UserResponse serialization includes role field
     - Test UserResponse with different role values
     - _Requirements: 7.1, 7.2, 7.3_
