@@ -73,6 +73,124 @@ def user_b(db_session):
 
 
 # ---------------------------------------------------------------------------
+# get_all_reports
+# ---------------------------------------------------------------------------
+
+
+def test_get_all_reports_returns_all_reports_in_database(db_session, user_a, user_b):
+    """get_all_reports returns all expense reports regardless of owner."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    r1 = ExpenseReport(
+        title="Alice Report 1",
+        description="Travel",
+        total_amount=100.0,
+        status="Pending",
+        owner_id=user_a.id,
+        created_at=now,
+        reimbursable_from_client=False,
+    )
+    r2 = ExpenseReport(
+        title="Alice Report 2",
+        description="Meals",
+        total_amount=50.0,
+        status="Pending",
+        owner_id=user_a.id,
+        created_at=now,
+        reimbursable_from_client=False,
+    )
+    r3 = ExpenseReport(
+        title="Bob Report 1",
+        description="Supplies",
+        total_amount=200.0,
+        status="Pending",
+        owner_id=user_b.id,
+        created_at=now,
+        reimbursable_from_client=False,
+    )
+    db_session.add_all([r1, r2, r3])
+    db_session.commit()
+
+    results = report_service.get_all_reports(db_session)
+
+    assert len(results) == 3
+    titles = {r.title for r in results}
+    assert titles == {"Alice Report 1", "Alice Report 2", "Bob Report 1"}
+
+
+def test_get_all_reports_returns_empty_list_when_no_reports(db_session):
+    """get_all_reports returns an empty list when there are no reports in the database."""
+    results = report_service.get_all_reports(db_session)
+
+    assert results == []
+
+
+def test_get_all_reports_orders_by_id_ascending(db_session, user_a):
+    """get_all_reports returns reports ordered by id in ascending order."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    r1 = ExpenseReport(
+        title="Report C",
+        total_amount=100.0,
+        status="Pending",
+        owner_id=user_a.id,
+        created_at=now,
+        reimbursable_from_client=False,
+    )
+    r2 = ExpenseReport(
+        title="Report A",
+        total_amount=50.0,
+        status="Pending",
+        owner_id=user_a.id,
+        created_at=now,
+        reimbursable_from_client=False,
+    )
+    r3 = ExpenseReport(
+        title="Report B",
+        total_amount=200.0,
+        status="Pending",
+        owner_id=user_a.id,
+        created_at=now,
+        reimbursable_from_client=False,
+    )
+    db_session.add_all([r1, r2, r3])
+    db_session.commit()
+
+    results = report_service.get_all_reports(db_session)
+
+    # Results should be ordered by id (which is insertion order in this case)
+    assert len(results) == 3
+    assert results[0].id < results[1].id < results[2].id
+    assert [r.title for r in results] == ["Report C", "Report A", "Report B"]
+
+
+def test_get_all_reports_eagerly_loads_owner_relationship(db_session, user_a):
+    """get_all_reports eagerly loads the owner relationship so owner.username is accessible."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    r1 = ExpenseReport(
+        title="Eager Load Test",
+        total_amount=75.0,
+        status="Pending",
+        owner_id=user_a.id,
+        created_at=now,
+        reimbursable_from_client=False,
+    )
+    db_session.add(r1)
+    db_session.commit()
+
+    results = report_service.get_all_reports(db_session)
+
+    assert len(results) == 1
+    # owner relationship must be loaded — no lazy-load exception
+    assert results[0].owner is not None
+    assert results[0].owner.username == "alice"
+
+
+# ---------------------------------------------------------------------------
 # get_reports_for_user
 # ---------------------------------------------------------------------------
 

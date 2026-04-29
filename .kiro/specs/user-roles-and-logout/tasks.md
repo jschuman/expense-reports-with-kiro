@@ -56,57 +56,31 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Test that user without role_id fails validation
     - _Requirements: 1.3, 1.5_
 
-- [ ] 6. Checkpoint - Verify database schema and models
+- [x] 6. Checkpoint - Verify database schema and models
   - Ensure all tests pass for Role and User models
   - Verify database schema matches ORM models
   - Ask the user if questions arise
 
-- [ ] 7. Implement report service functions for role-based access
-  - [ ] 7.1 Add get_all_reports function to backend/app/services/report_service.py
+- [x] 7. Implement report service functions for role-based access
+  - [x] 7.1 Add get_all_reports function to backend/app/services/report_service.py
     - Implement function to return all expense reports ordered by id
     - Eagerly load owner relationship using joinedload
     - _Requirements: 2.1, 2.2_
   
-  - [ ] 6.2 Write unit tests for report service
+  - [x] 7.2 Write unit tests for report service
     - Test get_all_reports returns all reports
     - Test get_reports_for_user filters by owner_id
     - Test eager loading of owner relationship
     - _Requirements: 2.1, 3.1_
   
-  - [ ] 6.3 Write property test for admin report visibility
+  - [x] 7.3 Write property test for admin report visibility
     - **Property 2: Admin Report Visibility**
     - **Validates: Requirements 2.1, 2.2, 2.3**
     - Test that admin users receive all reports with owner information
     - Use Hypothesis to generate multiple users and reports
     - _Requirements: 2.1, 2.2, 2.3_
   
-  - [ ] 6.4 Write property test for user report filtering
-    - **Property 3: User Report Filtering**
-    - **Validates: Requirements 3.1, 5.3**
-    - Test that user role users see only their own reports
-    - Use Hypothesis to generate multiple users and reports
-    - _Requirements: 3.1, 5.3_
-
-- [ ] 7. Implement report service functions for role-based access
-  - [ ] 7.1 Add get_all_reports function to backend/app/services/report_service.py
-    - Implement function to return all expense reports ordered by id
-    - Eagerly load owner relationship using joinedload
-    - _Requirements: 2.1, 2.2_
-  
-  - [ ] 7.2 Write unit tests for report service
-    - Test get_all_reports returns all reports
-    - Test get_reports_for_user filters by owner_id
-    - Test eager loading of owner relationship
-    - _Requirements: 2.1, 3.1_
-  
-  - [ ] 7.3 Write property test for admin report visibility
-    - **Property 2: Admin Report Visibility**
-    - **Validates: Requirements 2.1, 2.2, 2.3**
-    - Test that admin users receive all reports with owner information
-    - Use Hypothesis to generate multiple users and reports
-    - _Requirements: 2.1, 2.2, 2.3_
-  
-  - [ ] 7.4 Write property test for user report filtering
+  - [x] 7.4 Write property test for user report filtering
     - **Property 3: User Report Filtering**
     - **Validates: Requirements 3.1, 5.3**
     - Test that user role users see only their own reports
