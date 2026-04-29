@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Update README After Spec",
+  "description": "Automatically prompts the agent to update the README.md file with information about newly completed features from spec implementations",
+  "version": "1",
+  "when": {
+    "type": "postTaskExecution"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A spec task has just been completed. Review the completed work and update the README.md file to include information about the new feature or changes. Focus on updating the Overview/Key Features section and any relevant Getting Started or Usage sections. Keep the updates concise and consistent with the existing README style."
+  }
+}
