@@ -183,7 +183,7 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Use Hypothesis to test multiple protected endpoints
     - _Requirements: 4.4_
 
-- [ ] 13. Update OpenAPI documentation
+- [x] 13. Update OpenAPI documentation
   - Modify backend/docs/openapi.yaml to include role field in UserResponse
   - Update GET /reports endpoint description to explain role-based behavior
   - Verify documentation matches implementation

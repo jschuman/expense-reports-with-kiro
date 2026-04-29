@@ -54,6 +54,7 @@ paths:
               example:
                 id: 1
                 username: alice
+                role: User
         "401":
           description: Invalid credentials
           content:
@@ -105,6 +106,7 @@ paths:
               example:
                 id: 1
                 username: alice
+                role: User
         "401":
           description: No valid session
           content:
@@ -117,10 +119,13 @@ paths:
   /reports:
     get:
       tags: [reports]
-      summary: List the authenticated user's expense reports
+      summary: List expense reports based on the authenticated user's role
       description: >
-        Returns all expense reports whose owner_id matches the authenticated
-        user. Requires a valid session cookie.
+        Returns expense reports filtered by the authenticated user's role.
+        Admin role users receive all expense reports in the system, each
+        including the owner_username field to identify the submitter.
+        User role users receive only the reports they own (owner_id matches
+        their user id). Requires a valid session cookie.
       operationId: listReports
       security:
         - cookieAuth: []
@@ -276,7 +281,7 @@ components:
 
     UserResponse:
       type: object
-      required: [id, username]
+      required: [id, username, role]
       properties:
         id:
           type: integer
@@ -284,6 +289,13 @@ components:
         username:
           type: string
           description: The user's login name
+        role:
+          type: string
+          enum: [User, Admin]
+          description: >
+            The name of the role assigned to this user.
+            "User" has access only to their own expense reports.
+            "Admin" has access to all expense reports in the system.
 
     ExpenseReportCreate:
       type: object
