@@ -199,14 +199,14 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Test User type structure matches backend UserResponse
     - _Requirements: 7.1, 7.2_
 
-- [ ] 15. Update frontend auth API
-  - [ ] 15.1 Modify frontend/src/api/auth.ts
+- [x] 15. Update frontend auth API
+  - [x] 15.1 Modify frontend/src/api/auth.ts
     - Update LoginResponse interface to include role field
     - Add logout function that calls POST /auth/logout
     - Update getCurrentUser return type to include role
     - _Requirements: 4.5, 7.1, 7.2_
   
-  - [ ] 15.2 Write unit tests for auth API
+  - [x] 15.2 Write unit tests for auth API
     - Test logout function calls correct endpoint
     - Test logout function handles errors appropriately
     - Test login and getCurrentUser parse role field

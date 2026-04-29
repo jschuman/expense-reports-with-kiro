@@ -10,4 +10,6 @@ export interface LoginRequest {
 export interface UserResponse {
   id: number;
   username: string;
+  /** The user's assigned role name (e.g., "User" or "Admin"). */
+  role: string;
 }
