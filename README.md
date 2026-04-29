@@ -99,9 +99,9 @@ The Expense Report Web App allows authenticated users to create, view, and manag
    python3 seed.py
    ```
 
-   This creates two users with different roles:
-   - Admin user: `admin` / `admin123`
-   - Regular user: `user` / `user123`
+   This creates three users with different roles:
+   - Admin user: `admin` / `admin123` (can view all expense reports)
+   - Regular users: `user1` / `user123` and `user2` / `user123` (can view only their own reports)
 
 3. **Set up the frontend**
 
@@ -142,7 +142,8 @@ The frontend will be available at: http://localhost:5173 (or the next available 
 1. Navigate to http://localhost:5173
 2. Log in with one of the seeded credentials:
    - **Admin**: `admin` / `admin123` (can view all expense reports)
-   - **User**: `user` / `user123` (can view only their own reports)
+   - **User 1**: `user1` / `user123` (can view only their own reports)
+   - **User 2**: `user2` / `user123` (can view only their own reports)
 3. You'll be redirected to the dashboard where you can create and view expense reports
 
 ## Development

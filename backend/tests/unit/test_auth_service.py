@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.db.database import Base
+from app.models.role import Role
 from app.models.user import User
 from app.services.auth_service import authenticate_user, hash_password, verify_password
 
@@ -18,6 +19,14 @@ def db_session():
     Base.metadata.create_all(bind=engine)
     Session = sessionmaker(bind=engine)
     session = Session()
+    
+    # Seed roles for tests
+    user_role = Role(id=1, name="User")
+    admin_role = Role(id=2, name="Admin")
+    session.add(user_role)
+    session.add(admin_role)
+    session.commit()
+    
     try:
         yield session
     finally:
@@ -57,7 +66,7 @@ def test_hash_password_never_returns_plaintext():
 
 def test_authenticate_user_returns_user_when_credentials_are_valid(db_session):
     """authenticate_user returns the User object when username exists and password matches."""
-    user = User(username="alice", hashed_password=hash_password("secret"))
+    user = User(username="alice", hashed_password=hash_password("secret"), role_id=1)
     db_session.add(user)
     db_session.commit()
 
@@ -76,7 +85,7 @@ def test_authenticate_user_returns_none_when_username_does_not_exist(db_session)
 
 def test_authenticate_user_returns_none_when_password_does_not_match(db_session):
     """authenticate_user returns None when the password does not match the stored hash."""
-    user = User(username="bob", hashed_password=hash_password("correctpassword"))
+    user = User(username="bob", hashed_password=hash_password("correctpassword"), role_id=1)
     db_session.add(user)
     db_session.commit()
 

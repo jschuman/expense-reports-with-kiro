@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base
 from app.models.expense_report import ExpenseReport
+from app.models.role import Role
 from app.models.user import User
 from app.schemas.expense_report import ExpenseReportCreate
 from app.services import report_service
@@ -36,6 +37,14 @@ def db_session():
     Base.metadata.create_all(bind=engine)
     Session = sessionmaker(bind=engine)
     session = Session()
+    
+    # Seed roles for tests
+    user_role = Role(id=1, name="User")
+    admin_role = Role(id=2, name="Admin")
+    session.add(user_role)
+    session.add(admin_role)
+    session.commit()
+    
     try:
         yield session
     finally:
@@ -46,7 +55,7 @@ def db_session():
 @pytest.fixture()
 def user_a(db_session):
     """Seed and return a User with username 'alice'."""
-    user = User(username="alice", hashed_password=hash_password("pw"))
+    user = User(username="alice", hashed_password=hash_password("pw"), role_id=1)
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
@@ -56,7 +65,7 @@ def user_a(db_session):
 @pytest.fixture()
 def user_b(db_session):
     """Seed and return a second User with username 'bob'."""
-    user = User(username="bob", hashed_password=hash_password("pw"))
+    user = User(username="bob", hashed_password=hash_password("pw"), role_id=1)
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)

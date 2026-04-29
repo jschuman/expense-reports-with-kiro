@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db.database import Base
 from app.models.expense_report import ExpenseReport
+from app.models.role import Role
 from app.models.user import User
 
 
@@ -29,6 +30,8 @@ def db_session():
 
     Foreign key enforcement is explicitly enabled via PRAGMA because SQLite
     disables it by default.
+    
+    Roles are seeded automatically for tests that require them.
     """
     engine = create_engine(
         "sqlite:///:memory:",
@@ -47,6 +50,13 @@ def db_session():
 
     Session = sessionmaker(bind=engine)
     session = Session()
+    
+    # Seed roles for tests
+    user_role = Role(id=1, name="User")
+    admin_role = Role(id=2, name="Admin")
+    session.add(user_role)
+    session.add(admin_role)
+    session.commit()
 
     try:
         yield session
@@ -61,8 +71,8 @@ def db_session():
 # ---------------------------------------------------------------------------
 
 
-def make_user(username: str = "alice", hashed_password: str = "hashed_pw") -> User:
-    return User(username=username, hashed_password=hashed_password)
+def make_user(username: str = "alice", hashed_password: str = "hashed_pw", role_id: int = 1) -> User:
+    return User(username=username, hashed_password=hashed_password, role_id=role_id)
 
 
 def make_report(owner_id: int, **kwargs) -> ExpenseReport:

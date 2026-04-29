@@ -15,14 +15,14 @@ This implementation adds role-based access control (RBAC) and logout functionali
   - Migration must add foreign key constraint from users.role_id to roles.id
   - _Requirements: 1.1, 1.2, 1.5, 6.1, 6.2, 6.3_
 
-- [ ] 2. Run and verify database migration
+- [x] 2. Run and verify database migration
   - Execute migration using Alembic: `alembic upgrade head`
   - Verify roles table exists with User and Admin roles
   - Verify all existing users have role_id assigned
   - Verify foreign key constraint is enforced
   - _Requirements: 1.1, 1.2, 1.5, 6.1, 6.2, 6.3_
 
-- [ ] 3. Update seed file to create users with roles
+- [x] 3. Update seed file to create users with roles
   - Modify backend/seed.py to query Role table for User and Admin roles
   - Create three users: "admin" with Admin role and two "users" with User role
   - Set passwords: admin/admin123, user1/user123, user2/user123
