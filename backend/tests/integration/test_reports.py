@@ -25,6 +25,7 @@ from sqlalchemy.pool import StaticPool
 from app.db.database import Base, get_db
 from app.main import app
 from app.models.expense_report import ExpenseReport
+from app.models.role import Role
 from app.models.user import User
 from app.services.auth_service import hash_password
 
@@ -45,6 +46,15 @@ async def async_client():
     )
     Base.metadata.create_all(bind=engine)
     TestSession = sessionmaker(bind=engine)
+
+    # Seed roles required by the User model's NOT NULL role_id constraint
+    session = TestSession()
+    try:
+        session.add(Role(id=1, name="User"))
+        session.add(Role(id=2, name="Admin"))
+        session.commit()
+    finally:
+        session.close()
 
     def override_get_db():
         session = TestSession()
@@ -69,7 +79,7 @@ async def seeded_user(async_client):
     """Insert a known user into the shared in-memory DB and return credentials."""
     session = async_client._test_session_factory()  # type: ignore[attr-defined]
     try:
-        user = User(username="reportuser", hashed_password=hash_password("reportpass"))
+        user = User(username="reportuser", hashed_password=hash_password("reportpass"), role_id=1)
         session.add(user)
         session.commit()
         session.refresh(user)
@@ -84,7 +94,7 @@ async def seeded_reports(async_client, seeded_user):
     now = datetime.now(timezone.utc)
     session = async_client._test_session_factory()  # type: ignore[attr-defined]
     try:
-        other_user = User(username="otheruser", hashed_password=hash_password("otherpass"))
+        other_user = User(username="otheruser", hashed_password=hash_password("otherpass"), role_id=1)
         session.add(other_user)
         session.flush()
 

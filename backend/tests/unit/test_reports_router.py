@@ -19,6 +19,7 @@ from app.db.database import Base, get_db
 from app.dependencies import get_current_user
 from app.main import app
 from app.models.expense_report import ExpenseReport
+from app.models.role import Role
 from app.models.user import User
 from app.services.auth_service import hash_password
 
@@ -28,7 +29,7 @@ from app.services.auth_service import hash_password
 
 
 def _make_engine_and_session():
-    """Return a fresh in-memory SQLite engine + session factory."""
+    """Return a fresh in-memory SQLite engine + session factory with roles seeded."""
     import app.models  # noqa: F401 — register all ORM models with Base
 
     engine = create_engine(
@@ -37,7 +38,18 @@ def _make_engine_and_session():
         poolclass=StaticPool,
     )
     Base.metadata.create_all(bind=engine)
-    return engine, sessionmaker(bind=engine)
+    Session = sessionmaker(bind=engine)
+
+    # Seed roles required by the User model's NOT NULL role_id constraint
+    session = Session()
+    try:
+        session.add(Role(id=1, name="User"))
+        session.add(Role(id=2, name="Admin"))
+        session.commit()
+    finally:
+        session.close()
+
+    return engine, Session
 
 
 # ---------------------------------------------------------------------------
@@ -47,11 +59,11 @@ def _make_engine_and_session():
 
 @pytest.fixture()
 def auth_client():
-    """TestClient with get_db overridden and get_current_user returning a seeded user."""
+    """TestClient with get_db overridden and get_current_user returning a seeded User-role user."""
     engine, TestSession = _make_engine_and_session()
 
     session = TestSession()
-    user = User(username="alice", hashed_password=hash_password("pw"))
+    user = User(username="alice", hashed_password=hash_password("pw"), role_id=1)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -78,6 +90,45 @@ def auth_client():
     with TestClient(app, raise_server_exceptions=True) as c:
         c._test_session_factory = TestSession  # type: ignore[attr-defined]
         c._seeded_user_id = user_id  # type: ignore[attr-defined]
+        yield c
+
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture()
+def admin_auth_client():
+    """TestClient with get_db overridden and get_current_user returning a seeded Admin-role user."""
+    engine, TestSession = _make_engine_and_session()
+
+    session = TestSession()
+    admin = User(username="admin", hashed_password=hash_password("pw"), role_id=2)
+    session.add(admin)
+    session.commit()
+    session.refresh(admin)
+    admin_id = admin.id
+    session.close()
+
+    def override_get_db():
+        s = TestSession()
+        try:
+            yield s
+        finally:
+            s.close()
+
+    def override_get_current_user(request: Request, db=None) -> User:
+        s = TestSession()
+        try:
+            return s.get(User, admin_id)
+        finally:
+            s.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    with TestClient(app, raise_server_exceptions=True) as c:
+        c._test_session_factory = TestSession  # type: ignore[attr-defined]
+        c._seeded_admin_id = admin_id  # type: ignore[attr-defined]
         yield c
 
     app.dependency_overrides.clear()
@@ -329,3 +380,208 @@ def test_post_reports_returns_401_when_unauthenticated(unauth_client):
     response = unauth_client.post("/reports", json=payload)
 
     assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# GET /reports — role-based branching (Admin vs User)
+# ---------------------------------------------------------------------------
+
+
+def test_get_reports_admin_role_returns_all_reports(admin_auth_client):
+    """GET /reports with Admin role returns all reports from all users.
+
+    Requirements: 2.1, 5.1, 5.2
+    """
+    now = datetime.now(timezone.utc)
+    session = admin_auth_client._test_session_factory()
+
+    # Create a second user (User role) with reports
+    other_user = User(username="bob", hashed_password=hash_password("pw"), role_id=1)
+    session.add(other_user)
+    session.flush()
+
+    session.add_all([
+        ExpenseReport(
+            title="Admin Own Report",
+            total_amount=100.0,
+            status="Pending",
+            owner_id=admin_auth_client._seeded_admin_id,
+            created_at=now,
+            reimbursable_from_client=False,
+        ),
+        ExpenseReport(
+            title="Bob Report",
+            total_amount=200.0,
+            status="Pending",
+            owner_id=other_user.id,
+            created_at=now,
+            reimbursable_from_client=False,
+        ),
+    ])
+    session.commit()
+    session.close()
+
+    response = admin_auth_client.get("/reports")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 2
+    titles = {r["title"] for r in body}
+    assert titles == {"Admin Own Report", "Bob Report"}
+
+
+def test_get_reports_admin_role_includes_owner_username(admin_auth_client):
+    """GET /reports with Admin role includes owner_username for each report.
+
+    Requirements: 2.2
+    """
+    now = datetime.now(timezone.utc)
+    session = admin_auth_client._test_session_factory()
+
+    other_user = User(username="carol", hashed_password=hash_password("pw"), role_id=1)
+    session.add(other_user)
+    session.flush()
+
+    session.add(
+        ExpenseReport(
+            title="Carol Report",
+            total_amount=150.0,
+            status="Pending",
+            owner_id=other_user.id,
+            created_at=now,
+            reimbursable_from_client=False,
+        )
+    )
+    session.commit()
+    session.close()
+
+    response = admin_auth_client.get("/reports")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["owner_username"] == "carol"
+
+
+def test_get_reports_user_role_returns_only_own_reports(auth_client):
+    """GET /reports with User role returns only reports owned by the authenticated user.
+
+    Requirements: 3.1, 5.2, 5.3
+    """
+    now = datetime.now(timezone.utc)
+    session = auth_client._test_session_factory()
+
+    # Create a second user with their own report
+    other_user = User(username="dave", hashed_password=hash_password("pw"), role_id=1)
+    session.add(other_user)
+    session.flush()
+
+    session.add_all([
+        ExpenseReport(
+            title="Alice Report",
+            total_amount=100.0,
+            status="Pending",
+            owner_id=auth_client._seeded_user_id,
+            created_at=now,
+            reimbursable_from_client=False,
+        ),
+        ExpenseReport(
+            title="Dave Report",
+            total_amount=200.0,
+            status="Pending",
+            owner_id=other_user.id,
+            created_at=now,
+            reimbursable_from_client=False,
+        ),
+    ])
+    session.commit()
+    session.close()
+
+    response = auth_client.get("/reports")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["title"] == "Alice Report"
+    assert body[0]["owner_id"] == auth_client._seeded_user_id
+
+
+def test_get_reports_user_role_does_not_return_other_users_reports(auth_client):
+    """GET /reports with User role must not include reports from other users.
+
+    Requirements: 3.1, 5.3
+    """
+    now = datetime.now(timezone.utc)
+    session = auth_client._test_session_factory()
+
+    other_user = User(username="eve", hashed_password=hash_password("pw"), role_id=1)
+    session.add(other_user)
+    session.flush()
+
+    session.add(
+        ExpenseReport(
+            title="Eve Secret Report",
+            total_amount=999.0,
+            status="Pending",
+            owner_id=other_user.id,
+            created_at=now,
+            reimbursable_from_client=False,
+        )
+    )
+    session.commit()
+    session.close()
+
+    response = auth_client.get("/reports")
+
+    assert response.status_code == 200
+    body = response.json()
+    # User has no own reports — must not see Eve's report
+    assert body == []
+
+
+def test_get_reports_admin_role_returns_empty_list_when_no_reports(admin_auth_client):
+    """GET /reports with Admin role returns empty list when no reports exist.
+
+    Requirements: 2.1
+    """
+    response = admin_auth_client.get("/reports")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_get_reports_role_branching_calls_correct_service_for_admin(admin_auth_client):
+    """GET /reports with Admin role calls get_all_reports (not get_reports_for_user).
+
+    Verifies the branching logic by checking that reports from other users are visible.
+    Requirements: 5.1, 5.2
+    """
+    now = datetime.now(timezone.utc)
+    session = admin_auth_client._test_session_factory()
+
+    # Create a user with a report — admin should see it
+    other_user = User(username="frank", hashed_password=hash_password("pw"), role_id=1)
+    session.add(other_user)
+    session.flush()
+
+    session.add(
+        ExpenseReport(
+            title="Frank Report",
+            total_amount=300.0,
+            status="Pending",
+            owner_id=other_user.id,
+            created_at=now,
+            reimbursable_from_client=False,
+        )
+    )
+    session.commit()
+    session.close()
+
+    response = admin_auth_client.get("/reports")
+
+    assert response.status_code == 200
+    body = response.json()
+    # Admin sees Frank's report even though admin doesn't own it
+    assert len(body) == 1
+    assert body[0]["title"] == "Frank Report"
+    assert body[0]["owner_username"] == "frank"

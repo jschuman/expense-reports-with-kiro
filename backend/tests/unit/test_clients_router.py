@@ -19,6 +19,7 @@ from app.constants import CLIENTS
 from app.db.database import Base, get_db
 from app.dependencies import get_current_user
 from app.main import app
+from app.models.role import Role
 from app.models.user import User
 from app.services.auth_service import hash_password
 
@@ -28,7 +29,7 @@ from app.services.auth_service import hash_password
 
 
 def _make_engine_and_session():
-    """Return a fresh in-memory SQLite engine + session factory."""
+    """Return a fresh in-memory SQLite engine + session factory with roles seeded."""
     import app.models  # noqa: F401 — register all ORM models with Base
 
     engine = create_engine(
@@ -37,7 +38,18 @@ def _make_engine_and_session():
         poolclass=StaticPool,
     )
     Base.metadata.create_all(bind=engine)
-    return engine, sessionmaker(bind=engine)
+    Session = sessionmaker(bind=engine)
+
+    # Seed roles required by the User model's NOT NULL role_id constraint
+    session = Session()
+    try:
+        session.add(Role(id=1, name="User"))
+        session.add(Role(id=2, name="Admin"))
+        session.commit()
+    finally:
+        session.close()
+
+    return engine, Session
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +66,7 @@ def auth_client():
     engine, TestSession = _make_engine_and_session()
 
     session = TestSession()
-    user = User(username="alice", hashed_password=hash_password("pw"))
+    user = User(username="alice", hashed_password=hash_password("pw"), role_id=1)
     session.add(user)
     session.commit()
     session.refresh(user)

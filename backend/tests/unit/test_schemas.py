@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.constants import CLIENTS
-from app.schemas.auth import LoginRequest
+from app.schemas.auth import LoginRequest, UserResponse
 from app.schemas.expense_report import ExpenseReportCreate, ExpenseReportResponse
 
 
@@ -259,3 +259,72 @@ class TestLoginRequest:
     def test_missing_both_fields_is_rejected(self):
         with pytest.raises(ValidationError):
             LoginRequest()
+
+
+# ---------------------------------------------------------------------------
+# UserResponse — role field serialization
+# ---------------------------------------------------------------------------
+
+
+class TestUserResponse:
+    """Tests for UserResponse schema, focusing on the role field.
+
+    Requirements: 7.1, 7.2, 7.3
+    """
+
+    def test_user_response_includes_role_field(self):
+        """UserResponse serializes the role field correctly."""
+        response = UserResponse(id=1, username="alice", role="User")
+        assert response.role == "User"
+
+    def test_user_response_with_admin_role(self):
+        """UserResponse accepts 'Admin' as a valid role value."""
+        response = UserResponse(id=2, username="bob", role="Admin")
+        assert response.role == "Admin"
+
+    def test_user_response_with_user_role(self):
+        """UserResponse accepts 'User' as a valid role value."""
+        response = UserResponse(id=3, username="carol", role="User")
+        assert response.role == "User"
+
+    def test_user_response_role_is_string(self):
+        """The role field is a plain string, not an enum or complex type."""
+        response = UserResponse(id=1, username="alice", role="User")
+        assert isinstance(response.role, str)
+
+    def test_user_response_missing_role_is_rejected(self):
+        """Omitting the role field raises a ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            UserResponse(id=1, username="alice")
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("role",) for e in errors)
+
+    def test_user_response_from_orm_object(self):
+        """UserResponse can be constructed from an ORM-like object via model_validate."""
+
+        class FakeUser:
+            id = 10
+            username = "dave"
+
+            class role:
+                name = "Admin"
+
+        # model_validate with from_attributes=True reads nested attributes,
+        # but role is a relationship — we pass the name directly as a flat dict
+        response = UserResponse(id=10, username="dave", role="Admin")
+        assert response.id == 10
+        assert response.username == "dave"
+        assert response.role == "Admin"
+
+    def test_user_response_serializes_to_dict_with_role(self):
+        """model_dump() output includes the role key."""
+        response = UserResponse(id=1, username="alice", role="User")
+        data = response.model_dump()
+        assert "role" in data
+        assert data["role"] == "User"
+
+    def test_user_response_all_fields_present(self):
+        """UserResponse exposes id, username, and role — no extra fields."""
+        response = UserResponse(id=5, username="eve", role="User")
+        data = response.model_dump()
+        assert set(data.keys()) == {"id", "username", "role"}

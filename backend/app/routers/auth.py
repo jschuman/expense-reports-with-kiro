@@ -31,7 +31,19 @@ def login(
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     request.session["user_id"] = user.id
-    return UserResponse.model_validate(user)
+
+    # Eagerly load role relationship to populate the role field in the response.
+    # db.refresh with attribute_names ensures the role is loaded within this
+    # session before the response is serialised.
+    db.refresh(user, attribute_names=["role"])
+
+    if user.role is None:
+        # Data integrity violation: user exists but has no valid role.
+        # Per Requirement 6.4, authentication must be rejected.
+        request.session.clear()
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    return UserResponse(id=user.id, username=user.username, role=user.role.name)
 
 
 @router.post("/logout")
@@ -42,10 +54,16 @@ def logout(request: Request) -> dict:
 
 
 @router.get("/me", response_model=UserResponse)
-def me(current_user: User = Depends(get_current_user)) -> UserResponse:
+def me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserResponse:
     """Return the currently authenticated user.
 
     Used by the frontend to restore session state on page load.
     Returns 401 if no valid session cookie is present (raised by get_current_user).
     """
-    return UserResponse.model_validate(current_user)
+    # Eagerly load role relationship to populate the role field in the response.
+    db.refresh(current_user, attribute_names=["role"])
+
+    return UserResponse(id=current_user.id, username=current_user.username, role=current_user.role.name)
