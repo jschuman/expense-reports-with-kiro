@@ -212,21 +212,21 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Test login and getCurrentUser parse role field
     - _Requirements: 4.5, 7.1, 7.2_
 
-- [ ] 16. Create useAuth hook
-  - [ ] 16.1 Create frontend/src/hooks/useAuth.ts
+- [x] 16. Create useAuth hook
+  - [x] 16.1 Create frontend/src/hooks/useAuth.ts
     - Implement hook to fetch current user on mount
     - Provide user, isLoading, and error states
     - Use getCurrentUser API function
     - _Requirements: 7.4_
   
-  - [ ] 16.2 Write unit tests for useAuth hook
+  - [x] 16.2 Write unit tests for useAuth hook
     - Test useAuth hook fetches user data on mount
     - Test useAuth hook handles loading states
     - Test useAuth hook handles errors
     - _Requirements: 7.4_
 
-- [ ] 17. Update DashboardPage with logout and role display
-  - [ ] 17.1 Modify frontend/src/pages/DashboardPage.tsx
+- [x] 17. Update DashboardPage with logout and role display
+  - [x] 17.1 Modify frontend/src/pages/DashboardPage.tsx
     - Add useAuth hook to access current user
     - Add logout button in header
     - Display user role information below page title
@@ -234,7 +234,7 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Implement handleLogout function that calls logout API and navigates to login
     - _Requirements: 2.3, 3.3, 4.5, 4.6, 4.7, 7.4_
   
-  - [ ] 17.2 Write component tests for DashboardPage
+  - [x] 17.2 Write component tests for DashboardPage
     - Test dashboard displays logout button
     - Test logout button triggers logout and navigation
     - Test dashboard displays user role information
@@ -242,7 +242,7 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Test dashboard displays owner_username for admin users
     - _Requirements: 2.3, 2.4, 3.3, 4.5, 4.6, 4.7, 7.4_
   
-  - [ ] 17.3 Write integration tests for logout flow
+  - [x] 17.3 Write integration tests for logout flow
     - Test complete logout flow: click button → API call → redirect
     - Test logout with API failure shows error message
     - Test session expiration redirects to login
