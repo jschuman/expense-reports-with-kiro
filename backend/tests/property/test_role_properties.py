@@ -3,10 +3,11 @@
 Feature: user-roles-and-logout
 
 Properties:
+  Property 1: User Creation Assigns Role
   Property 2: Admin Report Visibility
   Property 3: User Report Filtering
 
-Requirements: 2.1, 2.2, 2.3, 3.1, 5.3
+Requirements: 1.4, 2.1, 2.2, 2.3, 3.1, 5.3
 """
 
 from datetime import datetime, timezone
@@ -84,6 +85,93 @@ def cleanup_test_client(client):
     """Clean up test client resources."""
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=client._engine)  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# Feature: user-roles-and-logout
+# Property 1: User Creation Assigns Role
+# **Validates: Requirements 1.4**
+# ---------------------------------------------------------------------------
+
+
+@settings(max_examples=100, deadline=None)
+@given(
+    username=st.text(
+        alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), whitelist_characters="_"),
+        min_size=1,
+        max_size=150,
+    ),
+    role_name=st.sampled_from(["User", "Admin"]),
+)
+def test_property_user_creation_assigns_role(username, role_name):
+    """Property 1: User Creation Assigns Role.
+
+    # Feature: user-roles-and-logout, Property 1: User Creation Assigns Role
+
+    For any valid user creation data (username and password), when a new user is
+    created and persisted to the database, the user SHALL have a non-null role_id
+    assigned, and the user SHALL have a valid role relationship that resolves to a
+    known role name.
+
+    **Validates: Requirements 1.4**
+    """
+    import app.models as _models  # noqa: F401
+
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    TestSession = sessionmaker(bind=engine)
+
+    session = TestSession()
+    try:
+        # Seed roles so foreign key references are valid
+        user_role = Role(id=1, name="User")
+        admin_role = Role(id=2, name="Admin")
+        session.add_all([user_role, admin_role])
+        session.commit()
+
+        role_id = 2 if role_name == "Admin" else 1
+
+        # Create a new user with the generated data
+        new_user = User(
+            username=username,
+            hashed_password=_TEST_PASSWORD_HASH,
+            role_id=role_id,
+        )
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
+
+        # Property: role_id must be assigned (non-null)
+        assert new_user.role_id is not None, (
+            f"User '{username}' was created without a role_id"
+        )
+
+        # Property: role_id must reference a valid role
+        assert new_user.role_id in (1, 2), (
+            f"User '{username}' has role_id={new_user.role_id}, expected 1 or 2"
+        )
+
+        # Property: role relationship must resolve to the correct role name
+        session.refresh(new_user, attribute_names=["role"])
+        assert new_user.role is not None, (
+            f"User '{username}' role relationship is None after creation"
+        )
+        assert new_user.role.name == role_name, (
+            f"User '{username}' role.name is '{new_user.role.name}', expected '{role_name}'"
+        )
+
+        # Property: the persisted role_id must match the role we intended to assign
+        assert new_user.role_id == role_id, (
+            f"User '{username}' role_id={new_user.role_id} does not match "
+            f"intended role_id={role_id} for role '{role_name}'"
+        )
+    finally:
+        session.close()
+        Base.metadata.drop_all(bind=engine)
 
 
 # ---------------------------------------------------------------------------

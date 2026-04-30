@@ -248,7 +248,7 @@ This implementation adds role-based access control (RBAC) and logout functionali
     - Test session expiration redirects to login
     - _Requirements: 4.5, 4.6_
 
-- [ ] 18. Final checkpoint - End-to-end verification
+- [x] 18. Final checkpoint - End-to-end verification
   - Ensure all tests pass (backend and frontend)
   - Verify admin users can see all reports with owner information
   - Verify regular users can only see their own reports
@@ -256,7 +256,7 @@ This implementation adds role-based access control (RBAC) and logout functionali
   - Verify role information is displayed in UI
   - Ask the user if questions arise
 
-- [ ] 19. Write property test for user creation assigns role
+- [x] 19. Write property test for user creation assigns role
   - **Property 1: User Creation Assigns Role**
   - **Validates: Requirements 1.4**
   - Test that any new user creation assigns a role_id
