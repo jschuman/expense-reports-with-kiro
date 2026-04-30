@@ -50,8 +50,8 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test that a user with `role.name == "User"` raises 403
     - _Requirements: 5.4, 6.6_
 
-- [ ] 3. Status service implementation
-  - [ ] 3.1 Create `backend/app/services/status_service.py` with `submit_report()`
+- [x] 3. Status service implementation
+  - [x] 3.1 Create `backend/app/services/status_service.py` with `submit_report()`
     - Load report by `report_id`, raise 404 if not found
     - Raise 403 if `current_user.id != report.user_id`
     - Raise 409 if `report.status` is not `"In Progress"` or `"Rejected"`
@@ -59,21 +59,21 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Transition status to `"Submitted"`, write a `StatusAuditLog` entry with `datetime.now(timezone.utc)`, commit atomically, return updated report
     - _Requirements: 3.2, 3.3, 3.4, 3.5, 3.6, 7.5, 9.1, 9.2, 11.2, 11.3, 11.5_
 
-  - [ ] 3.2 Add `accept_report()` to `status_service.py`
+  - [x] 3.2 Add `accept_report()` to `status_service.py`
     - Load report, raise 404 if not found
     - Raise 403 if `current_user.role.name != "Admin"`
     - Raise 409 if `report.status != "Submitted"`
     - Transition status to `"Scheduled for Payment"`, write audit entry atomically, return updated report
     - _Requirements: 5.2, 5.3, 5.4, 9.1, 9.2, 11.2, 11.3, 11.5_
 
-  - [ ] 3.3 Add `reject_report()` to `status_service.py`
+  - [x] 3.3 Add `reject_report()` to `status_service.py`
     - Load report, raise 404 if not found
     - Raise 403 if `current_user.role.name != "Admin"`
     - Raise 409 if `report.status != "Submitted"`
     - Persist `admin_notes` on the report, transition status to `"Rejected"`, write audit entry atomically, return updated report
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 9.1, 9.2, 11.2, 11.3, 11.5_
 
-  - [ ] 3.4 Write unit tests for `status_service.py` in `backend/tests/unit/test_status_service.py`
+  - [x] 3.4 Write unit tests for `status_service.py` in `backend/tests/unit/test_status_service.py`
     - Test `submit_report` success from `"In Progress"` → `"Submitted"` with audit entry written
     - Test `submit_report` success from `"Rejected"` → `"Submitted"` with audit entry written
     - Test `submit_report` raises 403 for non-owner
@@ -87,21 +87,21 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test `reject_report` raises 409 from `"In Progress"` state
     - _Requirements: 3.2–3.6, 5.2–5.4, 6.1–6.6, 9.1, 9.2, 11.2_
 
-  - [ ] 3.5 Write property test for status transition validity in `backend/tests/property/test_status_lifecycle_properties.py`
+  - [x] 3.5 Write property test for status transition validity in `backend/tests/property/test_status_lifecycle_properties.py`
     - **Property 1: Status Transition Validity**
     - Use `@given(status=st.sampled_from([...]), action=st.sampled_from(["submit", "accept", "reject"]))` to generate all (state, action) combinations
     - Assert that undefined transitions return 409 and leave the report status unchanged
     - Run minimum 100 iterations
     - **Validates: Requirements 9.1, 9.2, 3.5, 5.3, 6.5**
 
-  - [ ] 3.6 Write property test for audit log completeness
+  - [x] 3.6 Write property test for audit log completeness
     - **Property 2: Audit Log Completeness**
     - Use `@given(transitions=st.lists(st.sampled_from(VALID_TRANSITION_SEQUENCES), min_size=1, max_size=5))` to generate valid transition sequences
     - Assert that the number of audit log entries equals the number of status changes applied, and each entry has the correct `expense_report_id`, `status`, and UTC `changed_at`
     - Run minimum 100 iterations
     - **Validates: Requirements 11.1, 11.2, 11.4, 11.6**
 
-  - [ ] 3.7 Write property test for submit transition correctness
+  - [x] 3.7 Write property test for submit transition correctness
     - **Property 7: Submit Transition Correctness**
     - Use `@given(initial_status=st.sampled_from(["In Progress", "Rejected"]), report_data=valid_report_strategy())` to generate valid submit scenarios
     - Assert that after a successful submit the status is `"Submitted"` and exactly one new audit entry was written
