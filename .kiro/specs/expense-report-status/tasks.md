@@ -25,14 +25,14 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Step 4: Backfill one audit entry per existing report using `created_at` as `changed_at` and `"In Progress"` as `status`
     - _Requirements: 1.1, 11.1, 11.4, 11.6_
 
-- [ ] 2. Backend schemas and dependency
-  - [ ] 2.1 Add new Pydantic schemas to `backend/app/schemas/expense_report.py`
+- [x] 2. Backend schemas and dependency
+  - [x] 2.1 Add new Pydantic schemas to `backend/app/schemas/expense_report.py`
     - Add `RejectRequest` with `admin_notes: str = Field(..., min_length=1)`
     - Add `ExpenseReportUpdate` with all optional fields (`title`, `description`, `total_amount`, `reimbursable_from_client`, `client`) and the `validate_client` model validator
     - Add `StatusAuditLogEntry` with `id`, `expense_report_id`, `status`, `changed_at` and `model_config = ConfigDict(from_attributes=True)`
     - _Requirements: 6.1, 6.2, 2.1, 7.1_
 
-  - [ ] 2.2 Write unit tests for new schemas in `backend/tests/unit/test_schemas.py`
+  - [x] 2.2 Write unit tests for new schemas in `backend/tests/unit/test_schemas.py`
     - Test `RejectRequest` rejects empty string and whitespace-only `admin_notes`
     - Test `RejectRequest` accepts a non-empty string
     - Test `ExpenseReportUpdate` rejects `total_amount <= 0`
@@ -41,11 +41,11 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test `ExpenseReportUpdate` accepts a valid partial update
     - _Requirements: 6.1, 6.2, 2.1_
 
-  - [ ] 2.3 Add `get_current_admin` dependency to `backend/app/dependencies.py`
+  - [x] 2.3 Add `get_current_admin` dependency to `backend/app/dependencies.py`
     - Implement `get_current_admin` by calling `get_current_user` and checking `user.role.name == "Admin"`, raising `HTTPException(403)` if not
     - _Requirements: 5.4, 6.6_
 
-  - [ ] 2.4 Write unit tests for `get_current_admin` in `backend/tests/unit/test_dependencies.py`
+  - [x] 2.4 Write unit tests for `get_current_admin` in `backend/tests/unit/test_dependencies.py`
     - Test that a user with `role.name == "Admin"` passes through
     - Test that a user with `role.name == "User"` raises 403
     - _Requirements: 5.4, 6.6_

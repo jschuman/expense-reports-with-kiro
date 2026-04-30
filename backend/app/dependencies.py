@@ -27,3 +27,15 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     return user
+
+
+def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
+    """FastAPI dependency that requires the current user to have the Admin role.
+
+    Delegates to ``get_current_user`` for authentication, then checks that
+    ``user.role.name == "Admin"``.  Raises ``HTTPException(403)`` if the user
+    is authenticated but does not hold the Admin role.
+    """
+    if current_user.role is None or current_user.role.name != "Admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return current_user

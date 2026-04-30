@@ -8,6 +8,44 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+class RejectRequest(BaseModel):
+    """Request body for POST /reports/{id}/reject."""
+
+    admin_notes: str = Field(..., min_length=1, description="Reason for rejection (required, non-empty)")
+
+
+class ExpenseReportUpdate(BaseModel):
+    """Request body for PUT /reports/{id}. All fields optional."""
+
+    title: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    description: Optional[str] = Field(default=None)
+    total_amount: Optional[float] = Field(default=None, gt=0)
+    reimbursable_from_client: Optional[bool] = Field(default=None)
+    client: Optional[str] = Field(default=None)
+
+    @model_validator(mode="after")
+    def validate_client(self) -> "ExpenseReportUpdate":
+        if self.reimbursable_from_client and not self.client:
+            raise ValueError("client is required when reimbursable_from_client is true")
+        if self.client is not None:
+            from app.constants import CLIENTS
+
+            if self.client not in CLIENTS:
+                raise ValueError(f"client must be one of: {CLIENTS}")
+        return self
+
+
+class StatusAuditLogEntry(BaseModel):
+    """Response schema for a single audit log entry."""
+
+    id: int
+    expense_report_id: int
+    status: str
+    changed_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ExpenseReportCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = Field(default=None)
