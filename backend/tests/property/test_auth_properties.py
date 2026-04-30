@@ -15,6 +15,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base, get_db
 from app.main import app
+from app.models.role import Role
 from app.models.user import User
 from app.services.auth_service import hash_password
 
@@ -35,6 +36,15 @@ def create_test_client():
     )
     Base.metadata.create_all(bind=engine)
     TestSession = sessionmaker(bind=engine)
+
+    # Seed roles required by the User model's NOT NULL role_id constraint
+    session = TestSession()
+    try:
+        session.add(Role(id=1, name="User"))
+        session.add(Role(id=2, name="Admin"))
+        session.commit()
+    finally:
+        session.close()
 
     def override_get_db():
         session = TestSession()
@@ -92,7 +102,7 @@ async def test_property_valid_credentials_always_establish_session(username, pas
         # Seed user with hashed password
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username=username, hashed_password=hash_password(password))
+            user = User(username=username, hashed_password=hash_password(password), role_id=1)
             session.add(user)
             session.commit()
             session.refresh(user)
@@ -164,7 +174,7 @@ async def test_property_invalid_credentials_never_establish_session(
         # Seed user with correct password
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username=username, hashed_password=hash_password(correct_password))
+            user = User(username=username, hashed_password=hash_password(correct_password), role_id=1)
             session.add(user)
             session.commit()
         finally:

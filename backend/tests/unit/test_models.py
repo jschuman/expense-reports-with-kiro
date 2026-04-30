@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db.database import Base
 from app.models.expense_report import ExpenseReport
+from app.models.role import Role
 from app.models.user import User
 
 
@@ -29,6 +30,8 @@ def db_session():
 
     Foreign key enforcement is explicitly enabled via PRAGMA because SQLite
     disables it by default.
+    
+    Roles are seeded automatically for tests that require them.
     """
     engine = create_engine(
         "sqlite:///:memory:",
@@ -47,6 +50,13 @@ def db_session():
 
     Session = sessionmaker(bind=engine)
     session = Session()
+    
+    # Seed roles for tests
+    user_role = Role(id=1, name="User")
+    admin_role = Role(id=2, name="Admin")
+    session.add(user_role)
+    session.add(admin_role)
+    session.commit()
 
     try:
         yield session
@@ -61,8 +71,8 @@ def db_session():
 # ---------------------------------------------------------------------------
 
 
-def make_user(username: str = "alice", hashed_password: str = "hashed_pw") -> User:
-    return User(username=username, hashed_password=hashed_password)
+def make_user(username: str = "alice", hashed_password: str = "hashed_pw", role_id: int = 1) -> User:
+    return User(username=username, hashed_password=hashed_password, role_id=role_id)
 
 
 def make_report(owner_id: int, **kwargs) -> ExpenseReport:
@@ -75,6 +85,68 @@ def make_report(owner_id: int, **kwargs) -> ExpenseReport:
     }
     defaults.update(kwargs)
     return ExpenseReport(**defaults)
+
+
+# ---------------------------------------------------------------------------
+# Role model tests
+# ---------------------------------------------------------------------------
+
+
+class TestRoleModel:
+    def test_create_role_persists_and_is_retrievable(self, db_session):
+        """A Role created with valid fields should be saved and queryable."""
+        role = Role(name="Manager")
+        db_session.add(role)
+        db_session.commit()
+
+        fetched = db_session.query(Role).filter_by(name="Manager").one()
+        assert fetched.id is not None
+        assert fetched.name == "Manager"
+
+    def test_duplicate_role_name_raises_integrity_error(self, db_session):
+        """Inserting two Roles with the same name must raise IntegrityError."""
+        db_session.add(Role(name="Supervisor"))
+        db_session.commit()
+
+        db_session.add(Role(name="Supervisor"))
+        with pytest.raises(IntegrityError):
+            db_session.commit()
+
+    def test_role_users_relationship_empty_by_default(self, db_session):
+        """A newly created Role with no associated users should have an empty list."""
+        role = Role(name="Guest")
+        db_session.add(role)
+        db_session.commit()
+
+        fetched = db_session.query(Role).filter_by(name="Guest").one()
+        assert fetched.users == []
+
+    def test_role_users_relationship_populated(self, db_session):
+        """After adding a user with a role, the Role.users list should contain that user."""
+        # Use existing seeded role
+        role = db_session.query(Role).filter_by(name="User").one()
+        
+        user = make_user(username="testuser", role_id=role.id)
+        db_session.add(user)
+        db_session.commit()
+
+        # Expire the cached state so SQLAlchemy re-fetches from DB
+        db_session.expire(role)
+        assert len(role.users) >= 1
+        assert any(u.username == "testuser" for u in role.users)
+
+    def test_user_role_relationship_resolves_correctly(self, db_session):
+        """The role relationship on User should resolve to the correct Role."""
+        role = db_session.query(Role).filter_by(name="Admin").one()
+        
+        user = make_user(username="adminuser", role_id=role.id)
+        db_session.add(user)
+        db_session.commit()
+
+        fetched_user = db_session.query(User).filter_by(username="adminuser").one()
+        assert fetched_user.role is not None
+        assert fetched_user.role.id == role.id
+        assert fetched_user.role.name == "Admin"
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +193,50 @@ class TestUserModel:
 
         fetched = db_session.query(User).filter_by(username="alice").one()
         assert fetched.reports == []
+
+    def test_user_with_role_id_foreign_key(self, db_session):
+        """A User with a valid role_id should persist and reference the correct role."""
+        admin_role = db_session.query(Role).filter_by(name="Admin").one()
+        
+        user = make_user(username="adminuser", role_id=admin_role.id)
+        db_session.add(user)
+        db_session.commit()
+
+        fetched = db_session.query(User).filter_by(username="adminuser").one()
+        assert fetched.role_id == admin_role.id
+        assert fetched.role_id == 2  # Admin role has id=2
+
+    def test_user_role_relationship_loads_correctly(self, db_session):
+        """The role relationship on User should eagerly load the associated Role."""
+        user_role = db_session.query(Role).filter_by(name="User").one()
+        
+        user = make_user(username="regularuser", role_id=user_role.id)
+        db_session.add(user)
+        db_session.commit()
+
+        fetched = db_session.query(User).filter_by(username="regularuser").one()
+        # Access the role relationship
+        assert fetched.role is not None
+        assert fetched.role.name == "User"
+        assert fetched.role.id == user_role.id
+
+    def test_user_without_role_id_fails_validation(self, db_session):
+        """Creating a User without role_id must raise IntegrityError due to NOT NULL constraint."""
+        # Attempt to create a user without role_id (violates NOT NULL constraint)
+        user = User(username="noroleuser", hashed_password="hashed_pw")
+        db_session.add(user)
+        
+        with pytest.raises(IntegrityError):
+            db_session.commit()
+
+    def test_user_with_invalid_role_id_fails_validation(self, db_session):
+        """Creating a User with non-existent role_id must raise IntegrityError due to FK constraint."""
+        # Attempt to create a user with a role_id that doesn't exist
+        user = make_user(username="invalidrole", role_id=9999)
+        db_session.add(user)
+        
+        with pytest.raises(IntegrityError):
+            db_session.commit()
 
 
 # ---------------------------------------------------------------------------

@@ -16,6 +16,7 @@ from sqlalchemy.pool import StaticPool
 from app.constants import CLIENTS
 from app.db.database import Base, get_db
 from app.main import app
+from app.models.role import Role
 from app.models.user import User
 from app.services.auth_service import hash_password
 
@@ -36,6 +37,15 @@ async def async_client():
     )
     Base.metadata.create_all(bind=engine)
     TestSession = sessionmaker(bind=engine)
+
+    # Seed roles required by the User model's NOT NULL role_id constraint
+    session = TestSession()
+    try:
+        session.add(Role(id=1, name="User"))
+        session.add(Role(id=2, name="Admin"))
+        session.commit()
+    finally:
+        session.close()
 
     def override_get_db():
         session = TestSession()
@@ -60,7 +70,7 @@ async def seeded_user(async_client):
     """Insert a known user into the shared in-memory DB and return credentials."""
     session = async_client._test_session_factory()  # type: ignore[attr-defined]
     try:
-        user = User(username="clientsuser", hashed_password=hash_password("clientspass"))
+        user = User(username="clientsuser", hashed_password=hash_password("clientspass"), role_id=1)
         session.add(user)
         session.commit()
         session.refresh(user)

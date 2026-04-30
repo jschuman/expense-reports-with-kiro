@@ -30,6 +30,7 @@ from app.constants import CLIENTS
 from app.db.database import Base, get_db
 from app.main import app
 from app.models.expense_report import ExpenseReport
+from app.models.role import Role
 from app.models.user import User
 from app.services.auth_service import hash_password
 
@@ -60,6 +61,15 @@ def create_test_client():
     )
     Base.metadata.create_all(bind=engine)
     TestSession = sessionmaker(bind=engine)
+
+    # Seed roles required by the User model's NOT NULL role_id constraint
+    session = TestSession()
+    try:
+        session.add(Role(id=1, name="User"))
+        session.add(Role(id=2, name="Admin"))
+        session.commit()
+    finally:
+        session.close()
 
     def override_get_db():
         session = TestSession()
@@ -115,6 +125,7 @@ async def test_property_dashboard_returns_only_user_reports(num_users, reports_p
                 user = User(
                     username=f"user_{i}",
                     hashed_password=_TEST_PASSWORD_HASH,
+                    role_id=1,
                 )
                 session.add(user)
                 session.flush()
@@ -201,7 +212,7 @@ async def test_property_report_creation_round_trip_preserves_fields(
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="roundtrip_user", hashed_password=_TEST_PASSWORD_HASH)
+            user = User(username="roundtrip_user", hashed_password=_TEST_PASSWORD_HASH, role_id=1)
             session.add(user)
             session.commit()
             session.refresh(user)
@@ -268,7 +279,7 @@ async def test_property_invalid_reports_always_rejected(invalid_field):
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="invalid_user", hashed_password=_TEST_PASSWORD_HASH)
+            user = User(username="invalid_user", hashed_password=_TEST_PASSWORD_HASH, role_id=1)
             session.add(user)
             session.commit()
         finally:
@@ -336,7 +347,7 @@ async def test_property_zod_pydantic_validation_agree(title, total_amount):
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="zod_user", hashed_password=_TEST_PASSWORD_HASH)
+            user = User(username="zod_user", hashed_password=_TEST_PASSWORD_HASH, role_id=1)
             session.add(user)
             session.commit()
         finally:
@@ -399,7 +410,7 @@ async def test_property_owner_is_always_session_user(title, total_amount):
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="owner_prop_user", hashed_password=_TEST_PASSWORD_HASH)
+            user = User(username="owner_prop_user", hashed_password=_TEST_PASSWORD_HASH, role_id=1)
             session.add(user)
             session.commit()
             session.refresh(user)
@@ -469,7 +480,7 @@ async def test_property_description_round_trip(description, total_amount):
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="desc_rt_user", hashed_password=_TEST_PASSWORD_HASH)
+            user = User(username="desc_rt_user", hashed_password=_TEST_PASSWORD_HASH, role_id=1)
             session.add(user)
             session.commit()
         finally:
@@ -544,7 +555,7 @@ async def test_property_reimbursable_default_is_false(title, total_amount):
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="reimb_default_user", hashed_password=_TEST_PASSWORD_HASH)
+            user = User(username="reimb_default_user", hashed_password=_TEST_PASSWORD_HASH, role_id=1)
             session.add(user)
             session.commit()
         finally:
@@ -601,7 +612,7 @@ async def test_property_client_required_when_reimbursable_true(title, total_amou
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="client_req_user", hashed_password=_TEST_PASSWORD_HASH)
+            user = User(username="client_req_user", hashed_password=_TEST_PASSWORD_HASH, role_id=1)
             session.add(user)
             session.commit()
         finally:
@@ -675,7 +686,7 @@ async def test_property_client_validation_only_list_values_accepted(title, total
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="client_val_user", hashed_password=_TEST_PASSWORD_HASH)
+            user = User(username="client_val_user", hashed_password=_TEST_PASSWORD_HASH, role_id=1)
             session.add(user)
             session.commit()
         finally:
@@ -745,7 +756,7 @@ async def test_property_admin_notes_always_null_on_creation(title, total_amount)
     try:
         session = async_client._test_session_factory()  # type: ignore[attr-defined]
         try:
-            user = User(username="admin_notes_user", hashed_password=_TEST_PASSWORD_HASH)
+            user = User(username="admin_notes_user", hashed_password=_TEST_PASSWORD_HASH, role_id=1)
             session.add(user)
             session.commit()
         finally:

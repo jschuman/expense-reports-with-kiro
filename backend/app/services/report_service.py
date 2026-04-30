@@ -14,6 +14,19 @@ from app.models.expense_report import ExpenseReport
 from app.schemas.expense_report import ExpenseReportCreate
 
 
+def get_all_reports(db: Session) -> list[ExpenseReport]:
+    """Return all expense reports in the system, ordered by id ascending.
+    
+    Used for Admin role users. Eagerly loads owner relationship.
+    """
+    return (
+        db.query(ExpenseReport)
+        .options(joinedload(ExpenseReport.owner))
+        .order_by(ExpenseReport.id)
+        .all()
+    )
+
+
 def get_reports_for_user(db: Session, user_id: int) -> list[ExpenseReport]:
     """Return all expense reports owned by *user_id*, ordered by id ascending.
 
