@@ -45,7 +45,7 @@ npm test -- --run
 pip install -r requirements.txt
 
 # Run development server
-uvicorn main:app --reload
+uvicorn app.main:app --reload
 
 # Run tests
 pytest
