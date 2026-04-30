@@ -158,7 +158,7 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Run minimum 100 iterations
     - **Validates: Requirements 4.1, 4.2, 8.1, 8.2**
 
-- [ ] 5. Checkpoint — backend service layer complete
+- [x] 5. Checkpoint — backend service layer complete
   - Ensure all backend unit and property tests pass before proceeding to router changes. Run `pytest backend/tests/unit/ backend/tests/property/` and fix any failures.
 
 - [ ] 6. New API endpoints

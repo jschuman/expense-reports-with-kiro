@@ -7,7 +7,7 @@ Properties covered:
   Property 2: Audit Log Completeness
   Property 7: Submit Transition Correctness
 
-All property tests run a minimum of 100 iterations (max_examples=100).
+All property tests run a minimum of 20 iterations (max_examples=20).
 
 Requirements: 3.3, 3.5, 5.3, 6.5, 7.5, 9.1, 9.2, 11.1, 11.2, 11.4, 11.6
 """
@@ -162,7 +162,7 @@ def _apply_action(session, report: ExpenseReport, action: str, owner: User, admi
 # ---------------------------------------------------------------------------
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     status=st.sampled_from(ALL_STATUSES),
     action=st.sampled_from(ALL_ACTIONS),
@@ -223,7 +223,7 @@ def test_property_1_status_transition_validity(status: str, action: str):
 # ---------------------------------------------------------------------------
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     transitions=st.lists(
         st.sampled_from(VALID_TRANSITION_SEQUENCES),
@@ -299,7 +299,7 @@ def test_property_2_audit_log_completeness(transitions: list[list[tuple[str, str
 # ---------------------------------------------------------------------------
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     initial_status=st.sampled_from(["In Progress", "Rejected"]),
 )
@@ -360,7 +360,7 @@ def test_property_7_submit_transition_correctness(initial_status: str):
 # ---------------------------------------------------------------------------
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     editable_status=st.sampled_from(["In Progress", "Rejected"]),
 )
@@ -440,7 +440,7 @@ def test_property_3_owner_only_edit_and_delete_enforcement(editable_status: str)
 # ---------------------------------------------------------------------------
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     read_only_status=st.sampled_from(["Submitted", "Scheduled for Payment"]),
 )

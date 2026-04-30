@@ -353,3 +353,55 @@ def test_logout_clears_session_and_me_returns_401(client, seeded_user):
     # Session must be cleared
     me_after = client.get("/auth/me")
     assert me_after.status_code == 401
+
+
+def test_login_with_user_missing_role_returns_401(client):
+    """POST /auth/login returns 401 when the authenticated user has no role (data integrity violation).
+
+    This covers the branch in auth.py where user.role is None after authentication.
+    The session must also be cleared in this case.
+    """
+    from app.db.database import get_db
+
+    # Seed a valid user first
+    session = client._test_session_factory()  # type: ignore[attr-defined]
+    try:
+        user = User(username="noroleuser", hashed_password=hash_password("testpass"), role_id=1)
+        session.add(user)
+        session.commit()
+    finally:
+        session.close()
+
+    # Override get_db to return a session whose refresh() nullifies the role
+    original_override = client.app.dependency_overrides.get(get_db)
+
+    def patched_get_db():
+        for db in original_override():
+            original_db_refresh = db.refresh
+
+            def patched_refresh(obj, attribute_names=None):
+                if attribute_names == ["role"]:
+                    obj.role = None
+                else:
+                    original_db_refresh(obj, attribute_names=attribute_names)
+
+            db.refresh = patched_refresh
+            yield db
+
+    client.app.dependency_overrides[get_db] = patched_get_db
+
+    try:
+        response = client.post(
+            "/auth/login",
+            json={"username": "noroleuser", "password": "testpass"},
+        )
+    finally:
+        # Restore original override
+        client.app.dependency_overrides[get_db] = original_override
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid username or password"
+
+    # Session must be cleared — /auth/me must return 401
+    me_response = client.get("/auth/me")
+    assert me_response.status_code == 401
