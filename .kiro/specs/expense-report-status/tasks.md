@@ -108,13 +108,13 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Run minimum 100 iterations
     - **Validates: Requirements 3.3, 7.5, 11.2**
 
-- [ ] 4. Report service update
-  - [ ] 4.1 Update `create_report()` in `backend/app/services/report_service.py`
+- [x] 4. Report service update
+  - [x] 4.1 Update `create_report()` in `backend/app/services/report_service.py`
     - Change `status="Pending"` to `status="In Progress"`
     - Write an initial `StatusAuditLog` entry (status `"In Progress"`, `changed_at=datetime.now(timezone.utc)`) in the same transaction as the report insert
     - _Requirements: 1.1, 11.1, 11.3, 11.5, 11.6_
 
-  - [ ] 4.2 Add `update_report()` to `report_service.py`
+  - [x] 4.2 Add `update_report()` to `report_service.py`
     - Accept `db`, `report_id`, `data: ExpenseReportUpdate`, `current_user`
     - Raise 404 if report not found
     - Raise 403 if `current_user.id != report.user_id`
@@ -122,7 +122,7 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Apply only the non-`None` fields from `data` to the report, commit, and return the updated report
     - _Requirements: 2.1, 2.4, 4.1, 7.1, 7.6, 8.1_
 
-  - [ ] 4.3 Add `delete_report()` to `report_service.py`
+  - [x] 4.3 Add `delete_report()` to `report_service.py`
     - Accept `db`, `report_id`, `current_user`
     - Raise 404 if report not found
     - Raise 403 if `current_user.id != report.user_id`
@@ -130,7 +130,7 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Delete the report and commit
     - _Requirements: 2.2, 2.5, 4.2, 7.2, 8.2_
 
-  - [ ] 4.4 Update unit tests for `report_service.py` in `backend/tests/unit/test_report_service.py`
+  - [x] 4.4 Update unit tests for `report_service.py` in `backend/tests/unit/test_report_service.py`
     - Test `create_report` sets status to `"In Progress"` and writes one audit entry
     - Test `update_report` success for `"In Progress"` state
     - Test `update_report` success for `"Rejected"` state
@@ -144,14 +144,14 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test `delete_report` raises 409 for `"Scheduled for Payment"` state
     - _Requirements: 1.1, 2.1, 2.2, 2.4, 2.5, 4.1, 4.2, 7.1, 7.2, 7.6, 8.1, 8.2, 11.1_
 
-  - [ ] 4.5 Write property test for owner-only edit and delete enforcement
+  - [x] 4.5 Write property test for owner-only edit and delete enforcement
     - **Property 3: Owner-Only Edit and Delete Enforcement**
     - Use `@given(report_data=report_strategy(), non_owner=user_strategy())` to generate editable reports with non-owner users
     - Assert that update and delete attempts by non-owners return 403 and leave the report unchanged
     - Run minimum 100 iterations
     - **Validates: Requirements 2.4, 2.5, 7.6**
 
-  - [ ] 4.6 Write property test for read-only state enforcement
+  - [x] 4.6 Write property test for read-only state enforcement
     - **Property 6: Read-Only State Enforcement**
     - Use `@given(status=st.sampled_from(["Submitted", "Scheduled for Payment"]), update_data=report_update_strategy())` to generate read-only state scenarios
     - Assert that update and delete attempts on read-only reports return 409 and leave the report unchanged

@@ -362,3 +362,230 @@ def test_get_reports_for_user_owner_username_accessible(db_session, user_a):
     # owner relationship must be loaded — no lazy-load exception
     assert results[0].owner is not None
     assert results[0].owner.username == "alice"
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_report(db_session, owner, status: str):
+    """Create and persist an ExpenseReport with the given status."""
+    from datetime import datetime, timezone
+
+    report = ExpenseReport(
+        title="Test Report",
+        description="A test",
+        total_amount=100.0,
+        status=status,
+        owner_id=owner.id,
+        created_at=datetime.now(timezone.utc),
+        reimbursable_from_client=False,
+    )
+    db_session.add(report)
+    db_session.commit()
+    db_session.refresh(report)
+    return report
+
+
+# ---------------------------------------------------------------------------
+# create_report — audit log
+# ---------------------------------------------------------------------------
+
+
+def test_create_report_writes_one_audit_entry(db_session, user_a):
+    """create_report writes exactly one StatusAuditLog entry with status 'In Progress'."""
+    from app.models.status_audit_log import StatusAuditLog
+
+    data = ExpenseReportCreate(title="Audit Test", total_amount=50.0)
+
+    report = report_service.create_report(db_session, user_a.id, data)
+
+    entries = (
+        db_session.query(StatusAuditLog)
+        .filter(StatusAuditLog.expense_report_id == report.id)
+        .all()
+    )
+    assert len(entries) == 1
+    assert entries[0].status == "In Progress"
+    assert entries[0].expense_report_id == report.id
+    assert entries[0].changed_at is not None
+
+
+# ---------------------------------------------------------------------------
+# update_report
+# ---------------------------------------------------------------------------
+
+
+def test_update_report_success_in_progress(db_session, user_a):
+    """update_report applies changes when report is 'In Progress'."""
+    from app.schemas.expense_report import ExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "In Progress")
+
+    data = ExpenseReportUpdate(title="Updated Title", total_amount=200.0)
+    updated = report_service.update_report(db_session, report.id, data, user_a)
+
+    assert updated.title == "Updated Title"
+    assert updated.total_amount == pytest.approx(200.0)
+    assert updated.status == "In Progress"
+
+
+def test_update_report_success_rejected(db_session, user_a):
+    """update_report applies changes when report is 'Rejected'."""
+    from app.schemas.expense_report import ExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "Rejected")
+
+    data = ExpenseReportUpdate(title="Fixed Title")
+    updated = report_service.update_report(db_session, report.id, data, user_a)
+
+    assert updated.title == "Fixed Title"
+    assert updated.status == "Rejected"
+
+
+def test_update_report_raises_403_for_non_owner(db_session, user_a, user_b):
+    """update_report raises 403 when the caller is not the report owner."""
+    from fastapi import HTTPException
+
+    from app.schemas.expense_report import ExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "In Progress")
+
+    data = ExpenseReportUpdate(title="Hacked")
+    with pytest.raises(HTTPException) as exc_info:
+        report_service.update_report(db_session, report.id, data, user_b)
+
+    assert exc_info.value.status_code == 403
+
+
+def test_update_report_raises_409_for_submitted(db_session, user_a):
+    """update_report raises 409 when report is 'Submitted'."""
+    from fastapi import HTTPException
+
+    from app.schemas.expense_report import ExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "Submitted")
+
+    data = ExpenseReportUpdate(title="Attempt")
+    with pytest.raises(HTTPException) as exc_info:
+        report_service.update_report(db_session, report.id, data, user_a)
+
+    assert exc_info.value.status_code == 409
+
+
+def test_update_report_raises_409_for_scheduled_for_payment(db_session, user_a):
+    """update_report raises 409 when report is 'Scheduled for Payment'."""
+    from fastapi import HTTPException
+
+    from app.schemas.expense_report import ExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "Scheduled for Payment")
+
+    data = ExpenseReportUpdate(title="Attempt")
+    with pytest.raises(HTTPException) as exc_info:
+        report_service.update_report(db_session, report.id, data, user_a)
+
+    assert exc_info.value.status_code == 409
+
+
+def test_update_report_only_applies_provided_fields(db_session, user_a):
+    """update_report does not overwrite fields that are not included in the update."""
+    from app.schemas.expense_report import ExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "In Progress")
+    original_amount = report.total_amount
+
+    data = ExpenseReportUpdate(title="New Title Only")
+    updated = report_service.update_report(db_session, report.id, data, user_a)
+
+    assert updated.title == "New Title Only"
+    assert updated.total_amount == pytest.approx(original_amount)
+
+
+def test_update_report_raises_404_for_missing_report(db_session, user_a):
+    """update_report raises 404 when the report does not exist."""
+    from fastapi import HTTPException
+
+    from app.schemas.expense_report import ExpenseReportUpdate
+
+    data = ExpenseReportUpdate(title="Ghost")
+    with pytest.raises(HTTPException) as exc_info:
+        report_service.update_report(db_session, 99999, data, user_a)
+
+    assert exc_info.value.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# delete_report
+# ---------------------------------------------------------------------------
+
+
+def test_delete_report_success_in_progress(db_session, user_a):
+    """delete_report removes the report when it is 'In Progress'."""
+    report = _make_report(db_session, user_a, "In Progress")
+    report_id = report.id
+
+    report_service.delete_report(db_session, report_id, user_a)
+
+    assert db_session.get(ExpenseReport, report_id) is None
+
+
+def test_delete_report_success_rejected(db_session, user_a):
+    """delete_report removes the report when it is 'Rejected'."""
+    report = _make_report(db_session, user_a, "Rejected")
+    report_id = report.id
+
+    report_service.delete_report(db_session, report_id, user_a)
+
+    assert db_session.get(ExpenseReport, report_id) is None
+
+
+def test_delete_report_raises_403_for_non_owner(db_session, user_a, user_b):
+    """delete_report raises 403 when the caller is not the report owner."""
+    from fastapi import HTTPException
+
+    report = _make_report(db_session, user_a, "In Progress")
+
+    with pytest.raises(HTTPException) as exc_info:
+        report_service.delete_report(db_session, report.id, user_b)
+
+    assert exc_info.value.status_code == 403
+    # Report must still exist
+    assert db_session.get(ExpenseReport, report.id) is not None
+
+
+def test_delete_report_raises_409_for_submitted(db_session, user_a):
+    """delete_report raises 409 when report is 'Submitted'."""
+    from fastapi import HTTPException
+
+    report = _make_report(db_session, user_a, "Submitted")
+
+    with pytest.raises(HTTPException) as exc_info:
+        report_service.delete_report(db_session, report.id, user_a)
+
+    assert exc_info.value.status_code == 409
+    assert db_session.get(ExpenseReport, report.id) is not None
+
+
+def test_delete_report_raises_409_for_scheduled_for_payment(db_session, user_a):
+    """delete_report raises 409 when report is 'Scheduled for Payment'."""
+    from fastapi import HTTPException
+
+    report = _make_report(db_session, user_a, "Scheduled for Payment")
+
+    with pytest.raises(HTTPException) as exc_info:
+        report_service.delete_report(db_session, report.id, user_a)
+
+    assert exc_info.value.status_code == 409
+    assert db_session.get(ExpenseReport, report.id) is not None
+
+
+def test_delete_report_raises_404_for_missing_report(db_session, user_a):
+    """delete_report raises 404 when the report does not exist."""
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc_info:
+        report_service.delete_report(db_session, 99999, user_a)
+
+    assert exc_info.value.status_code == 404

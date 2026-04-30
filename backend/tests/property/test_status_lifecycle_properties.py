@@ -351,3 +351,150 @@ def test_property_7_submit_transition_correctness(initial_status: str):
         )
     finally:
         _teardown_db(session, engine)
+
+
+# ---------------------------------------------------------------------------
+# Property 3: Owner-Only Edit and Delete Enforcement
+# Feature: expense-report-status, Property 3
+# Validates: Requirements 2.4, 2.5, 7.6
+# ---------------------------------------------------------------------------
+
+
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@given(
+    editable_status=st.sampled_from(["In Progress", "Rejected"]),
+)
+def test_property_3_owner_only_edit_and_delete_enforcement(editable_status: str):
+    """Property 3: Owner-Only Edit and Delete Enforcement.
+
+    # Feature: expense-report-status, Property 3: Owner-Only Edit and Delete Enforcement
+
+    For any expense report in an editable state ('In Progress' or 'Rejected')
+    and any authenticated user who is not the report's owner, any attempt to
+    update or delete the report must return 403 Forbidden and leave the report
+    unchanged.
+
+    Validates: Requirements 2.4, 2.5, 7.6
+    """
+    from app.schemas.expense_report import ExpenseReportUpdate
+    from app.services import report_service
+
+    session, engine = _make_db()
+    try:
+        owner = _make_owner(session)
+
+        # Create a distinct non-owner user
+        non_owner = User(
+            username="non_owner",
+            hashed_password=_TEST_PASSWORD_HASH,
+            role_id=1,
+        )
+        session.add(non_owner)
+        session.commit()
+        session.refresh(non_owner)
+        session.refresh(non_owner, attribute_names=["role"])
+
+        report = _make_report(session, owner, editable_status)
+        original_title = report.title
+        original_status = report.status
+
+        # --- update attempt by non-owner must raise 403 ---
+        update_data = ExpenseReportUpdate(title="Hijacked Title")
+        with pytest.raises(HTTPException) as exc_info:
+            report_service.update_report(session, report.id, update_data, non_owner)
+
+        assert exc_info.value.status_code == 403, (
+            f"Expected 403 for non-owner update on '{editable_status}' report, "
+            f"got {exc_info.value.status_code}"
+        )
+
+        # Report must be unchanged
+        session.refresh(report)
+        assert report.title == original_title, (
+            f"Report title changed after non-owner update attempt: "
+            f"'{report.title}' != '{original_title}'"
+        )
+        assert report.status == original_status
+
+        # --- delete attempt by non-owner must raise 403 ---
+        with pytest.raises(HTTPException) as exc_info:
+            report_service.delete_report(session, report.id, non_owner)
+
+        assert exc_info.value.status_code == 403, (
+            f"Expected 403 for non-owner delete on '{editable_status}' report, "
+            f"got {exc_info.value.status_code}"
+        )
+
+        # Report must still exist and be unchanged
+        session.refresh(report)
+        assert report.title == original_title
+        assert report.status == original_status
+    finally:
+        _teardown_db(session, engine)
+
+
+# ---------------------------------------------------------------------------
+# Property 6: Read-Only State Enforcement
+# Feature: expense-report-status, Property 6
+# Validates: Requirements 4.1, 4.2, 8.1, 8.2
+# ---------------------------------------------------------------------------
+
+
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@given(
+    read_only_status=st.sampled_from(["Submitted", "Scheduled for Payment"]),
+)
+def test_property_6_read_only_state_enforcement(read_only_status: str):
+    """Property 6: Read-Only State Enforcement.
+
+    # Feature: expense-report-status, Property 6: Read-Only State Enforcement
+
+    For any expense report in a read-only state ('Submitted' or 'Scheduled for
+    Payment') and any authenticated user, any attempt to update or delete the
+    report must return 409 Conflict and leave the report unchanged.
+
+    Validates: Requirements 4.1, 4.2, 8.1, 8.2
+    """
+    from app.schemas.expense_report import ExpenseReportUpdate
+    from app.services import report_service
+
+    session, engine = _make_db()
+    try:
+        owner = _make_owner(session)
+        report = _make_report(session, owner, read_only_status)
+        original_title = report.title
+        original_status = report.status
+
+        # --- update attempt must raise 409 ---
+        update_data = ExpenseReportUpdate(title="Attempted Update")
+        with pytest.raises(HTTPException) as exc_info:
+            report_service.update_report(session, report.id, update_data, owner)
+
+        assert exc_info.value.status_code == 409, (
+            f"Expected 409 for update on read-only '{read_only_status}' report, "
+            f"got {exc_info.value.status_code}"
+        )
+
+        # Report must be unchanged
+        session.refresh(report)
+        assert report.title == original_title, (
+            f"Report title changed after update attempt on '{read_only_status}': "
+            f"'{report.title}' != '{original_title}'"
+        )
+        assert report.status == original_status
+
+        # --- delete attempt must raise 409 ---
+        with pytest.raises(HTTPException) as exc_info:
+            report_service.delete_report(session, report.id, owner)
+
+        assert exc_info.value.status_code == 409, (
+            f"Expected 409 for delete on read-only '{read_only_status}' report, "
+            f"got {exc_info.value.status_code}"
+        )
+
+        # Report must still exist and be unchanged
+        session.refresh(report)
+        assert report.title == original_title
+        assert report.status == original_status
+    finally:
+        _teardown_db(session, engine)
