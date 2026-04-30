@@ -204,7 +204,7 @@ async def test_property_report_creation_round_trip_preserves_fields(
 
     For any valid ExpenseReportCreate payload, submitting it via POST /reports and then
     retrieving the report via GET /reports SHALL return a record containing the same
-    title, description, and total_amount, with status equal to "Pending" and owner_id
+    title, description, and total_amount, with status equal to "In Progress" and owner_id
     equal to the authenticated user's id.
     """
     async_client = create_test_client()
@@ -247,7 +247,7 @@ async def test_property_report_creation_round_trip_preserves_fields(
         retrieved = matching[0]
         assert retrieved["title"] == title
         assert abs(retrieved["total_amount"] - total_amount) < 0.01
-        assert retrieved["status"] == "Pending"
+        assert retrieved["status"] == "In Progress"
         assert retrieved["owner_id"] == user_id
     finally:
         await async_client.aclose()

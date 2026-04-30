@@ -251,19 +251,19 @@ def test_get_reports_for_user_returns_empty_list_when_no_reports(db_session, use
 # ---------------------------------------------------------------------------
 
 
-def test_create_report_persists_with_pending_status_and_correct_owner(db_session, user_a):
-    """create_report saves a record with status='Pending' and the given owner_id."""
+def test_create_report_persists_with_in_progress_status_and_correct_owner(db_session, user_a):
+    """create_report saves a record with status='In Progress' and the given owner_id."""
     data = ExpenseReportCreate(title="Q1 Travel", total_amount=450.0)
 
     report = report_service.create_report(db_session, user_a.id, data)
 
     assert report.id is not None
-    assert report.status == "Pending"
+    assert report.status == "In Progress"
     assert report.owner_id == user_a.id
 
     persisted = db_session.get(ExpenseReport, report.id)
     assert persisted is not None
-    assert persisted.status == "Pending"
+    assert persisted.status == "In Progress"
     assert persisted.owner_id == user_a.id
 
 

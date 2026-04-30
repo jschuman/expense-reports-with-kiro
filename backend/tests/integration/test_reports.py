@@ -245,7 +245,7 @@ async def test_create_report_success_returns_201_and_response_shape(
     assert body["title"] == payload["title"]
     assert body["description"] == payload["description"]
     assert body["total_amount"] == payload["total_amount"]
-    assert body["status"] == "Pending"
+    assert body["status"] == "In Progress"
     assert body["owner_id"] == seeded_user["id"]
     assert body["owner_username"] == seeded_user["username"]
     assert "created_at" in body
@@ -257,8 +257,8 @@ async def test_create_report_success_returns_201_and_response_shape(
 
 
 @pytest.mark.asyncio
-async def test_create_report_status_is_pending(async_client, seeded_user):
-    """Newly created report always has status == 'Pending'."""
+async def test_create_report_status_is_in_progress(async_client, seeded_user):
+    """Newly created report always has status == 'In Progress'."""
     await async_client.post(
         "/auth/login",
         json={"username": seeded_user["username"], "password": seeded_user["password"]},
@@ -270,7 +270,7 @@ async def test_create_report_status_is_pending(async_client, seeded_user):
     )
 
     assert response.status_code == 201
-    assert response.json()["status"] == "Pending"
+    assert response.json()["status"] == "In Progress"
 
 
 @pytest.mark.asyncio

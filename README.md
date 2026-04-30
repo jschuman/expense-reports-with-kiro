@@ -10,7 +10,10 @@ The Expense Report Web App allows authenticated users to create, view, and manag
 
 - **User Authentication**: Secure login system with session-based authentication
 - **Role-Based Access Control**: User and Admin roles with different report visibility permissions
-- **Expense Report Management**: Create and view expense reports with detailed information
+- **Expense Report Status Lifecycle**: Reports move through a four-state workflow — `In Progress → Submitted → Scheduled for Payment` (or `Rejected → Submitted` for resubmission)
+- **Expense Report Management**: Create, edit, submit, and delete expense reports with detailed information
+- **Admin Review**: Admins can accept or reject submitted reports; rejected reports require a reason (admin notes)
+- **Status Audit Log**: Every status change is recorded with a UTC timestamp for full traceability
 - **Client Reimbursement Tracking**: Mark expenses as client-reimbursable and associate them with specific clients
 - **Automatic Metadata**: Owner and creation timestamp are automatically recorded
 - **Responsive UI**: Material UI-based interface with form validation
@@ -228,7 +231,7 @@ Each expense report includes:
 | Title | String | Yes | Report title (max 255 chars) |
 | Description | String | No | Optional description (replaces "Purpose") |
 | Total Amount | Number | Yes | Total expense amount (must be positive) |
-| Status | String | Auto | Always "Pending" on creation |
+| Status | String | Auto | `In Progress` on creation; transitions through `Submitted`, `Rejected`, `Scheduled for Payment` |
 | Owner | User | Auto | Automatically set to the logged-in user |
 | Created At | DateTime | Auto | Server-side UTC timestamp |
 | Reimbursable from Client | Boolean | No | Whether expense is client-reimbursable (default: false) |

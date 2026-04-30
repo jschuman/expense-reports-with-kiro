@@ -3,6 +3,7 @@
 
 from app.models.expense_report import ExpenseReport  # noqa: F401
 from app.models.role import Role  # noqa: F401
+from app.models.status_audit_log import StatusAuditLog  # noqa: F401
 from app.models.user import User  # noqa: F401
 
-__all__ = ["User", "ExpenseReport", "Role"]
+__all__ = ["User", "ExpenseReport", "Role", "StatusAuditLog"]

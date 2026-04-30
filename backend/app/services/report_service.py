@@ -59,7 +59,7 @@ def create_report(
         title=data.title,
         description=data.description or None,
         total_amount=data.total_amount,
-        status="Pending",
+        status="In Progress",
         owner_id=user_id,
         created_at=datetime.now(timezone.utc),
         reimbursable_from_client=data.reimbursable_from_client,

@@ -250,7 +250,7 @@ def test_post_reports_with_valid_payload_returns_201_and_response_shape(auth_cli
     assert body["title"] == "Q1 Travel"
     assert body["description"] == "Client visit"
     assert body["total_amount"] == pytest.approx(450.00)
-    assert body["status"] == "Pending"
+    assert body["status"] == "In Progress"
     assert body["owner_id"] == auth_client._seeded_user_id
     assert body["owner_username"] == "alice"
     assert "created_at" in body
@@ -261,14 +261,14 @@ def test_post_reports_with_valid_payload_returns_201_and_response_shape(auth_cli
     assert "purpose" not in body
 
 
-def test_post_reports_status_is_always_pending(auth_client):
-    """POST /reports always creates a report with status='Pending'."""
+def test_post_reports_status_is_always_in_progress(auth_client):
+    """POST /reports always creates a report with status='In Progress'."""
     payload = {"title": "Meals", "total_amount": 75.50}
 
     response = auth_client.post("/reports", json=payload)
 
     assert response.status_code == 201
-    assert response.json()["status"] == "Pending"
+    assert response.json()["status"] == "In Progress"
 
 
 def test_post_reports_with_reimbursable_true_and_valid_client_returns_201(auth_client):

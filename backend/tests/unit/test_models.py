@@ -262,8 +262,8 @@ class TestExpenseReportModel:
         assert fetched.total_amount == 450.00
         assert fetched.owner_id == user.id
 
-    def test_status_defaults_to_pending(self, db_session):
-        """status should default to 'Pending' when not explicitly provided."""
+    def test_status_defaults_to_in_progress(self, db_session):
+        """status should default to 'In Progress' when not explicitly provided."""
         user = make_user()
         db_session.add(user)
         db_session.commit()
@@ -279,7 +279,7 @@ class TestExpenseReportModel:
         db_session.commit()
 
         fetched = db_session.query(ExpenseReport).filter_by(title="No Status").one()
-        assert fetched.status == "Pending"
+        assert fetched.status == "In Progress"
 
     def test_nonexistent_owner_id_raises_integrity_error(self, db_session):
         """Inserting a report with a non-existent owner_id must raise IntegrityError."""
