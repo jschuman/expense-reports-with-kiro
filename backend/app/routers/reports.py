@@ -1,7 +1,8 @@
-"""Reports router: list and create expense reports.
+"""Reports router: list, create, update, delete, and status-transition expense reports.
 
-All routes require a valid session cookie (enforced via get_current_user).
-Business logic and DB interaction are delegated to report_service.
+All routes require a valid session cookie (enforced via get_current_user or
+get_current_admin).  Business logic and DB interaction are delegated to
+report_service and status_service.
 """
 
 from typing import List
@@ -10,11 +11,16 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_admin, get_current_user
 from app.models.expense_report import ExpenseReport
 from app.models.user import User
-from app.schemas.expense_report import ExpenseReportCreate, ExpenseReportResponse
-from app.services import report_service
+from app.schemas.expense_report import (
+    ExpenseReportCreate,
+    ExpenseReportResponse,
+    ExpenseReportUpdate,
+    RejectRequest,
+)
+from app.services import report_service, status_service
 
 router = APIRouter(tags=["reports"])
 
@@ -75,7 +81,7 @@ def create_report(
 ) -> ExpenseReportResponse:
     """Create a new expense report for the authenticated user.
 
-    The report is saved with status="Pending", owner_id set to the current
+    The report is saved with status="In Progress", owner_id set to the current
     user's id, and created_at set to the current UTC time.
 
     Returns 201 with the created ExpenseReportResponse on success.
@@ -84,3 +90,119 @@ def create_report(
     """
     report = report_service.create_report(db, current_user.id, data)
     return _to_response(report)
+
+
+@router.post("/{report_id}/submit", response_model=ExpenseReportResponse)
+def submit_report(
+    report_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ExpenseReportResponse:
+    """Transition a report from 'In Progress' or 'Rejected' to 'Submitted'.
+
+    Only the report owner may submit.
+
+    Returns 200 with the updated ExpenseReportResponse on success.
+    Returns 401 when no valid session cookie is present.
+    Returns 403 when the caller is not the report owner.
+    Returns 404 when the report does not exist.
+    Returns 409 when the report is not in a submittable state.
+    Returns 422 when required fields are not populated.
+
+    Requirements: 3.2, 3.3, 3.5, 3.6
+    """
+    report = status_service.submit_report(db, report_id, current_user)
+    return _to_response(report)
+
+
+@router.post("/{report_id}/accept", response_model=ExpenseReportResponse)
+def accept_report(
+    report_id: int,
+    current_user: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> ExpenseReportResponse:
+    """Transition a report from 'Submitted' to 'Scheduled for Payment'.
+
+    Only Admin users may accept a report.
+
+    Returns 200 with the updated ExpenseReportResponse on success.
+    Returns 401 when no valid session cookie is present.
+    Returns 403 when the caller does not have the Admin role.
+    Returns 404 when the report does not exist.
+    Returns 409 when the report is not in 'Submitted' state.
+
+    Requirements: 5.2, 5.3, 5.4
+    """
+    report = status_service.accept_report(db, report_id, current_user)
+    return _to_response(report)
+
+
+@router.post("/{report_id}/reject", response_model=ExpenseReportResponse)
+def reject_report(
+    report_id: int,
+    body: RejectRequest,
+    current_user: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> ExpenseReportResponse:
+    """Transition a report from 'Submitted' to 'Rejected', persisting admin_notes.
+
+    Only Admin users may reject a report.  ``admin_notes`` must be non-empty.
+
+    Returns 200 with the updated ExpenseReportResponse on success.
+    Returns 401 when no valid session cookie is present.
+    Returns 403 when the caller does not have the Admin role.
+    Returns 404 when the report does not exist.
+    Returns 409 when the report is not in 'Submitted' state.
+    Returns 422 when ``admin_notes`` is empty or missing.
+
+    Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
+    """
+    report = status_service.reject_report(db, report_id, body.admin_notes, current_user)
+    return _to_response(report)
+
+
+@router.put("/{report_id}", response_model=ExpenseReportResponse)
+def update_report(
+    report_id: int,
+    data: ExpenseReportUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ExpenseReportResponse:
+    """Update editable fields on an expense report.
+
+    Only the report owner may update, and only while the report is in an
+    editable state ('In Progress' or 'Rejected').
+
+    Returns 200 with the updated ExpenseReportResponse on success.
+    Returns 401 when no valid session cookie is present.
+    Returns 403 when the caller is not the report owner.
+    Returns 404 when the report does not exist.
+    Returns 409 when the report is in a read-only state.
+    Returns 422 when the request body fails Pydantic validation.
+
+    Requirements: 2.1, 2.4, 4.1, 7.1, 7.6
+    """
+    report = report_service.update_report(db, report_id, data, current_user)
+    return _to_response(report)
+
+
+@router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_report(
+    report_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Delete an expense report.
+
+    Only the report owner may delete, and only while the report is in an
+    editable state ('In Progress' or 'Rejected').
+
+    Returns 204 No Content on success.
+    Returns 401 when no valid session cookie is present.
+    Returns 403 when the caller is not the report owner.
+    Returns 404 when the report does not exist.
+    Returns 409 when the report is in a read-only state.
+
+    Requirements: 2.2, 2.5, 4.2, 7.2, 8.2
+    """
+    report_service.delete_report(db, report_id, current_user)

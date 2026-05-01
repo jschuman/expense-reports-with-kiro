@@ -161,33 +161,33 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
 - [x] 5. Checkpoint — backend service layer complete
   - Ensure all backend unit and property tests pass before proceeding to router changes. Run `pytest backend/tests/unit/ backend/tests/property/` and fix any failures.
 
-- [ ] 6. New API endpoints
-  - [ ] 6.1 Add `POST /reports/{id}/submit` endpoint to `backend/app/routers/reports.py`
+- [x] 6. New API endpoints
+  - [x] 6.1 Add `POST /reports/{id}/submit` endpoint to `backend/app/routers/reports.py`
     - Inject `current_user` via `get_current_user`, delegate to `status_service.submit_report()`
     - Return `ExpenseReportResponse` on 200
     - _Requirements: 3.2, 3.3, 3.5, 3.6_
 
-  - [ ] 6.2 Add `POST /reports/{id}/accept` endpoint
+  - [x] 6.2 Add `POST /reports/{id}/accept` endpoint
     - Inject `current_user` via `get_current_admin`, delegate to `status_service.accept_report()`
     - Return `ExpenseReportResponse` on 200
     - _Requirements: 5.2, 5.3, 5.4_
 
-  - [ ] 6.3 Add `POST /reports/{id}/reject` endpoint
+  - [x] 6.3 Add `POST /reports/{id}/reject` endpoint
     - Accept `RejectRequest` body, inject `current_user` via `get_current_admin`, delegate to `status_service.reject_report()`
     - Return `ExpenseReportResponse` on 200
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-  - [ ] 6.4 Add `PUT /reports/{id}` endpoint
+  - [x] 6.4 Add `PUT /reports/{id}` endpoint
     - Accept `ExpenseReportUpdate` body, inject `current_user` via `get_current_user`, delegate to `report_service.update_report()`
     - Return `ExpenseReportResponse` on 200
     - _Requirements: 2.1, 2.4, 4.1, 7.1, 7.6_
 
-  - [ ] 6.5 Add `DELETE /reports/{id}` endpoint
+  - [x] 6.5 Add `DELETE /reports/{id}` endpoint
     - Inject `current_user` via `get_current_user`, delegate to `report_service.delete_report()`
     - Return 204 No Content on success
     - _Requirements: 2.2, 2.5, 4.2, 7.2, 8.2_
 
-  - [ ] 6.6 Write integration tests for `POST /reports/{id}/submit` in `backend/tests/integration/`
+  - [x] 6.6 Write integration tests for `POST /reports/{id}/submit` in `backend/tests/integration/`
     - Test 200 success: owner submits an `"In Progress"` report → status becomes `"Submitted"`
     - Test 200 success: owner resubmits a `"Rejected"` report → status becomes `"Submitted"`
     - Test 403: non-owner attempt returns 403
@@ -196,14 +196,14 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test 404: non-existent report returns 404
     - _Requirements: 3.2, 3.3, 3.5, 3.6, 7.5_
 
-  - [ ] 6.7 Write integration tests for `POST /reports/{id}/accept`
+  - [x] 6.7 Write integration tests for `POST /reports/{id}/accept`
     - Test 200 success: admin accepts a `"Submitted"` report → status becomes `"Scheduled for Payment"`
     - Test 403: non-admin user returns 403
     - Test 409: attempt on `"In Progress"` report returns 409
     - Test 404: non-existent report returns 404
     - _Requirements: 5.2, 5.3, 5.4_
 
-  - [ ] 6.8 Write integration tests for `POST /reports/{id}/reject`
+  - [x] 6.8 Write integration tests for `POST /reports/{id}/reject`
     - Test 200 success: admin rejects a `"Submitted"` report with valid `admin_notes` → status becomes `"Rejected"` and `admin_notes` persisted
     - Test 403: non-admin user returns 403
     - Test 409: attempt on `"In Progress"` report returns 409
@@ -212,7 +212,7 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test 404: non-existent report returns 404
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-  - [ ] 6.9 Write integration tests for `PUT /reports/{id}`
+  - [x] 6.9 Write integration tests for `PUT /reports/{id}`
     - Test 200 success: owner updates an `"In Progress"` report
     - Test 200 success: owner updates a `"Rejected"` report
     - Test 403: non-owner returns 403
@@ -222,7 +222,7 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test 404: non-existent report returns 404
     - _Requirements: 2.1, 2.4, 4.1, 7.1, 7.6, 8.1_
 
-  - [ ] 6.10 Write integration tests for `DELETE /reports/{id}`
+  - [x] 6.10 Write integration tests for `DELETE /reports/{id}`
     - Test 204 success: owner deletes an `"In Progress"` report
     - Test 204 success: owner deletes a `"Rejected"` report
     - Test 403: non-owner returns 403
@@ -231,14 +231,14 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test 404: non-existent report returns 404
     - _Requirements: 2.2, 2.5, 4.2, 7.2, 8.2_
 
-  - [ ] 6.11 Write property test for admin-only accept and reject enforcement
+  - [x] 6.11 Write property test for admin-only accept and reject enforcement
     - **Property 4: Admin-Only Accept and Reject Enforcement**
     - Use `@given(report_data=submitted_report_strategy(), non_admin=non_admin_user_strategy())` to generate submitted reports with non-admin users
     - Assert that accept and reject attempts by non-admins return 403 and leave the report unchanged
     - Run minimum 100 iterations
     - **Validates: Requirements 5.4, 6.6**
 
-  - [ ] 6.12 Write property test for reject requires non-empty admin notes
+  - [x] 6.12 Write property test for reject requires non-empty admin notes
     - **Property 5: Reject Requires Non-Empty Admin Notes**
     - Use `@given(notes=st.one_of(st.just(""), st.just("   "), st.text(alphabet=st.characters(whitelist_categories=("Zs",)))))` to generate blank/whitespace notes
     - Assert that reject requests with blank notes return 422 and do not change the report status

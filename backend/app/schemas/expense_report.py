@@ -13,6 +13,12 @@ class RejectRequest(BaseModel):
 
     admin_notes: str = Field(..., min_length=1, description="Reason for rejection (required, non-empty)")
 
+    @model_validator(mode="after")
+    def validate_admin_notes_not_whitespace(self) -> "RejectRequest":
+        if not self.admin_notes.strip():
+            raise ValueError("admin_notes must not be blank or whitespace-only")
+        return self
+
 
 class ExpenseReportUpdate(BaseModel):
     """Request body for PUT /reports/{id}. All fields optional."""
