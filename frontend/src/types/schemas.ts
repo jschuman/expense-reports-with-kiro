@@ -25,6 +25,23 @@ export const expenseReportCreateSchema = z.object({
   }
 });
 
+export const expenseReportUpdateSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(255, 'Title must be 255 characters or less').optional(),
+  description: z.string().optional(),
+  total_amount: z.number({ invalid_type_error: 'Amount must be a number' }).positive('Amount must be positive').optional(),
+  reimbursable_from_client: z.boolean().optional(),
+  client: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.reimbursable_from_client && !data.client) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['client'],
+      message: 'Client is required when reimbursable from client is selected',
+    });
+  }
+});
+
 // Inferred types for form data
 export type LoginFormData = z.infer<typeof loginRequestSchema>;
 export type ExpenseReportFormData = z.infer<typeof expenseReportCreateSchema>;
+export type ExpenseReportUpdateFormData = z.infer<typeof expenseReportUpdateSchema>;

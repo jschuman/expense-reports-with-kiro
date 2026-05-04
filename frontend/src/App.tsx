@@ -16,6 +16,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CreateReportPage } from './pages/CreateReportPage';
+import { EditReportPage } from './pages/EditReportPage';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/reports/new" element={<CreateReportPage />} />
+          <Route path="/reports/:reportId/edit" element={<EditReportPage />} />
         </Route>
 
         {/* Catch-all */}
