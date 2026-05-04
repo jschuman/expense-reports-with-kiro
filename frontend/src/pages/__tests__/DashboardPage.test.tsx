@@ -9,6 +9,13 @@
  * - Page title changes based on role: Admin → "All Expense Reports",
  *   User → "My Expense Reports" (Requirements 2.3, 3.3)
  * - Admin users see owner_username on report cards (Requirement 2.4)
+ * - currentUser is passed to each ReportCard (Requirements 2.3, 3.1, 5.1)
+ * - Action buttons wire to useReports handlers (Requirements 3.1, 5.1, 6.3, 10.1)
+ *   - Submit button → handleSubmit (Requirement 3.1)
+ *   - Accept button → handleAccept (Requirement 5.1)
+ *   - Reject dialog confirm → handleReject (Requirement 6.3)
+ *   - Edit button → navigate to /reports/:id/edit (Requirement 7.3)
+ *   - Delete button → handleDelete (Requirement 10.1)
  * - Existing behaviour: empty state, report cards, create-report navigation
  */
 
@@ -56,7 +63,7 @@ const sampleReports: ExpenseReportResponse[] = [
     title: 'Q1 Travel',
     description: 'Client visit',
     total_amount: 450.0,
-    status: 'Pending',
+    status: 'In Progress',
     owner_id: 1,
     owner_username: 'alice',
     created_at: '2026-01-01T00:00:00Z',
@@ -69,7 +76,7 @@ const sampleReports: ExpenseReportResponse[] = [
     title: 'Office Supplies',
     description: 'Team equipment',
     total_amount: 120.5,
-    status: 'Pending',
+    status: 'In Progress',
     owner_id: 2,
     owner_username: 'bob',
     created_at: '2026-01-02T00:00:00Z',
@@ -304,7 +311,7 @@ describe('owner_username display for admin users', () => {
         title: 'Q1 Travel',
         description: 'Client visit',
         total_amount: 450.0,
-        status: 'Pending',
+        status: 'In Progress',
         owner_id: 1,
         owner_username: 'alice',
         created_at: '2026-01-01T00:00:00Z',
@@ -317,6 +324,346 @@ describe('owner_username display for admin users', () => {
     renderDashboard();
 
     expect(screen.getByText('alice')).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Requirements 2.3, 3.1, 5.1: currentUser is passed to each ReportCard
+// ---------------------------------------------------------------------------
+
+describe('currentUser passed to ReportCard', () => {
+  it('passes the logged-in user to each ReportCard so role-based buttons render correctly', () => {
+    // Owner (alice, id=1) viewing their own In Progress report — Submit button should appear
+    const ownerReport: ExpenseReportResponse = {
+      id: 1,
+      title: 'Q1 Travel',
+      description: 'Client visit',
+      total_amount: 450.0,
+      status: 'In Progress',
+      owner_id: 1,
+      owner_username: 'alice',
+      created_at: '2026-01-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+    };
+    setupDefaultMocks({ user: userRoleUser, reports: [ownerReport] });
+    renderDashboard();
+
+    // Submit button is only shown when currentUser is the owner and status is In Progress
+    expect(screen.getByRole('button', { name: /submit report/i })).toBeInTheDocument();
+  });
+
+  it('passes admin user to each ReportCard so Accept/Reject buttons render for Submitted reports', () => {
+    const submittedReport: ExpenseReportResponse = {
+      id: 10,
+      title: 'Submitted Report',
+      description: 'Awaiting review',
+      total_amount: 200.0,
+      status: 'Submitted',
+      owner_id: 99,
+      owner_username: 'charlie',
+      created_at: '2026-02-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+    };
+    setupDefaultMocks({ user: adminRoleUser, reports: [submittedReport] });
+    renderDashboard();
+
+    // Accept and Reject buttons are only shown when currentUser is Admin and status is Submitted
+    expect(screen.getByRole('button', { name: /accept report/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /reject report/i })).toBeInTheDocument();
+  });
+
+  it('renders no action buttons for a non-owner User viewing a Submitted report', () => {
+    const submittedReport: ExpenseReportResponse = {
+      id: 10,
+      title: 'Submitted Report',
+      description: 'Awaiting review',
+      total_amount: 200.0,
+      status: 'Submitted',
+      owner_id: 99, // different from userRoleUser.id (1)
+      owner_username: 'charlie',
+      created_at: '2026-02-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+    };
+    setupDefaultMocks({ user: userRoleUser, reports: [submittedReport] });
+    renderDashboard();
+
+    expect(screen.queryByRole('button', { name: /submit report/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /accept report/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /reject report/i })).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Requirement 3.1: Submit button calls handleSubmit with the correct report ID
+// ---------------------------------------------------------------------------
+
+describe('Submit action wiring', () => {
+  it('calls handleSubmit with the correct report ID when Submit is clicked', async () => {
+    const handleSubmit = vi.fn().mockResolvedValue(undefined);
+    const inProgressReport: ExpenseReportResponse = {
+      id: 42,
+      title: 'Travel Expenses',
+      description: 'Business trip',
+      total_amount: 300.0,
+      status: 'In Progress',
+      owner_id: 1, // matches userRoleUser.id
+      owner_username: 'alice',
+      created_at: '2026-03-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+    };
+    mockUseReports.mockReturnValue({
+      reports: [inProgressReport],
+      isLoading: false,
+      error: null,
+      createReport: vi.fn(),
+      handleSubmit,
+      handleAccept: vi.fn(),
+      handleReject: vi.fn(),
+      handleUpdate: vi.fn(),
+      handleDelete: vi.fn(),
+    });
+    mockUseAuth.mockReturnValue({
+      user: userRoleUser,
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+    renderDashboard();
+
+    await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+
+    expect(handleSubmit).toHaveBeenCalledOnce();
+    expect(handleSubmit).toHaveBeenCalledWith(42);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Requirement 5.1: Accept button calls handleAccept with the correct report ID
+// ---------------------------------------------------------------------------
+
+describe('Accept action wiring', () => {
+  it('calls handleAccept with the correct report ID when Accept is clicked', async () => {
+    const handleAccept = vi.fn().mockResolvedValue(undefined);
+    const submittedReport: ExpenseReportResponse = {
+      id: 55,
+      title: 'Submitted Report',
+      description: 'Ready for review',
+      total_amount: 500.0,
+      status: 'Submitted',
+      owner_id: 99,
+      owner_username: 'charlie',
+      created_at: '2026-03-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+    };
+    mockUseReports.mockReturnValue({
+      reports: [submittedReport],
+      isLoading: false,
+      error: null,
+      createReport: vi.fn(),
+      handleSubmit: vi.fn(),
+      handleAccept,
+      handleReject: vi.fn(),
+      handleUpdate: vi.fn(),
+      handleDelete: vi.fn(),
+    });
+    mockUseAuth.mockReturnValue({
+      user: adminRoleUser,
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+    renderDashboard();
+
+    await userEvent.click(screen.getByRole('button', { name: /accept report/i }));
+
+    expect(handleAccept).toHaveBeenCalledOnce();
+    expect(handleAccept).toHaveBeenCalledWith(55);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Requirement 6.3: Reject dialog confirm calls handleReject with report ID and notes
+// ---------------------------------------------------------------------------
+
+describe('Reject action wiring', () => {
+  it('calls handleReject with the correct report ID and admin notes when dialog is confirmed', async () => {
+    const handleReject = vi.fn().mockResolvedValue(undefined);
+    const submittedReport: ExpenseReportResponse = {
+      id: 77,
+      title: 'Submitted Report',
+      description: 'Ready for review',
+      total_amount: 750.0,
+      status: 'Submitted',
+      owner_id: 99,
+      owner_username: 'charlie',
+      created_at: '2026-03-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+    };
+    mockUseReports.mockReturnValue({
+      reports: [submittedReport],
+      isLoading: false,
+      error: null,
+      createReport: vi.fn(),
+      handleSubmit: vi.fn(),
+      handleAccept: vi.fn(),
+      handleReject,
+      handleUpdate: vi.fn(),
+      handleDelete: vi.fn(),
+    });
+    mockUseAuth.mockReturnValue({
+      user: adminRoleUser,
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+    renderDashboard();
+
+    // Open the reject dialog
+    await userEvent.click(screen.getByRole('button', { name: /reject report/i }));
+
+    // Type admin notes into the dialog text field
+    const notesInput = screen.getByRole('textbox');
+    await userEvent.type(notesInput, 'Missing receipts');
+
+    // Confirm the rejection
+    await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    expect(handleReject).toHaveBeenCalledOnce();
+    expect(handleReject).toHaveBeenCalledWith(77, 'Missing receipts');
+  });
+
+  it('does not call handleReject when the reject dialog is cancelled', async () => {
+    const handleReject = vi.fn();
+    const submittedReport: ExpenseReportResponse = {
+      id: 77,
+      title: 'Submitted Report',
+      description: 'Ready for review',
+      total_amount: 750.0,
+      status: 'Submitted',
+      owner_id: 99,
+      owner_username: 'charlie',
+      created_at: '2026-03-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+    };
+    mockUseReports.mockReturnValue({
+      reports: [submittedReport],
+      isLoading: false,
+      error: null,
+      createReport: vi.fn(),
+      handleSubmit: vi.fn(),
+      handleAccept: vi.fn(),
+      handleReject,
+      handleUpdate: vi.fn(),
+      handleDelete: vi.fn(),
+    });
+    mockUseAuth.mockReturnValue({
+      user: adminRoleUser,
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+    renderDashboard();
+
+    // Open the reject dialog
+    await userEvent.click(screen.getByRole('button', { name: /reject report/i }));
+
+    // Cancel without confirming
+    await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(handleReject).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Requirement 7.3: Edit button navigates to /reports/:id/edit
+// ---------------------------------------------------------------------------
+
+describe('Edit action wiring', () => {
+  it('navigates to /reports/:id/edit when Edit is clicked', async () => {
+    const inProgressReport: ExpenseReportResponse = {
+      id: 88,
+      title: 'Travel Expenses',
+      description: 'Business trip',
+      total_amount: 300.0,
+      status: 'In Progress',
+      owner_id: 1, // matches userRoleUser.id
+      owner_username: 'alice',
+      created_at: '2026-03-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+    };
+    setupDefaultMocks({ user: userRoleUser, reports: [inProgressReport] });
+    renderDashboard();
+
+    await userEvent.click(screen.getByRole('button', { name: /edit report/i }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/reports/88/edit');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Requirement 10.1: Delete button calls handleDelete with the correct report ID
+// ---------------------------------------------------------------------------
+
+describe('Delete action wiring', () => {
+  it('calls handleDelete with the correct report ID when Delete is clicked', async () => {
+    const handleDelete = vi.fn().mockResolvedValue(undefined);
+    const inProgressReport: ExpenseReportResponse = {
+      id: 99,
+      title: 'Travel Expenses',
+      description: 'Business trip',
+      total_amount: 300.0,
+      status: 'In Progress',
+      owner_id: 1, // matches userRoleUser.id
+      owner_username: 'alice',
+      created_at: '2026-03-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+    };
+    mockUseReports.mockReturnValue({
+      reports: [inProgressReport],
+      isLoading: false,
+      error: null,
+      createReport: vi.fn(),
+      handleSubmit: vi.fn(),
+      handleAccept: vi.fn(),
+      handleReject: vi.fn(),
+      handleUpdate: vi.fn(),
+      handleDelete,
+    });
+    mockUseAuth.mockReturnValue({
+      user: userRoleUser,
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+    renderDashboard();
+
+    await userEvent.click(screen.getByRole('button', { name: /delete report/i }));
+
+    expect(handleDelete).toHaveBeenCalledOnce();
+    expect(handleDelete).toHaveBeenCalledWith(99);
   });
 });
 

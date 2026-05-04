@@ -6,10 +6,17 @@
  * Provides a "Create New Report" button and a "Logout" button.
  * Logout calls the auth API and redirects to /login on success.
  *
- * Requirements: 2.3, 3.3, 4.5, 4.6, 4.7, 7.4
+ * Action buttons on each ReportCard are wired to useReports handlers:
+ *  - onSubmit  → handleSubmit  (In Progress / Rejected → Submitted)
+ *  - onAccept  → handleAccept  (Submitted → Scheduled for Payment)
+ *  - onReject  → handleReject  (Submitted → Rejected, requires admin notes)
+ *  - onEdit    → navigate to /reports/:id/edit
+ *  - onDelete  → handleDelete  (removes report)
+ *
+ * Requirements: 2.3, 3.1, 4.3, 4.5, 4.6, 4.7, 5.1, 7.3, 7.4, 8.3, 10.1
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -23,7 +30,15 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorAlert } from '../components/ErrorAlert';
 
 export function DashboardPage() {
-  const { reports, isLoading, error, handleSubmit, handleAccept, handleReject, handleDelete } = useReports();
+  const {
+    reports,
+    isLoading,
+    error,
+    handleSubmit,
+    handleAccept,
+    handleReject,
+    handleDelete,
+  } = useReports();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -42,6 +57,17 @@ export function DashboardPage() {
       setLogoutError('Logout failed. Please try again.');
     }
   };
+
+  /**
+   * Navigates to the edit page for the given report.
+   * Requirements: 2.3, 7.3 — owner can edit In Progress / Rejected reports.
+   */
+  const handleEdit = useCallback(
+    (reportId: number) => {
+      navigate(`/reports/${reportId}/edit`);
+    },
+    [navigate],
+  );
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
@@ -89,6 +115,9 @@ export function DashboardPage() {
 
       {!isLoading && !error && reports.length === 0 && <EmptyState />}
 
+      {/* Requirements: 2.3, 3.1, 4.3, 5.1, 7.3, 7.4, 8.3, 10.1
+          Pass currentUser so ReportCard can render role-appropriate action buttons.
+          Each action handler updates local state optimistically via useReports. */}
       {reports.map((report) => (
         <ReportCard
           key={report.id}
@@ -97,6 +126,7 @@ export function DashboardPage() {
           onSubmit={handleSubmit}
           onAccept={handleAccept}
           onReject={handleReject}
+          onEdit={handleEdit}
           onDelete={handleDelete}
         />
       ))}

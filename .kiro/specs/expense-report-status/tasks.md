@@ -339,15 +339,15 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Run minimum 100 iterations
     - **Validates: Requirements 2.3, 3.1, 4.3, 5.1, 7.3, 7.4, 8.3, 10.1**
 
-- [ ] 12. `DashboardPage` update
-  - [ ] 12.1 Update `frontend/src/pages/DashboardPage.tsx`
+- [x] 12. `DashboardPage` update
+  - [x] 12.1 Update `frontend/src/pages/DashboardPage.tsx`
     - Read `currentUser` from the auth context
     - Pass `currentUser` to each `ReportCard` instance
     - Wire `onSubmit`, `onAccept`, `onReject`, `onEdit`, `onDelete` props on `ReportCard` to the corresponding `useReports` action handlers
     - Trigger a refetch or apply optimistic state update after each action completes
     - _Requirements: 2.3, 3.1, 4.3, 5.1, 7.3, 7.4, 8.3, 10.1_
 
-  - [ ] 12.2 Update integration tests for `DashboardPage` in `frontend/src/pages/__tests__/DashboardPage.test.tsx`
+  - [x] 12.2 Update integration tests for `DashboardPage` in `frontend/src/pages/__tests__/DashboardPage.test.tsx`
     - Test that `currentUser` is passed to each rendered `ReportCard`
     - Test that clicking the Submit button on a card calls `handleSubmit` with the correct report ID
     - Test that clicking the Accept button on a card calls `handleAccept` with the correct report ID
