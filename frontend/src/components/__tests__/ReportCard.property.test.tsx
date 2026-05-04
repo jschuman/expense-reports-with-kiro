@@ -26,6 +26,12 @@ import { render, cleanup } from '@testing-library/react';
 import * as fc from 'fast-check';
 import { ReportCard } from '../ReportCard';
 import type { ExpenseReportResponse } from '../../types/expenseReport';
+import type { UserResponse } from '../../types/auth';
+
+// A non-owner, non-admin viewer used for field-rendering property tests.
+// Using a fixed viewer avoids action-button rendering that would interfere
+// with field-content assertions.
+const VIEWER_USER: UserResponse = { id: 9999, username: 'viewer', role: 'User' };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -137,7 +143,7 @@ describe('ReportCard — Property 5: Reimbursable boolean renders as "Yes" or "N
         fc.property(
           fullReport.map((r) => ({ ...r, reimbursable_from_client: true })),
           (report) => {
-            const { container } = render(<ReportCard report={report} />);
+            const { container } = render(<ReportCard report={report} currentUser={VIEWER_USER} />);
             expect(getReimbursableValue(container)).toBe('Yes');
             cleanup();
           }
@@ -154,7 +160,7 @@ describe('ReportCard — Property 5: Reimbursable boolean renders as "Yes" or "N
         fc.property(
           fullReport.map((r) => ({ ...r, reimbursable_from_client: false })),
           (report) => {
-            const { container } = render(<ReportCard report={report} />);
+            const { container } = render(<ReportCard report={report} currentUser={VIEWER_USER} />);
             expect(getReimbursableValue(container)).toBe('No');
             cleanup();
           }
@@ -169,7 +175,7 @@ describe('ReportCard — Property 5: Reimbursable boolean renders as "Yes" or "N
     () => {
       fc.assert(
         fc.property(fullReport, (report) => {
-          const { container } = render(<ReportCard report={report} />);
+          const { container } = render(<ReportCard report={report} currentUser={VIEWER_USER} />);
           const value = getReimbursableValue(container);
           const expected = report.reimbursable_from_client ? 'Yes' : 'No';
           expect(value).toBe(expected);
@@ -208,7 +214,7 @@ describe('ReportCard — Property 8: Empty optional fields display a placeholder
     () => {
       fc.assert(
         fc.property(reportWithNullableOptionals, (report) => {
-          const { container } = render(<ReportCard report={report} />);
+          const { container } = render(<ReportCard report={report} currentUser={VIEWER_USER} />);
 
           if (report.description === null || report.description === '') {
             expect(getFieldValue(container, 'Description')).toBe('—');
@@ -234,7 +240,7 @@ describe('ReportCard — Property 8: Empty optional fields display a placeholder
         fc.property(
           fullReport.map((r) => ({ ...r, description: null as string | null })),
           (report) => {
-            const { container } = render(<ReportCard report={report} />);
+            const { container } = render(<ReportCard report={report} currentUser={VIEWER_USER} />);
             expect(getFieldValue(container, 'Description')).toBe('—');
             cleanup();
           }
@@ -251,7 +257,7 @@ describe('ReportCard — Property 8: Empty optional fields display a placeholder
         fc.property(
           fullReport.map((r) => ({ ...r, client: null as string | null })),
           (report) => {
-            const { container } = render(<ReportCard report={report} />);
+            const { container } = render(<ReportCard report={report} currentUser={VIEWER_USER} />);
             expect(getFieldValue(container, 'Client')).toBe('—');
             cleanup();
           }
@@ -268,7 +274,7 @@ describe('ReportCard — Property 8: Empty optional fields display a placeholder
         fc.property(
           fullReport.map((r) => ({ ...r, admin_notes: null as string | null })),
           (report) => {
-            const { container } = render(<ReportCard report={report} />);
+            const { container } = render(<ReportCard report={report} currentUser={VIEWER_USER} />);
             expect(getFieldValue(container, 'Admin Notes')).toBe('—');
             cleanup();
           }
@@ -290,7 +296,7 @@ describe('ReportCard — Property 8: Empty optional fields display a placeholder
             admin_notes: null as string | null,
           })),
           (report) => {
-            const { container } = render(<ReportCard report={report} />);
+            const { container } = render(<ReportCard report={report} currentUser={VIEWER_USER} />);
             expect(getFieldValue(container, 'Description')).toBe('—');
             expect(getFieldValue(container, 'Client')).toBe('—');
             expect(getFieldValue(container, 'Admin Notes')).toBe('—');
@@ -315,7 +321,7 @@ describe('ReportCard — Property 8: Empty optional fields display a placeholder
  * stale DOM nodes when fast-check runs many iterations.
  */
 function renderCard(report: ExpenseReportResponse) {
-  const { container } = render(<ReportCard report={report} />);
+  const { container } = render(<ReportCard report={report} currentUser={VIEWER_USER} />);
   return container;
 }
 

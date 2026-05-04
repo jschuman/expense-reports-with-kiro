@@ -103,6 +103,11 @@ function setupDefaultMocks({
     isLoading,
     error,
     createReport: vi.fn(),
+    handleSubmit: vi.fn(),
+    handleAccept: vi.fn(),
+    handleReject: vi.fn(),
+    handleUpdate: vi.fn(),
+    handleDelete: vi.fn(),
   });
   mockUseAuth.mockReturnValue({
     user,

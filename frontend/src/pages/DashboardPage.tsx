@@ -23,7 +23,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorAlert } from '../components/ErrorAlert';
 
 export function DashboardPage() {
-  const { reports, isLoading, error } = useReports();
+  const { reports, isLoading, error, handleSubmit, handleAccept, handleReject, handleDelete } = useReports();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -90,7 +90,15 @@ export function DashboardPage() {
       {!isLoading && !error && reports.length === 0 && <EmptyState />}
 
       {reports.map((report) => (
-        <ReportCard key={report.id} report={report} />
+        <ReportCard
+          key={report.id}
+          report={report}
+          currentUser={user ?? { id: 0, username: '', role: 'User' }}
+          onSubmit={handleSubmit}
+          onAccept={handleAccept}
+          onReject={handleReject}
+          onDelete={handleDelete}
+        />
       ))}
     </Container>
   );

@@ -307,8 +307,8 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test clicking Cancel calls `onClose` without calling `onConfirm`
     - _Requirements: 6.1, 6.2_
 
-- [ ] 11. `ReportCard` component update
-  - [ ] 11.1 Update `frontend/src/components/ReportCard.tsx`
+- [x] 11. `ReportCard` component update
+  - [x] 11.1 Update `frontend/src/components/ReportCard.tsx`
     - Add `currentUser: UserResponse` prop
     - Render a colored MUI `Chip` for the report status (distinct color per status value)
     - Display `admin_notes` prominently when `report.status === "Rejected"`
@@ -320,7 +320,7 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Wire button clicks to `onSubmit`, `onAccept`, `onReject`, `onEdit`, `onDelete` callback props
     - _Requirements: 2.3, 3.1, 4.3, 5.1, 7.3, 7.4, 8.3, 10.1, 10.3_
 
-  - [ ] 11.2 Update unit tests for `ReportCard` in `frontend/src/components/__tests__/ReportCard.test.tsx`
+  - [x] 11.2 Update unit tests for `ReportCard` in `frontend/src/components/__tests__/ReportCard.test.tsx`
     - Test Submit button is shown for owner when status is `"In Progress"`
     - Test Edit and Delete buttons are shown for owner when status is `"In Progress"`
     - Test no action buttons are shown for owner when status is `"Submitted"`
@@ -332,7 +332,7 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test status chip renders the correct label for each status value
     - _Requirements: 2.3, 3.1, 4.3, 5.1, 7.3, 7.4, 8.3, 10.1, 10.3_
 
-  - [ ] 11.3 Write property test for dashboard controls matching status and role
+  - [x] 11.3 Write property test for dashboard controls matching status and role
     - **Property 8: Dashboard Controls Match Status and Role**
     - Use `@given(report=report_strategy(), user_role=st.sampled_from(["Admin", "User"]))` to generate all (status, role) combinations
     - Render `ReportCard` with each combination and assert that the set of visible action buttons exactly matches the permitted controls — no permitted action hidden, no forbidden action shown
