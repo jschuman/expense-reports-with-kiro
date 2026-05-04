@@ -355,7 +355,7 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test that clicking the Delete button on a card calls `handleDelete` with the correct report ID
     - _Requirements: 2.3, 3.1, 5.1, 6.3, 10.1_
 
-- [ ] 13. Final checkpoint — all tests pass
+- [x] 13. Final checkpoint — all tests pass
   - Run the full backend test suite: `pytest` from `backend/`
   - Run the full frontend test suite: `npm test -- --run` from `frontend/`
   - Ensure all tests pass and fix any remaining failures before considering the feature complete.

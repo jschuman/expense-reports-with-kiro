@@ -363,14 +363,13 @@ class TestRejectRequest:
         assert any(e["loc"] == ("admin_notes",) for e in errors)
 
     def test_whitespace_only_admin_notes_is_rejected(self):
-        """A string of only spaces has length > 0 but Pydantic min_length counts
-        characters, so a single space passes min_length=1.  The service layer
-        enforces the non-whitespace rule; here we verify that a truly empty
-        string is rejected at the schema level."""
-        # A single space technically passes min_length=1 — that is intentional.
-        # The schema rejects *empty* strings; whitespace trimming is a service concern.
-        with pytest.raises(ValidationError):
-            RejectRequest(admin_notes="")
+        """A string of only spaces passes min_length=1 but the model_validator
+        rejects it because strip() returns an empty string."""
+        with pytest.raises(ValidationError) as exc_info:
+            RejectRequest(admin_notes="   ")
+        errors = exc_info.value.errors()
+        # model_validator raises at model level (loc=()), not field level
+        assert any("admin_notes must not be blank" in str(e.get("msg", "")) for e in errors)
 
     def test_missing_admin_notes_is_rejected(self):
         """Omitting admin_notes entirely must raise ValidationError."""
