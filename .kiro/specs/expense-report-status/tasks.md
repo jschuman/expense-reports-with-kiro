@@ -291,15 +291,15 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test `handleDelete` removes the report from local state on success
     - _Requirements: 3.3, 5.2, 6.3, 2.1, 2.2_
 
-- [ ] 10. `RejectDialog` component
-  - [ ] 10.1 Create `frontend/src/components/RejectDialog.tsx`
+- [x] 10. `RejectDialog` component
+  - [x] 10.1 Create `frontend/src/components/RejectDialog.tsx`
     - Implement an MUI `Dialog` that accepts `open`, `onClose`, and `onConfirm(adminNotes: string)` props
     - Render a controlled `TextField` for `admin_notes`
     - Disable the Confirm button when `admin_notes.trim()` is empty
     - Call `onConfirm(adminNotes)` on Confirm click and reset state; call `onClose` on Cancel
     - _Requirements: 6.1, 6.2, 6.3_
 
-  - [ ] 10.2 Write unit tests for `RejectDialog` in `frontend/src/components/__tests__/RejectDialog.test.tsx`
+  - [x] 10.2 Write unit tests for `RejectDialog` in `frontend/src/components/__tests__/RejectDialog.test.tsx`
     - Test Confirm button is disabled when `admin_notes` is empty
     - Test Confirm button is disabled when `admin_notes` is whitespace only
     - Test Confirm button is enabled when `admin_notes` is non-empty
