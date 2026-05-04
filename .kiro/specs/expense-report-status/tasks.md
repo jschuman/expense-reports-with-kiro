@@ -245,20 +245,20 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Run minimum 100 iterations
     - **Validates: Requirements 6.1, 6.2**
 
-- [ ] 7. Checkpoint — backend API complete
+- [x] 7. Checkpoint — backend API complete
   - Ensure all backend unit, property, and integration tests pass. Run `pytest` from the `backend/` directory and fix any failures.
 
-- [ ] 8. Frontend types and API client
-  - [ ] 8.1 Update `frontend/src/types/expenseReport.ts`
+- [x] 8. Frontend types and API client
+  - [x] 8.1 Update `frontend/src/types/expenseReport.ts`
     - Add `ExpenseReportUpdate` interface with all optional fields matching the backend schema
     - Add `StatusAuditLogEntry` interface with `id`, `expense_report_id`, `status`, `changed_at` (ISO 8601 string)
     - _Requirements: 2.1, 7.1, 11.6_
 
-  - [ ] 8.2 Update `frontend/src/types/auth.ts`
+  - [x] 8.2 Update `frontend/src/types/auth.ts`
     - Add `role: string` field to `UserResponse` interface
     - _Requirements: 5.1, 5.4, 6.6_
 
-  - [ ] 8.3 Add new API functions to `frontend/src/api/reports.ts`
+  - [x] 8.3 Add new API functions to `frontend/src/api/reports.ts`
     - Add `submitReport(reportId: number): Promise<ExpenseReportResponse>`
     - Add `acceptReport(reportId: number): Promise<ExpenseReportResponse>`
     - Add `rejectReport(reportId: number, adminNotes: string): Promise<ExpenseReportResponse>`
@@ -266,7 +266,7 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Add `deleteReport(reportId: number): Promise<void>`
     - _Requirements: 3.3, 5.2, 6.3, 2.1, 2.2_
 
-  - [ ] 8.4 Write unit tests for the new API functions in `frontend/src/api/reports.test.ts`
+  - [x] 8.4 Write unit tests for the new API functions in `frontend/src/api/reports.test.ts`
     - Test `submitReport` calls `POST /reports/{id}/submit` and returns the response
     - Test `acceptReport` calls `POST /reports/{id}/accept` and returns the response
     - Test `rejectReport` calls `POST /reports/{id}/reject` with `{ admin_notes }` body and returns the response

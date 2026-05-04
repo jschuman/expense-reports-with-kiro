@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { listReports, createReport } from '../reports';
+import { listReports, createReport, submitReport, acceptReport, rejectReport, updateReport, deleteReport } from '../reports';
 import { ApiError } from '../client';
 
 const server = setupServer();
@@ -146,5 +146,333 @@ describe('createReport()', () => {
     await expect(
       createReport({ title: '', purpose: 'Test', total_amount: 10 }),
     ).rejects.toMatchObject({ status: 422 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// submitReport()
+// ---------------------------------------------------------------------------
+
+describe('submitReport()', () => {
+  it('sends POST /reports/{id}/submit and returns ExpenseReportResponse on 200', async () => {
+    let capturedMethod: string | undefined;
+    let capturedUrl: string | undefined;
+
+    server.use(
+      http.post('/reports/:id/submit', ({ request }) => {
+        capturedMethod = request.method;
+        capturedUrl = request.url;
+        return HttpResponse.json({ ...sampleReport, status: 'Submitted' }, { status: 200 });
+      }),
+    );
+
+    const result = await submitReport(1);
+
+    expect(result).toEqual({ ...sampleReport, status: 'Submitted' });
+    expect(capturedMethod).toBe('POST');
+    expect(capturedUrl).toContain('/reports/1/submit');
+  });
+
+  it('throws ApiError on 403 (non-owner)', async () => {
+    server.use(
+      http.post('/reports/:id/submit', () =>
+        HttpResponse.json({ detail: 'Forbidden' }, { status: 403 }),
+      ),
+    );
+
+    await expect(submitReport(1)).rejects.toThrow(ApiError);
+    await expect(submitReport(1)).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('throws ApiError on 409 (invalid state)', async () => {
+    server.use(
+      http.post('/reports/:id/submit', () =>
+        HttpResponse.json({ detail: 'Cannot submit from this state' }, { status: 409 }),
+      ),
+    );
+
+    await expect(submitReport(1)).rejects.toThrow(ApiError);
+    await expect(submitReport(1)).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// acceptReport()
+// ---------------------------------------------------------------------------
+
+describe('acceptReport()', () => {
+  it('sends POST /reports/{id}/accept and returns ExpenseReportResponse on 200', async () => {
+    let capturedMethod: string | undefined;
+    let capturedUrl: string | undefined;
+
+    server.use(
+      http.post('/reports/:id/accept', ({ request }) => {
+        capturedMethod = request.method;
+        capturedUrl = request.url;
+        return HttpResponse.json({ ...sampleReport, status: 'Scheduled for Payment' }, { status: 200 });
+      }),
+    );
+
+    const result = await acceptReport(1);
+
+    expect(result).toEqual({ ...sampleReport, status: 'Scheduled for Payment' });
+    expect(capturedMethod).toBe('POST');
+    expect(capturedUrl).toContain('/reports/1/accept');
+  });
+
+  it('throws ApiError on 403 (non-admin)', async () => {
+    server.use(
+      http.post('/reports/:id/accept', () =>
+        HttpResponse.json({ detail: 'Admin role required' }, { status: 403 }),
+      ),
+    );
+
+    await expect(acceptReport(1)).rejects.toThrow(ApiError);
+    await expect(acceptReport(1)).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('throws ApiError on 409 (invalid state)', async () => {
+    server.use(
+      http.post('/reports/:id/accept', () =>
+        HttpResponse.json({ detail: 'Cannot accept from this state' }, { status: 409 }),
+      ),
+    );
+
+    await expect(acceptReport(1)).rejects.toThrow(ApiError);
+    await expect(acceptReport(1)).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// rejectReport()
+// ---------------------------------------------------------------------------
+
+describe('rejectReport()', () => {
+  it('sends POST /reports/{id}/reject with { admin_notes } body and returns ExpenseReportResponse on 200', async () => {
+    let capturedMethod: string | undefined;
+    let capturedUrl: string | undefined;
+    let capturedBody: unknown;
+
+    server.use(
+      http.post('/reports/:id/reject', async ({ request }) => {
+        capturedMethod = request.method;
+        capturedUrl = request.url;
+        capturedBody = await request.json();
+        return HttpResponse.json({ ...sampleReport, status: 'Rejected', admin_notes: 'Missing receipts' }, { status: 200 });
+      }),
+    );
+
+    const result = await rejectReport(1, 'Missing receipts');
+
+    expect(result).toEqual({ ...sampleReport, status: 'Rejected', admin_notes: 'Missing receipts' });
+    expect(capturedMethod).toBe('POST');
+    expect(capturedUrl).toContain('/reports/1/reject');
+    expect(capturedBody).toEqual({ admin_notes: 'Missing receipts' });
+  });
+
+  it('sends the exact admin_notes string provided', async () => {
+    let capturedBody: unknown;
+
+    server.use(
+      http.post('/reports/:id/reject', async ({ request }) => {
+        capturedBody = await request.json();
+        return HttpResponse.json({ ...sampleReport, status: 'Rejected' }, { status: 200 });
+      }),
+    );
+
+    await rejectReport(42, 'Amount exceeds policy limit');
+
+    expect(capturedBody).toEqual({ admin_notes: 'Amount exceeds policy limit' });
+  });
+
+  it('sends Content-Type: application/json header', async () => {
+    let capturedContentType: string | null = null;
+
+    server.use(
+      http.post('/reports/:id/reject', ({ request }) => {
+        capturedContentType = request.headers.get('content-type');
+        return HttpResponse.json({ ...sampleReport, status: 'Rejected' }, { status: 200 });
+      }),
+    );
+
+    await rejectReport(1, 'Some reason');
+
+    expect(capturedContentType).toContain('application/json');
+  });
+
+  it('throws ApiError on 403 (non-admin)', async () => {
+    server.use(
+      http.post('/reports/:id/reject', () =>
+        HttpResponse.json({ detail: 'Admin role required' }, { status: 403 }),
+      ),
+    );
+
+    await expect(rejectReport(1, 'reason')).rejects.toThrow(ApiError);
+    await expect(rejectReport(1, 'reason')).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('throws ApiError on 422 (empty admin_notes)', async () => {
+    server.use(
+      http.post('/reports/:id/reject', () =>
+        HttpResponse.json({ detail: 'admin_notes must be non-empty' }, { status: 422 }),
+      ),
+    );
+
+    await expect(rejectReport(1, '')).rejects.toThrow(ApiError);
+    await expect(rejectReport(1, '')).rejects.toMatchObject({ status: 422 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateReport()
+// ---------------------------------------------------------------------------
+
+describe('updateReport()', () => {
+  it('sends PUT /reports/{id} with the update body and returns ExpenseReportResponse on 200', async () => {
+    let capturedMethod: string | undefined;
+    let capturedUrl: string | undefined;
+    let capturedBody: unknown;
+
+    server.use(
+      http.put('/reports/:id', async ({ request }) => {
+        capturedMethod = request.method;
+        capturedUrl = request.url;
+        capturedBody = await request.json();
+        return HttpResponse.json({ ...sampleReport, title: 'Updated Title' }, { status: 200 });
+      }),
+    );
+
+    const updateData = { title: 'Updated Title', total_amount: 500 };
+    const result = await updateReport(1, updateData);
+
+    expect(result).toEqual({ ...sampleReport, title: 'Updated Title' });
+    expect(capturedMethod).toBe('PUT');
+    expect(capturedUrl).toContain('/reports/1');
+    expect(capturedBody).toEqual(updateData);
+  });
+
+  it('sends only the provided fields in the request body', async () => {
+    let capturedBody: unknown;
+
+    server.use(
+      http.put('/reports/:id', async ({ request }) => {
+        capturedBody = await request.json();
+        return HttpResponse.json(sampleReport, { status: 200 });
+      }),
+    );
+
+    await updateReport(5, { total_amount: 999.99 });
+
+    expect(capturedBody).toEqual({ total_amount: 999.99 });
+  });
+
+  it('sends Content-Type: application/json header', async () => {
+    let capturedContentType: string | null = null;
+
+    server.use(
+      http.put('/reports/:id', ({ request }) => {
+        capturedContentType = request.headers.get('content-type');
+        return HttpResponse.json(sampleReport, { status: 200 });
+      }),
+    );
+
+    await updateReport(1, { title: 'Test' });
+
+    expect(capturedContentType).toContain('application/json');
+  });
+
+  it('throws ApiError on 403 (non-owner)', async () => {
+    server.use(
+      http.put('/reports/:id', () =>
+        HttpResponse.json({ detail: 'Forbidden' }, { status: 403 }),
+      ),
+    );
+
+    await expect(updateReport(1, { title: 'x' })).rejects.toThrow(ApiError);
+    await expect(updateReport(1, { title: 'x' })).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('throws ApiError on 409 (read-only state)', async () => {
+    server.use(
+      http.put('/reports/:id', () =>
+        HttpResponse.json({ detail: 'Cannot update in this state' }, { status: 409 }),
+      ),
+    );
+
+    await expect(updateReport(1, { title: 'x' })).rejects.toThrow(ApiError);
+    await expect(updateReport(1, { title: 'x' })).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deleteReport()
+// ---------------------------------------------------------------------------
+
+describe('deleteReport()', () => {
+  it('sends DELETE /reports/{id} and resolves void on 204', async () => {
+    let capturedMethod: string | undefined;
+    let capturedUrl: string | undefined;
+
+    server.use(
+      http.delete('/reports/:id', ({ request }) => {
+        capturedMethod = request.method;
+        capturedUrl = request.url;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const result = await deleteReport(1);
+
+    expect(result).toBeUndefined();
+    expect(capturedMethod).toBe('DELETE');
+    expect(capturedUrl).toContain('/reports/1');
+  });
+
+  it('sends DELETE to the correct report ID', async () => {
+    let capturedUrl: string | undefined;
+
+    server.use(
+      http.delete('/reports/:id', ({ request }) => {
+        capturedUrl = request.url;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await deleteReport(42);
+
+    expect(capturedUrl).toContain('/reports/42');
+  });
+
+  it('throws ApiError on 403 (non-owner)', async () => {
+    server.use(
+      http.delete('/reports/:id', () =>
+        HttpResponse.json({ detail: 'Forbidden' }, { status: 403 }),
+      ),
+    );
+
+    await expect(deleteReport(1)).rejects.toThrow(ApiError);
+    await expect(deleteReport(1)).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('throws ApiError on 409 (read-only state)', async () => {
+    server.use(
+      http.delete('/reports/:id', () =>
+        HttpResponse.json({ detail: 'Cannot delete in this state' }, { status: 409 }),
+      ),
+    );
+
+    await expect(deleteReport(1)).rejects.toThrow(ApiError);
+    await expect(deleteReport(1)).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('throws ApiError on 404 (not found)', async () => {
+    server.use(
+      http.delete('/reports/:id', () =>
+        HttpResponse.json({ detail: 'Report not found' }, { status: 404 }),
+      ),
+    );
+
+    await expect(deleteReport(99)).rejects.toThrow(ApiError);
+    await expect(deleteReport(99)).rejects.toMatchObject({ status: 404 });
   });
 });
