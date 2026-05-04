@@ -19,23 +19,47 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
+// ---------------------------------------------------------------------------
+// Shared fixtures
+// ---------------------------------------------------------------------------
+
 const sampleReport = {
   id: 1,
   title: 'Q1 Travel',
-  purpose: 'Client visit',
+  description: 'Client visit',
   total_amount: 450.0,
-  status: 'Pending',
+  status: 'In Progress',
   owner_id: 1,
+  owner_username: 'user1',
+  created_at: '2026-01-01T00:00:00Z',
+  reimbursable_from_client: false,
+  client: null,
+  admin_notes: null,
 };
 
 const anotherReport = {
   id: 2,
   title: 'Conference',
-  purpose: 'Annual summit',
+  description: 'Annual summit',
   total_amount: 1200.5,
-  status: 'Pending',
+  status: 'In Progress',
   owner_id: 1,
+  owner_username: 'user1',
+  created_at: '2026-01-02T00:00:00Z',
+  reimbursable_from_client: false,
+  client: null,
+  admin_notes: null,
 };
+
+/** Helper: render the hook with a pre-loaded list of reports. */
+async function renderWithReports(initialReports = [sampleReport]) {
+  server.use(
+    http.get('/reports', () => HttpResponse.json(initialReports, { status: 200 })),
+  );
+  const rendered = renderHook(() => useReports());
+  await waitFor(() => expect(rendered.result.current.isLoading).toBe(false));
+  return rendered;
+}
 
 // ---------------------------------------------------------------------------
 // Reports fetched on mount
@@ -156,8 +180,8 @@ describe('createReport()', () => {
     await act(async () => {
       await result.current.createReport({
         title: 'Conference',
-        purpose: 'Annual summit',
         total_amount: 1200.5,
+        reimbursable_from_client: false,
       });
     });
 
@@ -178,8 +202,8 @@ describe('createReport()', () => {
     await act(async () => {
       created = await result.current.createReport({
         title: 'Q1 Travel',
-        purpose: 'Client visit',
         total_amount: 450.0,
+        reimbursable_from_client: false,
       });
     });
 
@@ -201,13 +225,266 @@ describe('createReport()', () => {
       act(async () => {
         await result.current.createReport({
           title: '',
-          purpose: 'Test',
           total_amount: 10,
+          reimbursable_from_client: false,
         });
       }),
     ).rejects.toMatchObject({ status: 422 });
 
     // List should remain unchanged
     expect(result.current.reports).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// handleSubmit()
+// ---------------------------------------------------------------------------
+
+describe('handleSubmit()', () => {
+  it('updates the matching report status to "Submitted" in local state on success', async () => {
+    const submittedReport = { ...sampleReport, status: 'Submitted' };
+
+    const { result } = await renderWithReports([sampleReport, anotherReport]);
+
+    server.use(
+      http.post(`/reports/${sampleReport.id}/submit`, () =>
+        HttpResponse.json(submittedReport, { status: 200 }),
+      ),
+    );
+
+    await act(async () => {
+      await result.current.handleSubmit(sampleReport.id);
+    });
+
+    expect(result.current.reports).toHaveLength(2);
+    expect(result.current.reports[0]).toEqual(submittedReport);
+    // Other reports are unaffected
+    expect(result.current.reports[1]).toEqual(anotherReport);
+  });
+
+  it('throws and leaves state unchanged when submit fails', async () => {
+    const { result } = await renderWithReports([sampleReport]);
+
+    server.use(
+      http.post(`/reports/${sampleReport.id}/submit`, () =>
+        HttpResponse.json({ detail: 'Conflict' }, { status: 409 }),
+      ),
+    );
+
+    await expect(
+      act(async () => {
+        await result.current.handleSubmit(sampleReport.id);
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+
+    expect(result.current.reports[0]).toEqual(sampleReport);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// handleAccept()
+// ---------------------------------------------------------------------------
+
+describe('handleAccept()', () => {
+  it('updates the matching report status to "Scheduled for Payment" in local state on success', async () => {
+    const submittedReport = { ...sampleReport, status: 'Submitted' };
+    const scheduledReport = { ...sampleReport, status: 'Scheduled for Payment' };
+
+    const { result } = await renderWithReports([submittedReport, anotherReport]);
+
+    server.use(
+      http.post(`/reports/${submittedReport.id}/accept`, () =>
+        HttpResponse.json(scheduledReport, { status: 200 }),
+      ),
+    );
+
+    await act(async () => {
+      await result.current.handleAccept(submittedReport.id);
+    });
+
+    expect(result.current.reports).toHaveLength(2);
+    expect(result.current.reports[0]).toEqual(scheduledReport);
+    // Other reports are unaffected
+    expect(result.current.reports[1]).toEqual(anotherReport);
+  });
+
+  it('throws and leaves state unchanged when accept fails', async () => {
+    const submittedReport = { ...sampleReport, status: 'Submitted' };
+    const { result } = await renderWithReports([submittedReport]);
+
+    server.use(
+      http.post(`/reports/${submittedReport.id}/accept`, () =>
+        HttpResponse.json({ detail: 'Forbidden' }, { status: 403 }),
+      ),
+    );
+
+    await expect(
+      act(async () => {
+        await result.current.handleAccept(submittedReport.id);
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+
+    expect(result.current.reports[0]).toEqual(submittedReport);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// handleReject()
+// ---------------------------------------------------------------------------
+
+describe('handleReject()', () => {
+  it('updates the matching report status to "Rejected" and admin_notes in local state on success', async () => {
+    const submittedReport = { ...sampleReport, status: 'Submitted' };
+    const rejectedReport = {
+      ...sampleReport,
+      status: 'Rejected',
+      admin_notes: 'Missing receipts',
+    };
+
+    const { result } = await renderWithReports([submittedReport, anotherReport]);
+
+    server.use(
+      http.post(`/reports/${submittedReport.id}/reject`, () =>
+        HttpResponse.json(rejectedReport, { status: 200 }),
+      ),
+    );
+
+    await act(async () => {
+      await result.current.handleReject(submittedReport.id, 'Missing receipts');
+    });
+
+    expect(result.current.reports).toHaveLength(2);
+    expect(result.current.reports[0]).toEqual(rejectedReport);
+    expect(result.current.reports[0].admin_notes).toBe('Missing receipts');
+    // Other reports are unaffected
+    expect(result.current.reports[1]).toEqual(anotherReport);
+  });
+
+  it('throws and leaves state unchanged when reject fails', async () => {
+    const submittedReport = { ...sampleReport, status: 'Submitted' };
+    const { result } = await renderWithReports([submittedReport]);
+
+    server.use(
+      http.post(`/reports/${submittedReport.id}/reject`, () =>
+        HttpResponse.json({ detail: 'Validation error' }, { status: 422 }),
+      ),
+    );
+
+    await expect(
+      act(async () => {
+        await result.current.handleReject(submittedReport.id, '');
+      }),
+    ).rejects.toMatchObject({ status: 422 });
+
+    expect(result.current.reports[0]).toEqual(submittedReport);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// handleUpdate()
+// ---------------------------------------------------------------------------
+
+describe('handleUpdate()', () => {
+  it('updates the matching report fields in local state on success', async () => {
+    const updatedReport = { ...sampleReport, title: 'Updated Title', total_amount: 999 };
+
+    const { result } = await renderWithReports([sampleReport, anotherReport]);
+
+    server.use(
+      http.put(`/reports/${sampleReport.id}`, () =>
+        HttpResponse.json(updatedReport, { status: 200 }),
+      ),
+    );
+
+    await act(async () => {
+      await result.current.handleUpdate(sampleReport.id, {
+        title: 'Updated Title',
+        total_amount: 999,
+      });
+    });
+
+    expect(result.current.reports).toHaveLength(2);
+    expect(result.current.reports[0]).toEqual(updatedReport);
+    expect(result.current.reports[0].title).toBe('Updated Title');
+    expect(result.current.reports[0].total_amount).toBe(999);
+    // Other reports are unaffected
+    expect(result.current.reports[1]).toEqual(anotherReport);
+  });
+
+  it('throws and leaves state unchanged when update fails', async () => {
+    const { result } = await renderWithReports([sampleReport]);
+
+    server.use(
+      http.put(`/reports/${sampleReport.id}`, () =>
+        HttpResponse.json({ detail: 'Conflict' }, { status: 409 }),
+      ),
+    );
+
+    await expect(
+      act(async () => {
+        await result.current.handleUpdate(sampleReport.id, { title: 'New Title' });
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+
+    expect(result.current.reports[0]).toEqual(sampleReport);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// handleDelete()
+// ---------------------------------------------------------------------------
+
+describe('handleDelete()', () => {
+  it('removes the report from local state on success', async () => {
+    const { result } = await renderWithReports([sampleReport, anotherReport]);
+
+    server.use(
+      http.delete(`/reports/${sampleReport.id}`, () =>
+        new HttpResponse(null, { status: 204 }),
+      ),
+    );
+
+    await act(async () => {
+      await result.current.handleDelete(sampleReport.id);
+    });
+
+    expect(result.current.reports).toHaveLength(1);
+    expect(result.current.reports[0]).toEqual(anotherReport);
+  });
+
+  it('removes only the targeted report, leaving others intact', async () => {
+    const { result } = await renderWithReports([sampleReport, anotherReport]);
+
+    server.use(
+      http.delete(`/reports/${anotherReport.id}`, () =>
+        new HttpResponse(null, { status: 204 }),
+      ),
+    );
+
+    await act(async () => {
+      await result.current.handleDelete(anotherReport.id);
+    });
+
+    expect(result.current.reports).toHaveLength(1);
+    expect(result.current.reports[0]).toEqual(sampleReport);
+  });
+
+  it('throws and leaves state unchanged when delete fails', async () => {
+    const { result } = await renderWithReports([sampleReport]);
+
+    server.use(
+      http.delete(`/reports/${sampleReport.id}`, () =>
+        HttpResponse.json({ detail: 'Conflict' }, { status: 409 }),
+      ),
+    );
+
+    await expect(
+      act(async () => {
+        await result.current.handleDelete(sampleReport.id);
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+
+    expect(result.current.reports).toHaveLength(1);
+    expect(result.current.reports[0]).toEqual(sampleReport);
   });
 });

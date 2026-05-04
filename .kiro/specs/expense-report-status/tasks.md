@@ -274,8 +274,8 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Test `deleteReport` calls `DELETE /reports/{id}` and resolves void on 204
     - _Requirements: 3.3, 5.2, 6.3, 2.1, 2.2_
 
-- [ ] 9. `useReports` hook update
-  - [ ] 9.1 Add action handlers to `frontend/src/hooks/useReports.ts`
+- [x] 9. `useReports` hook update
+  - [x] 9.1 Add action handlers to `frontend/src/hooks/useReports.ts`
     - Add `handleSubmit(reportId: number)`: calls `submitReport`, updates local state on success
     - Add `handleAccept(reportId: number)`: calls `acceptReport`, updates local state on success
     - Add `handleReject(reportId: number, adminNotes: string)`: calls `rejectReport`, updates local state on success
@@ -283,7 +283,7 @@ Implement the full four-state status lifecycle (`In Progress → Submitted → S
     - Add `handleDelete(reportId: number)`: calls `deleteReport`, removes report from local state on success
     - _Requirements: 3.3, 5.2, 6.3, 2.1, 2.2_
 
-  - [ ] 9.2 Update unit tests for `useReports` in `frontend/src/hooks/useReports.test.ts`
+  - [x] 9.2 Update unit tests for `useReports` in `frontend/src/hooks/useReports.test.ts`
     - Test `handleSubmit` updates the matching report's status in local state on success
     - Test `handleAccept` updates the matching report's status in local state on success
     - Test `handleReject` updates the matching report's status and `admin_notes` in local state on success
