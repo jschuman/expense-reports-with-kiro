@@ -14,6 +14,7 @@ The Expense Report Web App allows authenticated users to create, view, and manag
 - **Expense Report Management**: Create, edit, submit, and delete expense reports with detailed information
 - **Admin Review**: Admins can accept or reject submitted reports; rejected reports require a reason (admin notes)
 - **Status Audit Log**: Every status change is recorded with a UTC timestamp for full traceability
+- **Expense Line Items**: Each report supports multiple line items (description, amount, incurred date); the report total is automatically computed as the sum of all lines
 - **Client Reimbursement Tracking**: Mark expenses as client-reimbursable and associate them with specific clients
 - **Automatic Metadata**: Owner and creation timestamp are automatically recorded
 - **Responsive UI**: Material UI-based interface with form validation
@@ -229,14 +230,24 @@ Each expense report includes:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | Title | String | Yes | Report title (max 255 chars) |
-| Description | String | No | Optional description (replaces "Purpose") |
-| Total Amount | Number | Yes | Total expense amount (must be positive) |
+| Description | String | No | Optional description |
+| Total Amount | Number | Computed | Sum of all line item amounts; read-only, never entered manually |
 | Status | String | Auto | `In Progress` on creation; transitions through `Submitted`, `Rejected`, `Scheduled for Payment` |
 | Owner | User | Auto | Automatically set to the logged-in user |
 | Created At | DateTime | Auto | Server-side UTC timestamp |
 | Reimbursable from Client | Boolean | No | Whether expense is client-reimbursable (default: false) |
 | Client | String | Conditional | Required when reimbursable is true; must be from predefined list |
-| Admin Notes | String | No | Reserved for future admin functionality |
+| Admin Notes | String | No | Reserved for admin use |
+
+## Expense Line Fields
+
+Each line item on a report includes:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| Description | String | Yes | What was purchased (e.g. "Taxi to airport") |
+| Amount | Number | Yes | Cost of the item (must be positive) |
+| Incurred Date | Date | Yes | Calendar date the expense occurred (ISO 8601) |
 
 ## Troubleshooting
 

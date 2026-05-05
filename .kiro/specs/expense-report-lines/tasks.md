@@ -6,7 +6,7 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
 
 ## Tasks
 
-- [ ] 1. Create the `ExpenseLine` ORM model and Alembic migration
+- [x] 1. Create the `ExpenseLine` ORM model and Alembic migration
   - Create `backend/app/models/expense_line.py` with the `ExpenseLine` class: `id`, `report_id` (FK to `expense_reports.id` with `ondelete="CASCADE"`), `description` (Text, not null), `amount` (Float, not null), `incurred_date` (Date, not null), and a `report` back-reference relationship
   - Add `lines: Mapped[List["ExpenseLine"]]` relationship to `ExpenseReport` in `backend/app/models/expense_report.py` with `cascade="all, delete-orphan"`
   - Remove the `total_amount` column from the `ExpenseReport` ORM model in `backend/app/models/expense_report.py` — it is no longer stored
