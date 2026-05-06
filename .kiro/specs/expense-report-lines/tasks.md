@@ -47,17 +47,17 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
     - `delete_line`: valid deletion removes line; 403 for non-owner; 409 for locked status; 404 for missing line
     - _Requirements: 1.2, 2.4, 3.4, 3.6, 3.7, 4.3, 4.4, 4.5, 8.1, 8.2, 8.3_
 
-- [ ] 5. Create the `lines` FastAPI router and register it
-  - [ ] 5.1 Create `backend/app/routers/lines.py` with four endpoints under `/{report_id}/lines`:
+- [x] 5. Create the `lines` FastAPI router and register it
+  - [x] 5.1 Create `backend/app/routers/lines.py` with four endpoints under `/{report_id}/lines`:
     - `POST /{report_id}/lines` → 201 `ExpenseLineResponse`; delegates to `create_line`
     - `GET /{report_id}/lines` → 200 `List[ExpenseLineResponse]`; delegates to `list_lines`
     - `PUT /{report_id}/lines/{line_id}` → 200 `ExpenseLineResponse`; delegates to `update_line`
     - `DELETE /{report_id}/lines/{line_id}` → 204 No Content; delegates to `delete_line`
     - All endpoints use `get_current_user` dependency
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.6, 7.7, 7.8, 7.9_
-  - [ ] 5.2 Register the lines router in `backend/app/main.py` with `prefix="/reports"`
+  - [x] 5.2 Register the lines router in `backend/app/main.py` with `prefix="/reports"`
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
-  - [ ] 5.3 Write integration tests for all line endpoints in `backend/tests/integration/test_lines.py`
+  - [x] 5.3 Write integration tests for all line endpoints in `backend/tests/integration/test_lines.py`
     - Use `httpx.AsyncClient` + `ASGITransport` pattern matching `test_reports.py`
     - `POST /reports/{id}/lines`: 201 success (verify response shape and `GET /reports` shows updated total_amount); 401 unauthenticated; 403 non-owner; 409 locked status (`Submitted`); 409 locked status (`Scheduled for Payment`); 422 missing description; 422 empty description; 422 zero amount; 422 negative amount; 422 missing date; 404 report not found
     - `GET /reports/{id}/lines`: 200 owner (verify list shape); 200 admin (any report); 200 empty list; 401 unauthenticated; 403 non-owner non-admin; 404 report not found

@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.db.database import create_tables
-from app.routers import auth, clients, reports
+from app.routers import auth, clients, lines, reports
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +63,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/auth")
 app.include_router(reports.router, prefix="/reports")
+app.include_router(lines.router, prefix="/reports")
 app.include_router(clients.router, prefix="/clients")
 
 # ---------------------------------------------------------------------------
