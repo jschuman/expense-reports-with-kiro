@@ -231,7 +231,6 @@ async def test_property_admin_sees_all_reports_with_owner_info(num_users, report
                     report = ExpenseReport(
                         title=f"Report {j} for user {i}",
                         description=f"Description {j}",
-                        total_amount=100.0 + j,
                         status="Pending",
                         owner_id=user.id,
                         created_at=now,
@@ -335,7 +334,6 @@ async def test_property_user_sees_only_own_reports(num_other_users, own_reports,
                 report = ExpenseReport(
                     title=f"Test User Report {i}",
                     description=f"Own report {i}",
-                    total_amount=100.0 + i,
                     status="Pending",
                     owner_id=test_user.id,
                     created_at=now,
@@ -357,7 +355,6 @@ async def test_property_user_sees_only_own_reports(num_other_users, own_reports,
                     report = ExpenseReport(
                         title=f"Other User {i} Report {j}",
                         description=f"Other report {j}",
-                        total_amount=200.0 + j,
                         status="Pending",
                         owner_id=other_user.id,
                         created_at=now,
@@ -465,7 +462,6 @@ async def test_property_role_retrieved_correctly_from_session(role_name):
             # Create one report for the test user and one for the other user
             own_report = ExpenseReport(
                 title="Test User Own Report",
-                total_amount=100.0,
                 status="Pending",
                 owner_id=test_user.id,
                 created_at=now,
@@ -473,7 +469,6 @@ async def test_property_role_retrieved_correctly_from_session(role_name):
             )
             other_report = ExpenseReport(
                 title="Other User Report",
-                total_amount=200.0,
                 status="Pending",
                 owner_id=other_user.id,
                 created_at=now,

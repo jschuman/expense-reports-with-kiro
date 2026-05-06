@@ -17,19 +17,19 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
   - Delete the existing `backend/expense_reports.db` file and run `alembic upgrade head` from the `backend/` directory to apply the migration to a fresh database
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 5.2_
 
-- [ ] 2. Create `ExpenseLine` Pydantic schemas and update `ExpenseReport` schemas
-  - [ ] 2.1 Create `backend/app/schemas/expense_line.py` with `ExpenseLineCreate` (description min_length=1, amount gt=0, incurred_date), `ExpenseLineUpdate` (all optional, model_validator requiring at least one field), and `ExpenseLineResponse` (id, report_id, description, amount, incurred_date; `from_attributes=True`)
+- [x] 2. Create `ExpenseLine` Pydantic schemas and update `ExpenseReport` schemas
+  - [x] 2.1 Create `backend/app/schemas/expense_line.py` with `ExpenseLineCreate` (description min_length=1, amount gt=0, incurred_date), `ExpenseLineUpdate` (all optional, model_validator requiring at least one field), and `ExpenseLineResponse` (id, report_id, description, amount, incurred_date; `from_attributes=True`)
     - _Requirements: 1.1, 2.3, 2.4, 2.5, 2.6, 2.7, 7.5, 7.8_
-  - [ ] 2.2 Write unit tests for `ExpenseLine` schemas in `backend/tests/unit/test_expense_line_schemas.py`
+  - [x] 2.2 Write unit tests for `ExpenseLine` schemas in `backend/tests/unit/test_expense_line_schemas.py`
     - Test `ExpenseLineCreate`: valid payload, missing description, empty description, zero amount, negative amount, missing date, invalid date string
     - Test `ExpenseLineUpdate`: valid partial update (each field individually), all-None payload rejected by model_validator
     - _Requirements: 2.5, 2.6, 2.7, 3.5_
-  - [ ] 2.3 Remove `total_amount` from `ExpenseReportCreate` and `ExpenseReportUpdate` in `backend/app/schemas/expense_report.py`
+  - [x] 2.3 Remove `total_amount` from `ExpenseReportCreate` and `ExpenseReportUpdate` in `backend/app/schemas/expense_report.py`
     - `ExpenseReportResponse` retains `total_amount` as a read-only computed field
     - Update `report_service.py` to add a `_compute_total(db, report_id)` helper using `func.sum(ExpenseLine.amount)` and call it from `_to_response` in `reports.py` when building each `ExpenseReportResponse`
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.6_
 
-- [ ] 3. Write unit tests for `_compute_total` in `backend/tests/unit/test_report_service.py`
+- [x] 3. Write unit tests for `_compute_total` in `backend/tests/unit/test_report_service.py`
   - Test: returns correct sum with multiple lines, returns `0.0` with zero lines
   - _Requirements: 5.1, 5.3_
 

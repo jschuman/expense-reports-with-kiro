@@ -4,7 +4,7 @@ Uses an in-memory SQLite database with a fresh schema per test so each
 test is fully isolated.
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 from sqlalchemy import create_engine
@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base
+from app.models.expense_line import ExpenseLine
 from app.models.expense_report import ExpenseReport
 from app.models.role import Role
 from app.models.user import User
@@ -85,7 +86,6 @@ def test_get_all_reports_returns_all_reports_in_database(db_session, user_a, use
     r1 = ExpenseReport(
         title="Alice Report 1",
         description="Travel",
-        total_amount=100.0,
         status="Pending",
         owner_id=user_a.id,
         created_at=now,
@@ -94,7 +94,6 @@ def test_get_all_reports_returns_all_reports_in_database(db_session, user_a, use
     r2 = ExpenseReport(
         title="Alice Report 2",
         description="Meals",
-        total_amount=50.0,
         status="Pending",
         owner_id=user_a.id,
         created_at=now,
@@ -103,7 +102,6 @@ def test_get_all_reports_returns_all_reports_in_database(db_session, user_a, use
     r3 = ExpenseReport(
         title="Bob Report 1",
         description="Supplies",
-        total_amount=200.0,
         status="Pending",
         owner_id=user_b.id,
         created_at=now,
@@ -133,7 +131,6 @@ def test_get_all_reports_orders_by_id_ascending(db_session, user_a):
     now = datetime.now(timezone.utc)
     r1 = ExpenseReport(
         title="Report C",
-        total_amount=100.0,
         status="Pending",
         owner_id=user_a.id,
         created_at=now,
@@ -141,7 +138,6 @@ def test_get_all_reports_orders_by_id_ascending(db_session, user_a):
     )
     r2 = ExpenseReport(
         title="Report A",
-        total_amount=50.0,
         status="Pending",
         owner_id=user_a.id,
         created_at=now,
@@ -149,7 +145,6 @@ def test_get_all_reports_orders_by_id_ascending(db_session, user_a):
     )
     r3 = ExpenseReport(
         title="Report B",
-        total_amount=200.0,
         status="Pending",
         owner_id=user_a.id,
         created_at=now,
@@ -173,7 +168,6 @@ def test_get_all_reports_eagerly_loads_owner_relationship(db_session, user_a):
     now = datetime.now(timezone.utc)
     r1 = ExpenseReport(
         title="Eager Load Test",
-        total_amount=75.0,
         status="Pending",
         owner_id=user_a.id,
         created_at=now,
@@ -203,7 +197,6 @@ def test_get_reports_for_user_returns_only_that_users_reports(db_session, user_a
     r1 = ExpenseReport(
         title="Alice Report 1",
         description="Travel",
-        total_amount=100.0,
         status="Pending",
         owner_id=user_a.id,
         created_at=now,
@@ -212,7 +205,6 @@ def test_get_reports_for_user_returns_only_that_users_reports(db_session, user_a
     r2 = ExpenseReport(
         title="Alice Report 2",
         description="Meals",
-        total_amount=50.0,
         status="Pending",
         owner_id=user_a.id,
         created_at=now,
@@ -221,7 +213,6 @@ def test_get_reports_for_user_returns_only_that_users_reports(db_session, user_a
     r3 = ExpenseReport(
         title="Bob Report 1",
         description="Supplies",
-        total_amount=200.0,
         status="Pending",
         owner_id=user_b.id,
         created_at=now,
@@ -253,7 +244,7 @@ def test_get_reports_for_user_returns_empty_list_when_no_reports(db_session, use
 
 def test_create_report_persists_with_in_progress_status_and_correct_owner(db_session, user_a):
     """create_report saves a record with status='In Progress' and the given owner_id."""
-    data = ExpenseReportCreate(title="Q1 Travel", total_amount=450.0)
+    data = ExpenseReportCreate(title="Q1 Travel")
 
     report = report_service.create_report(db_session, user_a.id, data)
 
@@ -268,24 +259,22 @@ def test_create_report_persists_with_in_progress_status_and_correct_owner(db_ses
 
 
 def test_create_report_stores_fields_exactly_as_provided(db_session, user_a):
-    """create_report stores title, description, and total_amount without modification."""
+    """create_report stores title and description without modification."""
     data = ExpenseReportCreate(
         title="Conference Expenses",
         description="Annual tech conference",
-        total_amount=1234.56,
     )
 
     report = report_service.create_report(db_session, user_a.id, data)
 
     assert report.title == "Conference Expenses"
     assert report.description == "Annual tech conference"
-    assert report.total_amount == pytest.approx(1234.56)
 
 
 def test_create_report_sets_created_at_to_utc_datetime(db_session, user_a):
     """create_report sets created_at to a UTC datetime on creation."""
     before = datetime.now(timezone.utc)
-    data = ExpenseReportCreate(title="Lunch", total_amount=20.0)
+    data = ExpenseReportCreate(title="Lunch")
 
     report = report_service.create_report(db_session, user_a.id, data)
 
@@ -300,7 +289,7 @@ def test_create_report_sets_created_at_to_utc_datetime(db_session, user_a):
 
 def test_create_report_admin_notes_is_none(db_session, user_a):
     """create_report always sets admin_notes to None — it is not user-settable."""
-    data = ExpenseReportCreate(title="Misc", total_amount=10.0)
+    data = ExpenseReportCreate(title="Misc")
 
     report = report_service.create_report(db_session, user_a.id, data)
 
@@ -309,7 +298,7 @@ def test_create_report_admin_notes_is_none(db_session, user_a):
 
 def test_create_report_reimbursable_defaults_to_false(db_session, user_a):
     """create_report stores reimbursable_from_client=False when not provided."""
-    data = ExpenseReportCreate(title="Misc", total_amount=10.0)
+    data = ExpenseReportCreate(title="Misc")
 
     report = report_service.create_report(db_session, user_a.id, data)
 
@@ -320,7 +309,6 @@ def test_create_report_stores_reimbursable_and_client(db_session, user_a):
     """create_report persists reimbursable_from_client and client correctly."""
     data = ExpenseReportCreate(
         title="Client Trip",
-        total_amount=500.0,
         reimbursable_from_client=True,
         client="Acme Corp",
     )
@@ -333,7 +321,7 @@ def test_create_report_stores_reimbursable_and_client(db_session, user_a):
 
 def test_create_report_purpose_field_does_not_exist(db_session, user_a):
     """The old 'purpose' field must not exist on the returned ORM object."""
-    data = ExpenseReportCreate(title="Misc", total_amount=10.0)
+    data = ExpenseReportCreate(title="Misc")
 
     report = report_service.create_report(db_session, user_a.id, data)
 
@@ -342,7 +330,7 @@ def test_create_report_purpose_field_does_not_exist(db_session, user_a):
 
 def test_create_report_owner_username_accessible(db_session, user_a):
     """create_report eagerly loads the owner relationship so owner.username is accessible."""
-    data = ExpenseReportCreate(title="Owner Check", total_amount=30.0)
+    data = ExpenseReportCreate(title="Owner Check")
 
     report = report_service.create_report(db_session, user_a.id, data)
 
@@ -353,7 +341,7 @@ def test_create_report_owner_username_accessible(db_session, user_a):
 
 def test_get_reports_for_user_owner_username_accessible(db_session, user_a):
     """get_reports_for_user eagerly loads owner so owner.username is accessible."""
-    data = ExpenseReportCreate(title="Eager Load Test", total_amount=75.0)
+    data = ExpenseReportCreate(title="Eager Load Test")
     report_service.create_report(db_session, user_a.id, data)
 
     results = report_service.get_reports_for_user(db_session, user_a.id)
@@ -376,7 +364,6 @@ def _make_report(db_session, owner, status: str):
     report = ExpenseReport(
         title="Test Report",
         description="A test",
-        total_amount=100.0,
         status=status,
         owner_id=owner.id,
         created_at=datetime.now(timezone.utc),
@@ -397,7 +384,7 @@ def test_create_report_writes_one_audit_entry(db_session, user_a):
     """create_report writes exactly one StatusAuditLog entry with status 'In Progress'."""
     from app.models.status_audit_log import StatusAuditLog
 
-    data = ExpenseReportCreate(title="Audit Test", total_amount=50.0)
+    data = ExpenseReportCreate(title="Audit Test")
 
     report = report_service.create_report(db_session, user_a.id, data)
 
@@ -423,11 +410,10 @@ def test_update_report_success_in_progress(db_session, user_a):
 
     report = _make_report(db_session, user_a, "In Progress")
 
-    data = ExpenseReportUpdate(title="Updated Title", total_amount=200.0)
+    data = ExpenseReportUpdate(title="Updated Title")
     updated = report_service.update_report(db_session, report.id, data, user_a)
 
     assert updated.title == "Updated Title"
-    assert updated.total_amount == pytest.approx(200.0)
     assert updated.status == "In Progress"
 
 
@@ -494,13 +480,11 @@ def test_update_report_only_applies_provided_fields(db_session, user_a):
     from app.schemas.expense_report import ExpenseReportUpdate
 
     report = _make_report(db_session, user_a, "In Progress")
-    original_amount = report.total_amount
 
     data = ExpenseReportUpdate(title="New Title Only")
     updated = report_service.update_report(db_session, report.id, data, user_a)
 
     assert updated.title == "New Title Only"
-    assert updated.total_amount == pytest.approx(original_amount)
 
 
 def test_update_report_raises_404_for_missing_report(db_session, user_a):
@@ -589,3 +573,53 @@ def test_delete_report_raises_404_for_missing_report(db_session, user_a):
         report_service.delete_report(db_session, 99999, user_a)
 
     assert exc_info.value.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# _compute_total
+# ---------------------------------------------------------------------------
+
+
+def test_compute_total_returns_correct_sum_with_multiple_lines(db_session, user_a):
+    """_compute_total returns the sum of all line amounts for the given report.
+
+    Requirements: 5.1
+    """
+    report = _make_report(db_session, user_a, "In Progress")
+
+    line1 = ExpenseLine(
+        report_id=report.id,
+        description="Taxi",
+        amount=25.50,
+        incurred_date=date(2026, 4, 1),
+    )
+    line2 = ExpenseLine(
+        report_id=report.id,
+        description="Lunch",
+        amount=14.75,
+        incurred_date=date(2026, 4, 2),
+    )
+    line3 = ExpenseLine(
+        report_id=report.id,
+        description="Hotel",
+        amount=120.00,
+        incurred_date=date(2026, 4, 3),
+    )
+    db_session.add_all([line1, line2, line3])
+    db_session.commit()
+
+    total = report_service._compute_total(db_session, report.id)
+
+    assert total == pytest.approx(25.50 + 14.75 + 120.00)
+
+
+def test_compute_total_returns_zero_when_report_has_no_lines(db_session, user_a):
+    """_compute_total returns 0.0 when the report has zero expense lines.
+
+    Requirements: 5.3
+    """
+    report = _make_report(db_session, user_a, "In Progress")
+
+    total = report_service._compute_total(db_session, report.id)
+
+    assert total == 0.0

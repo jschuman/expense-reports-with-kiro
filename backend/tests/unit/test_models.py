@@ -79,7 +79,6 @@ def make_report(owner_id: int, **kwargs) -> ExpenseReport:
     defaults = {
         "title": "Q1 Travel",
         "description": None,
-        "total_amount": 450.00,
         "owner_id": owner_id,
         "created_at": datetime.now(timezone.utc),
     }
@@ -259,7 +258,6 @@ class TestExpenseReportModel:
         assert fetched.id is not None
         assert fetched.title == "Q1 Travel"
         assert fetched.description is None
-        assert fetched.total_amount == 450.00
         assert fetched.owner_id == user.id
 
     def test_status_defaults_to_in_progress(self, db_session):
@@ -271,7 +269,6 @@ class TestExpenseReportModel:
         # Do NOT pass status — rely on the column default.
         report = ExpenseReport(
             title="No Status",
-            total_amount=100.0,
             owner_id=user.id,
             created_at=datetime.now(timezone.utc),
         )

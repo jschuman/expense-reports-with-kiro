@@ -25,13 +25,14 @@ from app.services import report_service, status_service
 router = APIRouter(tags=["reports"])
 
 
-def _to_response(report: ExpenseReport) -> ExpenseReportResponse:
-    """Build an ExpenseReportResponse from an ORM object, resolving owner_username."""
+def _to_response(report: ExpenseReport, db: Session) -> ExpenseReportResponse:
+    """Build an ExpenseReportResponse from an ORM object, resolving owner_username
+    and computing total_amount on the fly from expense lines."""
     return ExpenseReportResponse(
         id=report.id,
         title=report.title,
         description=report.description,
-        total_amount=report.total_amount,
+        total_amount=report_service._compute_total(db, report.id),
         status=report.status,
         owner_id=report.owner_id,
         owner_username=report.owner.username,
@@ -70,7 +71,7 @@ def list_reports(
         reports = report_service.get_all_reports(db)
     else:
         reports = report_service.get_reports_for_user(db, current_user.id)
-    return [_to_response(r) for r in reports]
+    return [_to_response(r, db) for r in reports]
 
 
 @router.post("", response_model=ExpenseReportResponse, status_code=status.HTTP_201_CREATED)
@@ -89,7 +90,7 @@ def create_report(
     Returns 422 when the request body fails Pydantic validation.
     """
     report = report_service.create_report(db, current_user.id, data)
-    return _to_response(report)
+    return _to_response(report, db)
 
 
 @router.post("/{report_id}/submit", response_model=ExpenseReportResponse)
@@ -112,7 +113,7 @@ def submit_report(
     Requirements: 3.2, 3.3, 3.5, 3.6
     """
     report = status_service.submit_report(db, report_id, current_user)
-    return _to_response(report)
+    return _to_response(report, db)
 
 
 @router.post("/{report_id}/accept", response_model=ExpenseReportResponse)
@@ -134,7 +135,7 @@ def accept_report(
     Requirements: 5.2, 5.3, 5.4
     """
     report = status_service.accept_report(db, report_id, current_user)
-    return _to_response(report)
+    return _to_response(report, db)
 
 
 @router.post("/{report_id}/reject", response_model=ExpenseReportResponse)
@@ -158,7 +159,7 @@ def reject_report(
     Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
     """
     report = status_service.reject_report(db, report_id, body.admin_notes, current_user)
-    return _to_response(report)
+    return _to_response(report, db)
 
 
 @router.put("/{report_id}", response_model=ExpenseReportResponse)
@@ -183,7 +184,7 @@ def update_report(
     Requirements: 2.1, 2.4, 4.1, 7.1, 7.6
     """
     report = report_service.update_report(db, report_id, data, current_user)
-    return _to_response(report)
+    return _to_response(report, db)
 
 
 @router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)

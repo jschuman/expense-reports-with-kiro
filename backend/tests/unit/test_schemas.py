@@ -26,37 +26,32 @@ class TestExpenseReportCreateValid:
         report = ExpenseReportCreate(
             title="Q1 Travel",
             description="Client visit",
-            total_amount=450.00,
             reimbursable_from_client=True,
             client="Acme Corp",
         )
         assert report.title == "Q1 Travel"
         assert report.description == "Client visit"
-        assert report.total_amount == 450.00
         assert report.reimbursable_from_client is True
         assert report.client == "Acme Corp"
 
     def test_no_description_is_accepted(self):
         """Description is optional — omitting it should succeed."""
-        report = ExpenseReportCreate(title="Lunch", total_amount=20.00)
+        report = ExpenseReportCreate(title="Lunch")
         assert report.description is None
 
     def test_empty_description_is_accepted(self):
         """An empty string description is allowed (treated as absent)."""
-        report = ExpenseReportCreate(
-            title="Lunch", description="", total_amount=20.00
-        )
+        report = ExpenseReportCreate(title="Lunch", description="")
         assert report.description == ""
 
     def test_reimbursable_defaults_to_false(self):
-        report = ExpenseReportCreate(title="Lunch", total_amount=20.00)
+        report = ExpenseReportCreate(title="Lunch")
         assert report.reimbursable_from_client is False
 
     def test_reimbursable_false_with_no_client_is_accepted(self):
         """Client is not required when reimbursable_from_client is False."""
         report = ExpenseReportCreate(
             title="Office supplies",
-            total_amount=15.00,
             reimbursable_from_client=False,
         )
         assert report.client is None
@@ -66,26 +61,20 @@ class TestExpenseReportCreateValid:
         for client_name in CLIENTS:
             report = ExpenseReportCreate(
                 title="Trip",
-                total_amount=100.00,
                 reimbursable_from_client=True,
                 client=client_name,
             )
             assert report.client == client_name
 
-    def test_minimum_positive_amount_is_accepted(self):
-        report = ExpenseReportCreate(title="Lunch", total_amount=0.01)
-        assert report.total_amount == 0.01
-
     def test_title_at_max_length_is_accepted(self):
         long_title = "A" * 255
-        report = ExpenseReportCreate(title=long_title, total_amount=10.0)
+        report = ExpenseReportCreate(title=long_title)
         assert len(report.title) == 255
 
     def test_client_none_when_not_reimbursable(self):
         """Explicitly passing client=None with reimbursable=False is fine."""
         report = ExpenseReportCreate(
             title="Misc",
-            total_amount=5.00,
             reimbursable_from_client=False,
             client=None,
         )
@@ -100,42 +89,25 @@ class TestExpenseReportCreateValid:
 class TestExpenseReportCreateInvalid:
     def test_empty_title_is_rejected(self):
         with pytest.raises(ValidationError) as exc_info:
-            ExpenseReportCreate(title="", total_amount=10.0)
+            ExpenseReportCreate(title="")
         errors = exc_info.value.errors()
         assert any(e["loc"] == ("title",) for e in errors)
 
     def test_title_exceeding_max_length_is_rejected(self):
         with pytest.raises(ValidationError) as exc_info:
-            ExpenseReportCreate(title="A" * 256, total_amount=10.0)
+            ExpenseReportCreate(title="A" * 256)
         errors = exc_info.value.errors()
         assert any(e["loc"] == ("title",) for e in errors)
 
     def test_missing_title_is_rejected(self):
         with pytest.raises(ValidationError):
-            ExpenseReportCreate(total_amount=10.0)
-
-    def test_total_amount_zero_is_rejected(self):
-        with pytest.raises(ValidationError) as exc_info:
-            ExpenseReportCreate(title="Valid title", total_amount=0)
-        errors = exc_info.value.errors()
-        assert any(e["loc"] == ("total_amount",) for e in errors)
-
-    def test_total_amount_negative_is_rejected(self):
-        with pytest.raises(ValidationError) as exc_info:
-            ExpenseReportCreate(title="Valid title", total_amount=-1)
-        errors = exc_info.value.errors()
-        assert any(e["loc"] == ("total_amount",) for e in errors)
-
-    def test_missing_total_amount_is_rejected(self):
-        with pytest.raises(ValidationError):
-            ExpenseReportCreate(title="Valid title")
+            ExpenseReportCreate()
 
     def test_reimbursable_true_with_no_client_is_rejected(self):
         """Requirement 5.3: client is required when reimbursable_from_client=True."""
         with pytest.raises(ValidationError) as exc_info:
             ExpenseReportCreate(
                 title="Trip",
-                total_amount=200.00,
                 reimbursable_from_client=True,
                 client=None,
             )
@@ -147,7 +119,6 @@ class TestExpenseReportCreateInvalid:
         with pytest.raises(ValidationError) as exc_info:
             ExpenseReportCreate(
                 title="Trip",
-                total_amount=200.00,
                 reimbursable_from_client=True,
             )
         errors = exc_info.value.errors()
@@ -158,7 +129,6 @@ class TestExpenseReportCreateInvalid:
         with pytest.raises(ValidationError) as exc_info:
             ExpenseReportCreate(
                 title="Trip",
-                total_amount=200.00,
                 reimbursable_from_client=True,
                 client="Unknown Corp",
             )
@@ -170,7 +140,6 @@ class TestExpenseReportCreateInvalid:
         with pytest.raises(ValidationError) as exc_info:
             ExpenseReportCreate(
                 title="Trip",
-                total_amount=200.00,
                 reimbursable_from_client=False,
                 client="Fake Client",
             )
@@ -400,41 +369,22 @@ class TestExpenseReportUpdate:
         """An empty update (all fields None) is valid — nothing to change."""
         update = ExpenseReportUpdate()
         assert update.title is None
-        assert update.total_amount is None
+        assert update.reimbursable_from_client is None
 
     def test_valid_partial_update_title_only(self):
         update = ExpenseReportUpdate(title="New Title")
         assert update.title == "New Title"
-        assert update.total_amount is None
-
-    def test_valid_partial_update_amount_only(self):
-        update = ExpenseReportUpdate(total_amount=99.99)
-        assert update.total_amount == 99.99
+        assert update.reimbursable_from_client is None
 
     def test_valid_full_update(self):
         update = ExpenseReportUpdate(
             title="Updated",
             description="New desc",
-            total_amount=250.00,
             reimbursable_from_client=True,
             client="Acme Corp",
         )
         assert update.title == "Updated"
-        assert update.total_amount == 250.00
         assert update.client == "Acme Corp"
-
-    def test_total_amount_zero_is_rejected(self):
-        """total_amount must be > 0 when provided."""
-        with pytest.raises(ValidationError) as exc_info:
-            ExpenseReportUpdate(total_amount=0)
-        errors = exc_info.value.errors()
-        assert any(e["loc"] == ("total_amount",) for e in errors)
-
-    def test_total_amount_negative_is_rejected(self):
-        with pytest.raises(ValidationError) as exc_info:
-            ExpenseReportUpdate(total_amount=-5.0)
-        errors = exc_info.value.errors()
-        assert any(e["loc"] == ("total_amount",) for e in errors)
 
     def test_reimbursable_true_with_no_client_is_rejected(self):
         """client is required when reimbursable_from_client=True."""

@@ -69,7 +69,7 @@ def submit_report(db: Session, report_id: int, current_user: User) -> ExpenseRep
         HTTPException 404: Report not found.
         HTTPException 403: Caller is not the report owner.
         HTTPException 409: Report is not in a submittable state.
-        HTTPException 422: Required fields (title, total_amount) are not populated.
+        HTTPException 422: Required fields (title) are not populated.
 
     Requirements: 3.2, 3.3, 3.4, 3.5, 3.6, 7.5, 9.1, 9.2, 11.2, 11.3, 11.5
     """
@@ -89,11 +89,11 @@ def submit_report(db: Session, report_id: int, current_user: User) -> ExpenseRep
             detail=f"Cannot perform this action on a report with status '{report.status}'",
         )
 
-    # Field validation: title and total_amount must be populated
-    if not report.title or report.total_amount is None:
+    # Field validation: title must be populated
+    if not report.title:
         raise HTTPException(
             status_code=422,
-            detail="Report must have a title and total_amount before it can be submitted",
+            detail="Report must have a title before it can be submitted",
         )
 
     # Apply transition + audit entry atomically

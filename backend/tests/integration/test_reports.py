@@ -101,7 +101,6 @@ async def seeded_reports(async_client, seeded_user):
         report1 = ExpenseReport(
             title="Q1 Travel",
             description="Client visit",
-            total_amount=450.00,
             status="Pending",
             owner_id=seeded_user["id"],
             created_at=now,
@@ -110,7 +109,6 @@ async def seeded_reports(async_client, seeded_user):
         report2 = ExpenseReport(
             title="Office Supplies",
             description="Stationery restock",
-            total_amount=75.50,
             status="Pending",
             owner_id=seeded_user["id"],
             created_at=now,
@@ -119,7 +117,6 @@ async def seeded_reports(async_client, seeded_user):
         other_report = ExpenseReport(
             title="Other User Report",
             description="Should not appear",
-            total_amount=999.99,
             status="Pending",
             owner_id=other_user.id,
             created_at=now,
@@ -133,8 +130,8 @@ async def seeded_reports(async_client, seeded_user):
         return {
             "user": seeded_user,
             "reports": [
-                {"title": report1.title, "description": report1.description, "total_amount": report1.total_amount},
-                {"title": report2.title, "description": report2.description, "total_amount": report2.total_amount},
+                {"title": report1.title, "description": report1.description},
+                {"title": report2.title, "description": report2.description},
             ],
         }
     finally:

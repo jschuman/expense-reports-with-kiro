@@ -119,7 +119,6 @@ def _seed_report(async_client, owner_id: int, status: str, title: str = "Test Re
         report = ExpenseReport(
             title=title,
             description="A description",
-            total_amount=100.0,
             status=status,
             owner_id=owner_id,
             created_at=datetime.now(timezone.utc),

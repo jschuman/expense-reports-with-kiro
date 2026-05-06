@@ -99,7 +99,6 @@ async def seeded_users(async_client):
         report1 = ExpenseReport(
             title="User1 Report A",
             description="Travel",
-            total_amount=100.0,
             status="Pending",
             owner_id=user1.id,
             created_at=now,
@@ -108,7 +107,6 @@ async def seeded_users(async_client):
         report2 = ExpenseReport(
             title="User1 Report B",
             description="Meals",
-            total_amount=50.0,
             status="Pending",
             owner_id=user1.id,
             created_at=now,
@@ -117,7 +115,6 @@ async def seeded_users(async_client):
         report3 = ExpenseReport(
             title="User2 Report A",
             description="Supplies",
-            total_amount=200.0,
             status="Pending",
             owner_id=user2.id,
             created_at=now,

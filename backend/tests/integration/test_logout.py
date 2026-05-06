@@ -209,7 +209,7 @@ async def test_create_report_returns_401_after_logout(async_client, seeded_user)
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Test", "description": "Test", "total_amount": 100.0},
+        json={"title": "Test", "description": "Test"},
     )
 
     assert response.status_code == 401

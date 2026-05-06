@@ -9,11 +9,26 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
+from app.models.expense_line import ExpenseLine
 from app.models.expense_report import ExpenseReport
 from app.models.status_audit_log import StatusAuditLog
 from app.schemas.expense_report import ExpenseReportCreate, ExpenseReportUpdate
+
+
+def _compute_total(db: Session, report_id: int) -> float:
+    """Compute the total amount for a report as the sum of its line amounts.
+
+    Returns 0.0 when the report has no lines.
+    """
+    result = (
+        db.query(func.sum(ExpenseLine.amount))
+        .filter(ExpenseLine.report_id == report_id)
+        .scalar()
+    )
+    return result or 0.0
 
 
 def get_all_reports(db: Session) -> list[ExpenseReport]:
@@ -62,7 +77,6 @@ def create_report(
     report = ExpenseReport(
         title=data.title,
         description=data.description or None,
-        total_amount=data.total_amount,
         status="In Progress",
         owner_id=user_id,
         created_at=now,

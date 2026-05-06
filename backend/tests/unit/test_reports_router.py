@@ -169,7 +169,6 @@ def test_get_reports_returns_200_and_list_for_authenticated_user(auth_client):
         ExpenseReport(
             title="Trip A",
             description="Client",
-            total_amount=100.0,
             status="Pending",
             owner_id=auth_client._seeded_user_id,
             created_at=now,
@@ -178,7 +177,6 @@ def test_get_reports_returns_200_and_list_for_authenticated_user(auth_client):
         ExpenseReport(
             title="Trip B",
             description="Conference",
-            total_amount=200.0,
             status="Pending",
             owner_id=auth_client._seeded_user_id,
             created_at=now,
@@ -240,7 +238,6 @@ def test_post_reports_with_valid_payload_returns_201_and_response_shape(auth_cli
     payload = {
         "title": "Q1 Travel",
         "description": "Client visit",
-        "total_amount": 450.00,
     }
 
     response = auth_client.post("/reports", json=payload)
@@ -249,7 +246,7 @@ def test_post_reports_with_valid_payload_returns_201_and_response_shape(auth_cli
     body = response.json()
     assert body["title"] == "Q1 Travel"
     assert body["description"] == "Client visit"
-    assert body["total_amount"] == pytest.approx(450.00)
+    assert body["total_amount"] == pytest.approx(0.0)
     assert body["status"] == "In Progress"
     assert body["owner_id"] == auth_client._seeded_user_id
     assert body["owner_username"] == "alice"
@@ -263,7 +260,7 @@ def test_post_reports_with_valid_payload_returns_201_and_response_shape(auth_cli
 
 def test_post_reports_status_is_always_in_progress(auth_client):
     """POST /reports always creates a report with status='In Progress'."""
-    payload = {"title": "Meals", "total_amount": 75.50}
+    payload = {"title": "Meals"}
 
     response = auth_client.post("/reports", json=payload)
 
@@ -275,7 +272,6 @@ def test_post_reports_with_reimbursable_true_and_valid_client_returns_201(auth_c
     """POST /reports with reimbursable_from_client=true and a valid client returns 201."""
     payload = {
         "title": "Client Trip",
-        "total_amount": 500.0,
         "reimbursable_from_client": True,
         "client": "Acme Corp",
     }
@@ -292,7 +288,6 @@ def test_post_reports_with_reimbursable_true_and_no_client_returns_422(auth_clie
     """POST /reports with reimbursable_from_client=true and no client returns 422."""
     payload = {
         "title": "Client Trip",
-        "total_amount": 500.0,
         "reimbursable_from_client": True,
     }
 
@@ -305,7 +300,6 @@ def test_post_reports_with_invalid_client_returns_422(auth_client):
     """POST /reports with a client string not in CLIENTS returns 422."""
     payload = {
         "title": "Client Trip",
-        "total_amount": 500.0,
         "reimbursable_from_client": True,
         "client": "Unknown Corp",
     }
@@ -319,7 +313,6 @@ def test_post_reports_with_reimbursable_false_and_no_client_returns_201(auth_cli
     """POST /reports with reimbursable_from_client=false and no client returns 201."""
     payload = {
         "title": "Office Supplies",
-        "total_amount": 30.0,
         "reimbursable_from_client": False,
     }
 
@@ -336,25 +329,7 @@ def test_post_reports_with_reimbursable_false_and_no_client_returns_201(auth_cli
 
 def test_post_reports_with_empty_title_returns_422(auth_client):
     """POST /reports with an empty title returns 422."""
-    payload = {"title": "", "total_amount": 100.0}
-
-    response = auth_client.post("/reports", json=payload)
-
-    assert response.status_code == 422
-
-
-def test_post_reports_with_zero_total_amount_returns_422(auth_client):
-    """POST /reports with total_amount=0 returns 422."""
-    payload = {"title": "Valid Title", "total_amount": 0}
-
-    response = auth_client.post("/reports", json=payload)
-
-    assert response.status_code == 422
-
-
-def test_post_reports_with_negative_total_amount_returns_422(auth_client):
-    """POST /reports with a negative total_amount returns 422."""
-    payload = {"title": "Valid Title", "total_amount": -10.0}
+    payload = {"title": ""}
 
     response = auth_client.post("/reports", json=payload)
 
@@ -375,7 +350,7 @@ def test_post_reports_with_missing_fields_returns_422(auth_client):
 
 def test_post_reports_returns_401_when_unauthenticated(unauth_client):
     """POST /reports returns 401 when no valid session cookie is present."""
-    payload = {"title": "Q1 Travel", "total_amount": 450.0}
+    payload = {"title": "Q1 Travel"}
 
     response = unauth_client.post("/reports", json=payload)
 
@@ -403,7 +378,6 @@ def test_get_reports_admin_role_returns_all_reports(admin_auth_client):
     session.add_all([
         ExpenseReport(
             title="Admin Own Report",
-            total_amount=100.0,
             status="Pending",
             owner_id=admin_auth_client._seeded_admin_id,
             created_at=now,
@@ -411,7 +385,6 @@ def test_get_reports_admin_role_returns_all_reports(admin_auth_client):
         ),
         ExpenseReport(
             title="Bob Report",
-            total_amount=200.0,
             status="Pending",
             owner_id=other_user.id,
             created_at=now,
@@ -445,7 +418,6 @@ def test_get_reports_admin_role_includes_owner_username(admin_auth_client):
     session.add(
         ExpenseReport(
             title="Carol Report",
-            total_amount=150.0,
             status="Pending",
             owner_id=other_user.id,
             created_at=now,
@@ -479,7 +451,6 @@ def test_get_reports_user_role_returns_only_own_reports(auth_client):
     session.add_all([
         ExpenseReport(
             title="Alice Report",
-            total_amount=100.0,
             status="Pending",
             owner_id=auth_client._seeded_user_id,
             created_at=now,
@@ -487,7 +458,6 @@ def test_get_reports_user_role_returns_only_own_reports(auth_client):
         ),
         ExpenseReport(
             title="Dave Report",
-            total_amount=200.0,
             status="Pending",
             owner_id=other_user.id,
             created_at=now,
@@ -521,7 +491,6 @@ def test_get_reports_user_role_does_not_return_other_users_reports(auth_client):
     session.add(
         ExpenseReport(
             title="Eve Secret Report",
-            total_amount=999.0,
             status="Pending",
             owner_id=other_user.id,
             created_at=now,
@@ -567,7 +536,6 @@ def test_get_reports_role_branching_calls_correct_service_for_admin(admin_auth_c
     session.add(
         ExpenseReport(
             title="Frank Report",
-            total_amount=300.0,
             status="Pending",
             owner_id=other_user.id,
             created_at=now,

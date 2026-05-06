@@ -122,7 +122,6 @@ def _make_report(session, owner: User, status: str) -> ExpenseReport:
     report = ExpenseReport(
         title="Test Report",
         description="Description",
-        total_amount=100.0,
         status=status,
         owner_id=owner.id,
         created_at=datetime.now(timezone.utc),

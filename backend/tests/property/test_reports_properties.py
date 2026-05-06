@@ -134,7 +134,6 @@ async def test_property_dashboard_returns_only_user_reports(num_users, reports_p
                     report = ExpenseReport(
                         title=f"Report {j} for user {i}",
                         description=f"Description {j}",
-                        total_amount=100.0 + j,
                         status="Pending",
                         owner_id=user.id,
                         created_at=now,

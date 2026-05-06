@@ -25,7 +25,6 @@ class ExpenseReportUpdate(BaseModel):
 
     title: Optional[str] = Field(default=None, min_length=1, max_length=255)
     description: Optional[str] = Field(default=None)
-    total_amount: Optional[float] = Field(default=None, gt=0)
     reimbursable_from_client: Optional[bool] = Field(default=None)
     client: Optional[str] = Field(default=None)
 
@@ -55,7 +54,6 @@ class StatusAuditLogEntry(BaseModel):
 class ExpenseReportCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = Field(default=None)
-    total_amount: float = Field(..., gt=0)
     reimbursable_from_client: bool = Field(default=False)
     client: Optional[str] = Field(default=None)
 

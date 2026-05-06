@@ -93,7 +93,6 @@ def _make_report(db_session, owner: User, status: str) -> ExpenseReport:
     report = ExpenseReport(
         title="Test Report",
         description="Some description",
-        total_amount=100.0,
         status=status,
         owner_id=owner.id,
         created_at=datetime.now(timezone.utc),
@@ -224,7 +223,6 @@ class TestSubmitReportErrors:
         """
         report = ExpenseReport(
             title="",  # empty title
-            total_amount=100.0,
             status="In Progress",
             owner_id=owner.id,
             created_at=datetime.now(timezone.utc),
