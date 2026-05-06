@@ -33,14 +33,14 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
   - Test: returns correct sum with multiple lines, returns `0.0` with zero lines
   - _Requirements: 5.1, 5.3_
 
-- [ ] 4. Implement `line_service.py`
-  - [ ] 4.1 Create `backend/app/services/line_service.py` with private helpers `_get_report_or_404`, `_get_line_or_404`, `_assert_owner`, `_assert_editable`, `_assert_read_access`, and public functions `create_line`, `list_lines`, `update_line`, `delete_line`
+- [x] 4. Implement `line_service.py`
+  - [x] 4.1 Create `backend/app/services/line_service.py` with private helpers `_get_report_or_404`, `_get_line_or_404`, `_assert_owner`, `_assert_editable`, `_assert_read_access`, and public functions `create_line`, `list_lines`, `update_line`, `delete_line`
     - `create_line`: check ownership, check editable status, persist line, commit — no total recalculation needed
     - `list_lines`: check read access (owner or admin), return lines ordered by id
     - `update_line`: check ownership, check editable status, find line, apply partial update via `model_dump(exclude_none=True)`, commit
     - `delete_line`: check ownership, check editable status, find line, delete, commit
     - _Requirements: 1.2, 1.5, 2.4, 3.4, 3.6, 3.7, 4.3, 4.4, 4.5, 8.1, 8.2, 8.3_
-  - [ ] 4.2 Write unit tests for `line_service` functions in `backend/tests/unit/test_line_service.py`
+  - [x] 4.2 Write unit tests for `line_service` functions in `backend/tests/unit/test_line_service.py`
     - `create_line`: valid creation persists line; 403 for non-owner; 409 for locked status (`Submitted`, `Scheduled for Payment`); 404 for missing report
     - `list_lines`: owner receives lines; admin receives lines for any report; non-owner non-admin receives 403; 404 for missing report
     - `update_line`: valid full update; valid partial update (only provided fields change); 403 for non-owner; 409 for locked status; 404 for missing report; 404 for line not belonging to report
