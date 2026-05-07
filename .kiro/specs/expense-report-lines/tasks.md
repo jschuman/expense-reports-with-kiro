@@ -164,12 +164,12 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
     - Test `handleDelete` calls `deleteLine` and triggers refetch
     - _Requirements: 2.4, 2.8, 3.4, 3.8, 4.3_
 
-- [ ] 12. Implement the `formatIncurredDate` utility and its unit tests
-  - [ ] 12.1 Implement `formatIncurredDate(isoDate: string): string` (can live in `frontend/src/utils/formatDate.ts` or inline in the detail page, consistent with project conventions)
+- [x] 12. Implement the `formatIncurredDate` utility and its unit tests
+  - [x] 12.1 Implement `formatIncurredDate(isoDate: string): string` (can live in `frontend/src/utils/formatDate.ts` or inline in the detail page, consistent with project conventions)
     - Parse as local date: `const [year, month, day] = isoDate.split('-').map(Number); const d = new Date(year, month - 1, day);`
     - Format with `new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(d)`
     - _Requirements: 6.4_
-  - [ ] 12.2 Write Vitest unit tests for `formatIncurredDate` with 100% coverage
+  - [x] 12.2 Write Vitest unit tests for `formatIncurredDate` with 100% coverage
     - Test a known date string returns the expected human-readable format (e.g. `"2026-04-23"` → `"Apr 23, 2026"`)
     - Test month boundary dates (Jan 1, Dec 31)
     - Test that no raw ISO string (`"YYYY-MM-DD"`) is ever returned
