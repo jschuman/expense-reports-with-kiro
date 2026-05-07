@@ -5,7 +5,6 @@
 export interface ExpenseReportCreate {
   title: string;
   description?: string;
-  total_amount: number;
   reimbursable_from_client: boolean;
   client?: string;
 }
@@ -31,7 +30,6 @@ export interface ExpenseReportResponse {
 export interface ExpenseReportUpdate {
   title?: string;
   description?: string;
-  total_amount?: number;
   reimbursable_from_client?: boolean;
   client?: string;
 }
@@ -45,4 +43,36 @@ export interface StatusAuditLogEntry {
   expense_report_id: number;
   status: string;
   changed_at: string;
+}
+
+/**
+ * Request body for POST /reports/{id}/lines.
+ * Creates a new expense line with description, amount, and incurred date.
+ */
+export interface ExpenseLineCreate {
+  description: string;
+  amount: number;
+  incurred_date: string; // ISO 8601 date: "YYYY-MM-DD"
+}
+
+/**
+ * Request body for PUT /reports/{id}/lines/{line_id}.
+ * All fields are optional — only provided fields are updated.
+ */
+export interface ExpenseLineUpdate {
+  description?: string;
+  amount?: number;
+  incurred_date?: string; // ISO 8601 date: "YYYY-MM-DD"
+}
+
+/**
+ * Response body for GET /reports/{id}/lines and related line endpoints.
+ * Mirrors the backend ExpenseLineResponse schema.
+ */
+export interface ExpenseLineResponse {
+  id: number;
+  report_id: number;
+  description: string;
+  amount: number;
+  incurred_date: string; // ISO 8601 date: "YYYY-MM-DD"
 }
