@@ -17,6 +17,7 @@ The Expense Report Web App allows authenticated users to create, view, and manag
 - **Expense Line Items**: Each report supports multiple line items (description, amount, incurred date); the report total is automatically computed as the sum of all lines
 - **Expense Report Detail View**: Dedicated page per report showing the full line-item table with currency-formatted amounts and dates, a subtotal footer row, and inline Add/Edit/Delete controls (only available to the report owner when in an editable state)
 - **Expense Line Create/Edit Form**: Dedicated form page for adding new lines or editing existing ones, with client-side validation (non-empty description, positive amount, valid date), server-side 422 field-level error display, and 409 conflict alerts for locked reports
+- **Full Client-Side Routing**: React Router routes for all report and line pages (`/reports/:reportId`, `/reports/:reportId/lines/new`, `/reports/:reportId/lines/:lineId/edit`), all protected by authentication
 - **Client Reimbursement Tracking**: Mark expenses as client-reimbursable and associate them with specific clients
 - **Automatic Metadata**: Owner and creation timestamp are automatically recorded
 - **Responsive UI**: Material UI-based interface with form validation
