@@ -232,7 +232,7 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
     - Verify all pre-existing frontend tests pass after the type change
     - _Requirements: 5.6_
 
-- [ ] 16. Final checkpoint — ensure all tests pass
+- [x] 16. Final checkpoint — ensure all tests pass
   - Run `pytest` from `backend/` and verify 100% coverage across `backend/app/`
   - Run `npm test -- --run` from `frontend/` and verify 100% coverage for all utility functions in `frontend/src/`
   - Resolve any remaining failures before considering the feature complete
