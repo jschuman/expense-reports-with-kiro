@@ -127,17 +127,17 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
   - Verify all pre-existing backend tests pass after the schema change
   - _Requirements: 5.2, 5.6_
 
-- [ ] 8. Backend checkpoint — ensure all backend tests pass
+- [x] 8. Backend checkpoint — ensure all backend tests pass
   - Run `pytest` from the `backend/` directory; all tests must pass with 100% coverage across `backend/app/`
   - Resolve any failures before proceeding to frontend work
 
-- [ ] 9. Update TypeScript types and remove `total_amount` from frontend create/update types
-  - [ ] 9.1 Add `ExpenseLineCreate`, `ExpenseLineUpdate`, and `ExpenseLineResponse` interfaces to `frontend/src/types/expenseReport.ts`
+- [x] 9. Update TypeScript types and remove `total_amount` from frontend create/update types
+  - [x] 9.1 Add `ExpenseLineCreate`, `ExpenseLineUpdate`, and `ExpenseLineResponse` interfaces to `frontend/src/types/expenseReport.ts`
     - `ExpenseLineCreate`: `description: string`, `amount: number`, `incurred_date: string` (ISO 8601)
     - `ExpenseLineUpdate`: all fields optional
     - `ExpenseLineResponse`: `id`, `report_id`, `description`, `amount`, `incurred_date`
     - _Requirements: 1.1, 2.3, 3.3, 7.5_
-  - [ ] 9.2 Remove `total_amount` from `ExpenseReportCreate` and `ExpenseReportUpdate` TypeScript interfaces in `frontend/src/types/expenseReport.ts`
+  - [x] 9.2 Remove `total_amount` from `ExpenseReportCreate` and `ExpenseReportUpdate` TypeScript interfaces in `frontend/src/types/expenseReport.ts`
     - `ExpenseReportResponse` retains `total_amount` as a read-only field
     - _Requirements: 5.6_
 
