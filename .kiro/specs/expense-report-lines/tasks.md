@@ -65,64 +65,64 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
     - `DELETE /reports/{id}/lines/{id}`: 204 success (verify line absent and `GET /reports` shows updated total_amount); 401 unauthenticated; 403 non-owner; 409 locked status; 404 line not found
     - _Requirements: 2.4, 2.5, 2.6, 2.7, 3.4, 3.5, 3.6, 3.7, 4.3, 4.4, 4.5, 5.1, 7.1–7.9, 8.1, 8.2, 8.3_
 
-- [ ] 6. Write backend property-based tests
-  - [ ] 6.1 Write property test for Property 1 (line creation round-trip) in `backend/tests/property/test_lines_properties.py`
+- [x] 6. Write backend property-based tests
+  - [x] 6.1 Write property test for Property 1 (line creation round-trip) in `backend/tests/property/test_lines_properties.py`
     - Generate random valid description/amount/date via Hypothesis; POST line; GET lines; assert all fields match
     - `@settings(max_examples=100)`
     - **Property 1: Line creation round-trip preserves all fields**
     - **Validates: Requirements 1.1, 2.4, 7.5**
-  - [ ] 6.2 Write property test for Property 2 (invalid creation always rejected)
+  - [x] 6.2 Write property test for Property 2 (invalid creation always rejected)
     - Generate payloads with missing/empty description, non-positive amount, or missing date; assert 422 and line count unchanged
     - `@settings(max_examples=100)`
     - **Property 2: Invalid line creation is always rejected**
     - **Validates: Requirements 2.5, 2.6**
-  - [ ] 6.3 Write property test for Property 3 (line update round-trip)
+  - [x] 6.3 Write property test for Property 3 (line update round-trip)
     - Create a line; generate random valid `ExpenseLineUpdate` payload; PUT; GET; assert updated fields match and unchanged fields retain original values
     - `@settings(max_examples=100)`
     - **Property 3: Line update round-trip preserves updated fields**
     - **Validates: Requirements 3.4**
-  - [ ] 6.4 Write property test for Property 4 (non-owner mutation forbidden)
+  - [x] 6.4 Write property test for Property 4 (non-owner mutation forbidden)
     - Create two users; create line as user A; attempt PUT and DELETE as user B (non-admin); assert 403 and line unchanged
     - `@settings(max_examples=100)`
     - **Property 4: Non-owner mutation is always forbidden**
     - **Validates: Requirements 3.6, 4.4, 8.3**
-  - [ ] 6.5 Write property test for Property 5 (status locking prevents mutations)
+  - [x] 6.5 Write property test for Property 5 (status locking prevents mutations)
     - Create line; transition report to `Submitted` or `Scheduled for Payment`; attempt POST/PUT/DELETE as owner; assert 409 and lines unchanged
     - `@settings(max_examples=100)`
     - **Property 5: Status locking prevents all line mutations**
     - **Validates: Requirements 3.7, 4.5**
-  - [ ] 6.6 Write property test for Property 6 (total amount invariant)
+  - [x] 6.6 Write property test for Property 6 (total amount invariant)
     - Generate N lines with random amounts; after each create/update/delete assert `total_amount == sum(current line amounts)` and `0.0` when no lines remain
     - `@settings(max_examples=100)`
     - **Property 6: Total amount always equals the sum of line amounts**
     - **Validates: Requirements 5.1, 5.2, 5.3, 5.4**
-  - [ ] 6.7 Write property test for Property 7 (line deletion removes the line)
+  - [x] 6.7 Write property test for Property 7 (line deletion removes the line)
     - Create line; DELETE; GET lines; assert line absent; assert total_amount updated
     - `@settings(max_examples=100)`
     - **Property 7: Line deletion removes the line**
     - **Validates: Requirements 4.3, 5.1**
-  - [ ] 6.8 Write property test for Property 8 (cascade delete removes all lines)
+  - [x] 6.8 Write property test for Property 8 (cascade delete removes all lines)
     - Create report with N lines; DELETE report; query DB directly; assert no orphaned `expense_lines` rows
     - `@settings(max_examples=100)`
     - **Property 8: Cascade delete removes all lines**
     - **Validates: Requirements 1.5**
-  - [ ] 6.9 Write property test for Property 9 (unauthenticated requests rejected)
+  - [x] 6.9 Write property test for Property 9 (unauthenticated requests rejected)
     - Call each of the four line endpoints without a session cookie; assert 401 for all
     - `@settings(max_examples=100)`
     - **Property 9: Unauthenticated requests to line endpoints are always rejected**
     - **Validates: Requirements 7.9**
-  - [ ] 6.10 Write property test for Property 10 (admin can read lines for any report)
+  - [x] 6.10 Write property test for Property 10 (admin can read lines for any report)
     - Create report as user A; GET lines as admin user; assert 200 and correct list
     - `@settings(max_examples=100)`
     - **Property 10: Admin can read lines for any report**
     - **Validates: Requirements 8.1**
-  - [ ] 6.11 Write property test for Property 11 (non-owner non-admin read forbidden)
+  - [x] 6.11 Write property test for Property 11 (non-owner non-admin read forbidden)
     - Create report as user A; GET lines as user B (User role, not owner); assert 403
     - `@settings(max_examples=100)`
     - **Property 11: Non-owner non-admin cannot read lines**
     - **Validates: Requirements 8.2**
 
-- [ ] 7. Update existing backend tests broken by `total_amount` removal
+- [x] 7. Update existing backend tests broken by `total_amount` removal
   - Find all existing tests in `backend/tests/` that pass `total_amount` in report create or update payloads and remove that field from those payloads
   - Verify all pre-existing backend tests pass after the schema change
   - _Requirements: 5.2, 5.6_

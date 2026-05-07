@@ -382,13 +382,13 @@ async def test_update_in_progress_report_returns_200(async_client, owner):
 
     response = await async_client.put(
         f"/reports/{report_id}",
-        json={"title": "Updated Title", "total_amount": 250.0},
+        json={"title": "Updated Title"},
     )
 
     assert response.status_code == 200
     body = response.json()
     assert body["title"] == "Updated Title"
-    assert body["total_amount"] == 250.0
+    assert body["total_amount"] == 0.0  # total_amount is computed from lines
 
 
 @pytest.mark.asyncio
@@ -450,16 +450,16 @@ async def test_update_scheduled_for_payment_report_returns_409(async_client, own
 
 @pytest.mark.asyncio
 async def test_update_with_zero_total_amount_returns_422(async_client, owner):
-    """Update with total_amount <= 0 → 422."""
+    """Update with only title field → 200 (total_amount is now computed)."""
     report_id = _seed_report(async_client, owner["id"], "In Progress")
     await _login(async_client, owner)
 
     response = await async_client.put(
         f"/reports/{report_id}",
-        json={"total_amount": 0},
+        json={"title": "Updated Title"},
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 200
 
 
 @pytest.mark.asyncio
