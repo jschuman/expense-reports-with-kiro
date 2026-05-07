@@ -11,6 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.db.database import create_tables
 from app.routers import auth, clients, lines, reports
+from app.routers import attachments
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth")
 app.include_router(reports.router, prefix="/reports")
 app.include_router(lines.router, prefix="/reports")
+app.include_router(attachments.router, prefix="/reports")
 app.include_router(clients.router, prefix="/clients")
 
 # ---------------------------------------------------------------------------

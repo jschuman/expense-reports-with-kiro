@@ -113,8 +113,8 @@ This implementation plan breaks down the attachment management feature into disc
     - Test authorization: admin can access any
     - _Requirements: 1.1-1.6, 3.1-3.5, 4.1-4.5, 6.1-6.4, 9.1-9.4_
 
-- [ ] 5. Backend API: FastAPI Router and Endpoints
-  - [ ] 5.1 Create AttachmentRouter with POST upload endpoint
+- [x] 5. Backend API: FastAPI Router and Endpoints
+  - [x] 5.1 Create AttachmentRouter with POST upload endpoint
     - Route: POST /api/expense-reports/{report_id}/lines/{line_id}/attachments
     - Accept multipart form data with file field
     - Call AttachmentService.upload_attachment()
@@ -124,7 +124,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Handle not found errors (404)
     - _Requirements: 8.1, 9.5, 9.6_
   
-  - [ ] 5.2 Create AttachmentRouter with DELETE endpoint
+  - [x] 5.2 Create AttachmentRouter with DELETE endpoint
     - Route: DELETE /api/expense-reports/{report_id}/lines/{line_id}/attachments
     - Call AttachmentService.delete_attachment()
     - Return 204 No Content on success
@@ -132,7 +132,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Handle not found errors (404)
     - _Requirements: 8.2, 9.5, 9.6_
   
-  - [ ] 5.3 Create AttachmentRouter with GET download endpoint
+  - [x] 5.3 Create AttachmentRouter with GET download endpoint
     - Route: GET /api/expense-reports/{report_id}/lines/{line_id}/attachments
     - Call AttachmentService.get_attachment()
     - Return FileResponse with correct Content-Type and Content-Disposition headers
@@ -141,7 +141,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Handle not found errors (404)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 8.3, 9.5, 9.6_
   
-  - [ ] 5.4 Create AttachmentRouter with GET metadata endpoint
+  - [x] 5.4 Create AttachmentRouter with GET metadata endpoint
     - Route: GET /api/expense-reports/{report_id}/lines/{line_id}/attachments/metadata
     - Call AttachmentService.get_attachment_metadata()
     - Return 200 OK with AttachmentMetadataResponse
@@ -149,7 +149,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Handle not found errors (404)
     - _Requirements: 8.4, 9.5, 9.6_
   
-  - [ ] 5.5 Write integration tests for all attachment endpoints
+  - [x] 5.5 Write integration tests for all attachment endpoints
     - Test POST upload with valid file returns 201 with metadata
     - Test POST upload with invalid file type returns 400
     - Test POST upload with file > 10 MB returns 413

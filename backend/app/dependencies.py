@@ -5,6 +5,18 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.models.user import User
+from app.services.file_storage import FileStorageManager
+
+# Singleton FileStorageManager shared across requests.
+_storage_manager: FileStorageManager | None = None
+
+
+def get_storage() -> FileStorageManager:
+    """FastAPI dependency that returns the shared FileStorageManager instance."""
+    global _storage_manager
+    if _storage_manager is None:
+        _storage_manager = FileStorageManager()
+    return _storage_manager
 
 
 def get_current_user(
