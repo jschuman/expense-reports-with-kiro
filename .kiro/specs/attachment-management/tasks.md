@@ -25,8 +25,8 @@ This implementation plan breaks down the attachment management feature into disc
     - Test timestamp auto-generation
     - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 2. Backend Foundation: File Storage and Validation
-  - [ ] 2.1 Implement FileStorageManager class
+- [x] 2. Backend Foundation: File Storage and Validation
+  - [x] 2.1 Implement FileStorageManager class
     - Create secure directory with 0o700 permissions in __init__
     - Implement store_file() to save files with UUID-based names
     - Implement retrieve_file() to read file content by storage path
@@ -34,13 +34,13 @@ This implementation plan breaks down the attachment management feature into disc
     - Implement validate_file_content() to check magic bytes against MIME type
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
   
-  - [ ] 2.2 Define file type whitelist and validation constants
+  - [x] 2.2 Define file type whitelist and validation constants
     - Create ALLOWED_MIME_TYPES set with all 7 approved types (PDF, Word, Google Docs, Excel, Google Sheets)
     - Create ALLOWED_EXTENSIONS set with all approved extensions
     - Define MAX_FILE_SIZE constant (10 MB in bytes)
     - _Requirements: 2.1, 6.1_
   
-  - [ ] 2.3 Write unit tests for FileStorageManager
+  - [x] 2.3 Write unit tests for FileStorageManager
     - Test store_file() creates file with UUID-based name
     - Test retrieve_file() returns correct content
     - Test delete_file() removes file from storage
