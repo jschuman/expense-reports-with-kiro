@@ -271,8 +271,9 @@ describe('ReportCard', () => {
   // -------------------------------------------------------------------------
 
   describe('"Submitted" status + owner', () => {
-    it('shows no action buttons for the owner', () => {
+    it('shows only the View button for the owner', () => {
       render(<ReportCard report={makeReport({ status: 'Submitted' })} currentUser={OWNER_USER} />);
+      expect(screen.getByRole('button', { name: /view report/i })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /submit report/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /edit report/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /delete report/i })).not.toBeInTheDocument();
@@ -294,6 +295,11 @@ describe('ReportCard', () => {
     it('shows Reject button', () => {
       render(<ReportCard report={makeReport({ status: 'Submitted' })} currentUser={ADMIN_USER} />);
       expect(screen.getByRole('button', { name: /reject report/i })).toBeInTheDocument();
+    });
+
+    it('also shows the View button alongside Accept and Reject', () => {
+      render(<ReportCard report={makeReport({ status: 'Submitted' })} currentUser={ADMIN_USER} />);
+      expect(screen.getByRole('button', { name: /view report/i })).toBeInTheDocument();
     });
 
     it('does not show Edit, Delete, or Submit buttons', () => {
@@ -382,13 +388,14 @@ describe('ReportCard', () => {
   // -------------------------------------------------------------------------
 
   describe('"Scheduled for Payment" status', () => {
-    it('shows no action buttons for the owner', () => {
+    it('shows only the View button for the owner', () => {
       render(
         <ReportCard
           report={makeReport({ status: 'Scheduled for Payment' })}
           currentUser={OWNER_USER}
         />
       );
+      expect(screen.getByRole('button', { name: /view report/i })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /submit report/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /edit report/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /delete report/i })).not.toBeInTheDocument();
@@ -396,13 +403,14 @@ describe('ReportCard', () => {
       expect(screen.queryByRole('button', { name: /reject report/i })).not.toBeInTheDocument();
     });
 
-    it('shows no action buttons for an admin', () => {
+    it('shows only the View button for an admin', () => {
       render(
         <ReportCard
           report={makeReport({ status: 'Scheduled for Payment' })}
           currentUser={ADMIN_USER}
         />
       );
+      expect(screen.getByRole('button', { name: /view report/i })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /submit report/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /edit report/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /delete report/i })).not.toBeInTheDocument();

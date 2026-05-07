@@ -1,9 +1,12 @@
 /**
- * EditReportPage — page for editing an existing expense report.
+ * EditReportPage — page for editing an existing expense report and managing its line items.
  *
  * Fetches the report by ID from the reports list (already loaded in useReports),
  * pre-fills all editable fields, and calls handleUpdate on submit.
  * On success: navigates back to the Dashboard (/). On API error: shows ErrorAlert.
+ *
+ * Also displays the expense lines table with add/edit/delete controls.
+ * Line totals are shown read-only.
  *
  * Only reachable for reports in "In Progress" or "Rejected" state — the backend
  * enforces this; the frontend redirects to / if the report is not found.
@@ -14,26 +17,56 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
+import CircularProgress from '@mui/material/CircularProgress';
 import Container from '@mui/material/Container';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
+import IconButton from '@mui/material/IconButton';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableFooter from '@mui/material/TableFooter';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import { useReports } from '../hooks/useReports';
 import { useClients } from '../hooks/useClients';
+import { useExpenseLines } from '../hooks/useExpenseLines';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { expenseReportUpdateSchema } from '../types/schemas';
+import { formatIncurredDate } from '../utils/formatDate';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(amount);
+}
 
 interface FieldErrors {
   title?: string;
   description?: string;
-  total_amount?: string;
   client?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function EditReportPage() {
   const { reportId } = useParams<{ reportId: string }>();
@@ -41,24 +74,34 @@ export function EditReportPage() {
   const { clients, isLoading: clientsLoading } = useClients();
   const navigate = useNavigate();
 
-  const report = reports.find((r) => r.id === Number(reportId));
+  const reportIdNum = Number(reportId);
+  const report = reports.find((r) => r.id === reportIdNum);
 
-  // Pre-fill state from the existing report
+  const {
+    lines,
+    isLoading: linesLoading,
+    error: linesError,
+    handleDelete: handleDeleteLine,
+  } = useExpenseLines(reportIdNum);
+
+  // Report form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [totalAmount, setTotalAmount] = useState('');
   const [reimbursableFromClient, setReimbursableFromClient] = useState(false);
   const [client, setClient] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Line delete dialog state
+  const [deleteLineId, setDeleteLineId] = useState<number | null>(null);
+  const [deleteLineError, setDeleteLineError] = useState<string | null>(null);
+
   // Populate fields once the report is available
   useEffect(() => {
     if (report) {
       setTitle(report.title);
       setDescription(report.description ?? '');
-      setTotalAmount(String(report.total_amount));
       setReimbursableFromClient(report.reimbursable_from_client);
       setClient(report.client ?? '');
     }
@@ -83,7 +126,6 @@ export function EditReportPage() {
     const rawData = {
       title: title || undefined,
       description: description || undefined,
-      total_amount: totalAmount === '' ? undefined : Number(totalAmount),
       reimbursable_from_client: reimbursableFromClient,
       client: reimbursableFromClient && client ? client : undefined,
     };
@@ -106,7 +148,7 @@ export function EditReportPage() {
     setIsSubmitting(true);
 
     try {
-      await handleUpdate(Number(reportId), result.data);
+      await handleUpdate(reportIdNum, result.data);
       navigate('/');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update report';
@@ -116,12 +158,27 @@ export function EditReportPage() {
     }
   }
 
+  async function confirmDeleteLine() {
+    if (deleteLineId === null) return;
+    try {
+      setDeleteLineError(null);
+      await handleDeleteLine(deleteLineId);
+      setDeleteLineId(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete line';
+      setDeleteLineError(message);
+      setDeleteLineId(null);
+    }
+  }
+
   if (!report) {
     return null; // redirect effect will fire
   }
 
+  const subtotal = lines.reduce((sum, line) => sum + line.amount, 0);
+
   return (
-    <Container maxWidth="sm" sx={{ py: 4 }}>
+    <Container maxWidth="md" sx={{ py: 4 }}>
       <Box mb={3}>
         <Typography variant="h4" component="h1">
           Edit Report
@@ -155,19 +212,6 @@ export function EditReportPage() {
           error={Boolean(errors.description)}
           helperText={errors.description ?? ' '}
           disabled={isSubmitting}
-        />
-        <TextField
-          id="total_amount"
-          label="Total Amount"
-          fullWidth
-          margin="normal"
-          type="number"
-          value={totalAmount}
-          onChange={(e) => setTotalAmount(e.target.value)}
-          error={Boolean(errors.total_amount)}
-          helperText={errors.total_amount ?? ' '}
-          disabled={isSubmitting}
-          inputProps={{ min: 0, step: 'any' }}
         />
         <FormControlLabel
           control={
@@ -224,6 +268,93 @@ export function EditReportPage() {
           </Button>
         </Box>
       </Box>
+
+      {/* Expense Lines Section */}
+      <Divider sx={{ my: 4 }} />
+
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h5">Expense Lines</Typography>
+        <Button
+          variant="contained"
+          size="small"
+          onClick={() => navigate(`/reports/${reportId}/lines/new`)}
+        >
+          Add Line
+        </Button>
+      </Box>
+
+      <ErrorAlert message={linesError ?? deleteLineError} />
+
+      {linesLoading ? (
+        <CircularProgress />
+      ) : lines.length === 0 ? (
+        <Typography color="text.secondary">No expense lines yet. Click Add Line to get started.</Typography>
+      ) : (
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Description</TableCell>
+                <TableCell>Amount</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {lines.map((line) => (
+                <TableRow key={line.id}>
+                  <TableCell>{line.description}</TableCell>
+                  <TableCell>{formatCurrency(line.amount)}</TableCell>
+                  <TableCell>{formatIncurredDate(line.incurred_date)}</TableCell>
+                  <TableCell>
+                    <IconButton
+                      aria-label="edit line"
+                      size="small"
+                      onClick={() => navigate(`/reports/${reportId}/lines/${line.id}/edit`)}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      aria-label="delete line"
+                      size="small"
+                      onClick={() => setDeleteLineId(line.id)}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={2}>
+                  <Typography variant="body2" fontWeight="medium">
+                    Total: {formatCurrency(subtotal)}
+                  </Typography>
+                </TableCell>
+                <TableCell colSpan={2} />
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Delete line confirmation dialog */}
+      <Dialog open={deleteLineId !== null} onClose={() => setDeleteLineId(null)}>
+        <DialogTitle>Delete Expense Line</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this expense line? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteLineId(null)}>Cancel</Button>
+          <Button onClick={confirmDeleteLine} color="error" autoFocus>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
+

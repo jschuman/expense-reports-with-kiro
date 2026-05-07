@@ -12,6 +12,7 @@
  *  - onReject  → handleReject  (Submitted → Rejected, requires admin notes)
  *  - onEdit    → navigate to /reports/:id/edit
  *  - onDelete  → handleDelete  (removes report)
+ *  - onView    → navigate to /reports/:id (read-only detail page)
  *
  * Requirements: 2.3, 3.1, 4.3, 4.5, 4.6, 4.7, 5.1, 7.3, 7.4, 8.3, 10.1
  */
@@ -65,6 +66,17 @@ export function DashboardPage() {
   const handleEdit = useCallback(
     (reportId: number) => {
       navigate(`/reports/${reportId}/edit`);
+    },
+    [navigate],
+  );
+
+  /**
+   * Navigates to the read-only detail page for the given report.
+   * Used for non-editable statuses (Submitted, Scheduled for Payment) and admin views.
+   */
+  const handleView = useCallback(
+    (reportId: number) => {
+      navigate(`/reports/${reportId}`);
     },
     [navigate],
   );
@@ -128,6 +140,7 @@ export function DashboardPage() {
           onReject={handleReject}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onView={handleView}
         />
       ))}
     </Container>

@@ -138,7 +138,7 @@ describe('ExpenseLineDetailPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/reports/10');
+    expect(mockNavigate).toHaveBeenCalledWith('/reports/10/edit');
   });
 
   // -------------------------------------------------------------------------
@@ -191,7 +191,7 @@ describe('ExpenseLineDetailPage', () => {
         amount: 120,
         incurred_date: '2026-04-10',
       });
-      expect(mockNavigate).toHaveBeenCalledWith('/reports/10');
+      expect(mockNavigate).toHaveBeenCalledWith('/reports/10/edit');
     });
   });
 
@@ -215,7 +215,7 @@ describe('ExpenseLineDetailPage', () => {
         5,
         expect.objectContaining({ description: 'Updated taxi' }),
       );
-      expect(mockNavigate).toHaveBeenCalledWith('/reports/10');
+      expect(mockNavigate).toHaveBeenCalledWith('/reports/10/edit');
     });
   });
 

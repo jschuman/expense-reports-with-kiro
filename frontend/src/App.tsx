@@ -7,8 +7,8 @@
  * Protected routes (require authentication via ProtectedRoute):
  *   /                                       → DashboardPage
  *   /reports/new                            → CreateReportPage
- *   /reports/:reportId                      → ExpenseReportDetailPage
- *   /reports/:reportId/edit                 → EditReportPage
+ *   /reports/:reportId                      → ExpenseReportDetailPage (read-only view)
+ *   /reports/:reportId/edit                 → EditReportPage (includes lines management)
  *   /reports/:reportId/lines/new            → ExpenseLineDetailPage
  *   /reports/:reportId/lines/:lineId/edit   → ExpenseLineDetailPage
  *

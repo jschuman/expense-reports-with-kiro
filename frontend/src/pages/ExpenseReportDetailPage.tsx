@@ -115,6 +115,12 @@ export function ExpenseReportDetailPage() {
 
   return (
     <Container sx={{ mt: 4 }}>
+      <Box sx={{ mb: 2 }}>
+        <Button variant="text" onClick={() => navigate('/')}>
+          ← Back to Dashboard
+        </Button>
+      </Box>
+
       {/* Report header */}
       <Box sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>

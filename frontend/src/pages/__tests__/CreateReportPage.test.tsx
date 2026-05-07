@@ -41,7 +41,6 @@ vi.mock('../../components/ReportForm', () => ({
           onSubmit({
             title: 'Test',
             description: 'Testing',
-            total_amount: 10,
             reimbursable_from_client: false,
           })
         }
@@ -55,7 +54,6 @@ vi.mock('../../components/ReportForm', () => ({
           onSubmit({
             title: 'Client Trip',
             description: 'NYC visit',
-            total_amount: 850,
             reimbursable_from_client: true,
             client: 'Acme Corp',
           })
@@ -99,7 +97,7 @@ describe('CreateReportPage', () => {
   });
 
   // Requirements 3.1, 4.1: new fields (description, reimbursable_from_client) are passed through to createReport
-  it('calls createReport with all new fields and navigates to / on success', async () => {
+  it('calls createReport with all new fields and navigates to the edit page on success', async () => {
     const mockCreateReport = vi.fn().mockResolvedValue(mockReportBase);
 
     mockUseReports.mockReturnValue({
@@ -117,23 +115,24 @@ describe('CreateReportPage', () => {
       expect(mockCreateReport).toHaveBeenCalledWith({
         title: 'Test',
         description: 'Testing',
-        total_amount: 10,
         reimbursable_from_client: false,
       });
-      expect(mockNavigate).toHaveBeenCalledWith('/');
+      expect(mockNavigate).toHaveBeenCalledWith(`/reports/${mockReportBase.id}/edit`);
     });
   });
 
   // Requirements 4.1, 5.1: reimbursable=true with a valid client is passed through correctly
   it('calls createReport with reimbursable_from_client=true and client on reimbursable submission', async () => {
-    const mockCreateReport = vi.fn().mockResolvedValue({
+    const reimbursableReport = {
       ...mockReportBase,
+      id: 2,
       title: 'Client Trip',
       description: 'NYC visit',
-      total_amount: 850,
+      total_amount: 0,
       reimbursable_from_client: true,
       client: 'Acme Corp',
-    });
+    };
+    const mockCreateReport = vi.fn().mockResolvedValue(reimbursableReport);
 
     mockUseReports.mockReturnValue({
       reports: [],
@@ -150,11 +149,10 @@ describe('CreateReportPage', () => {
       expect(mockCreateReport).toHaveBeenCalledWith({
         title: 'Client Trip',
         description: 'NYC visit',
-        total_amount: 850,
         reimbursable_from_client: true,
         client: 'Acme Corp',
       });
-      expect(mockNavigate).toHaveBeenCalledWith('/');
+      expect(mockNavigate).toHaveBeenCalledWith(`/reports/${reimbursableReport.id}/edit`);
     });
   });
 

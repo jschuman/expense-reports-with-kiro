@@ -2,11 +2,11 @@
  * ExpenseLineDetailPage — form page for creating and editing expense lines.
  *
  * Create mode (/reports/:reportId/lines/new): empty form; on submit calls createLine;
- * on success navigates to /reports/${reportId}.
+ * on success navigates to /reports/${reportId}/edit.
  *
  * Edit mode (/reports/:reportId/lines/:lineId/edit): fetches lines via useExpenseLines,
  * finds the matching line, pre-populates the form; on submit calls updateLine;
- * on success navigates to /reports/${reportId}.
+ * on success navigates to /reports/${reportId}/edit.
  *
  * Client-side validation mirrors Pydantic rules. Server 422 errors are displayed as
  * field-level messages; other server errors (409) are displayed as an Alert.
@@ -138,7 +138,7 @@ export function ExpenseLineDetailPage() {
       } else {
         await handleCreate(formData);
       }
-      navigate(`/reports/${reportId}`);
+      navigate(`/reports/${reportId}/edit`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 422) {
         const parsed = parseFieldErrors(err.message);
@@ -226,7 +226,7 @@ export function ExpenseLineDetailPage() {
           <Button
             type="button"
             variant="outlined"
-            onClick={() => navigate(`/reports/${reportId}`)}
+            onClick={() => navigate(`/reports/${reportId}/edit`)}
             disabled={isSubmitting}
           >
             Cancel

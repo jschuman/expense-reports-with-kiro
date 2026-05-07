@@ -1,7 +1,8 @@
 /**
  * CreateReportPage — page for creating a new expense report.
  * Renders ReportForm wired to useReports().createReport.
- * On success: navigates to the Dashboard (/). On API error: shows ErrorAlert.
+ * On success: navigates to the report's edit page so the user can add expense lines.
+ * On API error: shows ErrorAlert.
  */
 
 import { useState } from 'react';
@@ -26,8 +27,8 @@ export function CreateReportPage() {
     setIsSubmitting(true);
 
     try {
-      await createReport(data);
-      navigate('/');
+      const newReport = await createReport(data);
+      navigate(`/reports/${newReport.id}/edit`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create report';
       setApiError(message);
