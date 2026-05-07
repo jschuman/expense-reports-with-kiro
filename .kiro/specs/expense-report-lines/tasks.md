@@ -151,12 +151,12 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
     - Test `deleteLine` handles the void/204 response correctly
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 11. Create the `useExpenseLines` hook and its unit tests
-  - [ ] 11.1 Create `frontend/src/hooks/useExpenseLines.ts` returning `{ lines, isLoading, error, refetch, handleCreate, handleUpdate, handleDelete }`
+- [x] 11. Create the `useExpenseLines` hook and its unit tests
+  - [x] 11.1 Create `frontend/src/hooks/useExpenseLines.ts` returning `{ lines, isLoading, error, refetch, handleCreate, handleUpdate, handleDelete }`
     - Fetch lines on mount and after each mutation via `refetch`
     - Expose `refetch` so `ExpenseReportDetailPage` can refresh the report's `total_amount` after a line mutation
     - _Requirements: 2.4, 2.8, 3.4, 3.8, 4.3, 5.4_
-  - [ ] 11.2 Write Vitest unit tests for `useExpenseLines`
+  - [x] 11.2 Write Vitest unit tests for `useExpenseLines`
     - Mock the `expenseLines` API module
     - Test loading state on mount, successful fetch populates `lines`, error state on API failure
     - Test `handleCreate` calls `createLine` and triggers refetch
