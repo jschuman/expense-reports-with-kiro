@@ -199,8 +199,8 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
     - Delete flow: click Delete → dialog appears; click Cancel → dialog closes, no API call; click Confirm → `handleDelete` called
     - _Requirements: 2.1, 3.1, 4.1, 4.2, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-- [ ] 14. Create `ExpenseLineDetailPage` and its unit tests
-  - [ ] 14.1 Create `frontend/src/pages/ExpenseLineDetailPage.tsx` operating in create and edit modes
+- [x] 14. Create `ExpenseLineDetailPage` and its unit tests
+  - [x] 14.1 Create `frontend/src/pages/ExpenseLineDetailPage.tsx` operating in create and edit modes
     - **Create mode** (`/reports/:reportId/lines/new`): empty form; on submit calls `createLine(reportId, formData)`; on success navigates to `/reports/${reportId}`
     - **Edit mode** (`/reports/:reportId/lines/:lineId/edit`): fetch lines via `useExpenseLines`, find matching line, pre-populate form; on submit calls `updateLine(reportId, lineId, formData)`; on success navigates to `/reports/${reportId}`
     - Form fields: `description` (MUI `TextField`, required), `amount` (MUI `TextField` type="number", required, must be > 0), `incurred_date` (MUI `DatePicker` or `<input type="date">`, required, valid calendar date)
@@ -208,7 +208,7 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
     - Cancel button navigates back to `/reports/${reportId}` without submitting
     - Show `CircularProgress` while loading in edit mode
     - _Requirements: 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 3.2, 3.3, 3.4, 3.5, 3.8_
-  - [ ] 14.2 Write Vitest unit tests for `ExpenseLineDetailPage`
+  - [x] 14.2 Write Vitest unit tests for `ExpenseLineDetailPage`
     - Render in create mode: all fields empty, submit button present, cancel navigates back
     - Render in edit mode: form pre-populated with existing line values
     - Submit in create mode with valid data: `createLine` called with correct payload; on success navigates to detail page
