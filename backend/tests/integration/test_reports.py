@@ -231,7 +231,6 @@ async def test_create_report_success_returns_201_and_response_shape(
     payload = {
         "title": "Conference Trip",
         "description": "Annual tech conference",
-        "total_amount": 1200.00,
         "reimbursable_from_client": True,
         "client": "Acme Corp",
     }
@@ -241,7 +240,7 @@ async def test_create_report_success_returns_201_and_response_shape(
     body = response.json()
     assert body["title"] == payload["title"]
     assert body["description"] == payload["description"]
-    assert body["total_amount"] == payload["total_amount"]
+    assert body["total_amount"] == 0.0  # total_amount is computed from lines, starts at 0
     assert body["status"] == "In Progress"
     assert body["owner_id"] == seeded_user["id"]
     assert body["owner_username"] == seeded_user["username"]
@@ -263,7 +262,7 @@ async def test_create_report_status_is_in_progress(async_client, seeded_user):
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Team Lunch", "total_amount": 250.00},
+        json={"title": "Team Lunch"},
     )
 
     assert response.status_code == 201
@@ -280,7 +279,7 @@ async def test_create_report_owner_id_matches_authenticated_user(async_client, s
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Software License", "total_amount": 99.99},
+        json={"title": "Software License"},
     )
 
     assert response.status_code == 201
@@ -297,7 +296,7 @@ async def test_create_report_reimbursable_false_no_client_returns_201(async_clie
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Office Supplies", "total_amount": 30.0, "reimbursable_from_client": False},
+        json={"title": "Office Supplies", "reimbursable_from_client": False},
     )
 
     assert response.status_code == 201
@@ -314,7 +313,7 @@ async def test_create_report_unauthenticated_returns_401(async_client):
     """POST /reports without a session cookie → 401."""
     response = await async_client.post(
         "/reports",
-        json={"title": "Some Report", "total_amount": 100.00},
+        json={"title": "Some Report"},
     )
 
     assert response.status_code == 401
@@ -330,7 +329,7 @@ async def test_create_report_empty_title_returns_422(async_client, seeded_user):
 
     response = await async_client.post(
         "/reports",
-        json={"title": "", "total_amount": 100.00},
+        json={"title": "", "reimbursable_from_client": False},
     )
 
     assert response.status_code == 422
@@ -340,7 +339,7 @@ async def test_create_report_empty_title_returns_422(async_client, seeded_user):
 
 @pytest.mark.asyncio
 async def test_create_report_zero_amount_returns_422(async_client, seeded_user):
-    """total_amount=0 → 422, no record created."""
+    """Missing total_amount field is now allowed (computed from lines) → 201."""
     await async_client.post(
         "/auth/login",
         json={"username": seeded_user["username"], "password": seeded_user["password"]},
@@ -348,17 +347,17 @@ async def test_create_report_zero_amount_returns_422(async_client, seeded_user):
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Valid Title", "total_amount": 0},
+        json={"title": "Valid Title"},
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 201
     list_response = await async_client.get("/reports")
-    assert list_response.json() == []
+    assert len(list_response.json()) == 1
 
 
 @pytest.mark.asyncio
 async def test_create_report_negative_amount_returns_422(async_client, seeded_user):
-    """total_amount=-5 → 422, no record created."""
+    """Missing total_amount field is now allowed (computed from lines) → 201."""
     await async_client.post(
         "/auth/login",
         json={"username": seeded_user["username"], "password": seeded_user["password"]},
@@ -366,12 +365,12 @@ async def test_create_report_negative_amount_returns_422(async_client, seeded_us
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Valid Title", "total_amount": -5},
+        json={"title": "Valid Title"},
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 201
     list_response = await async_client.get("/reports")
-    assert list_response.json() == []
+    assert len(list_response.json()) == 1
 
 
 @pytest.mark.asyncio
@@ -384,7 +383,7 @@ async def test_create_report_reimbursable_true_no_client_returns_422(async_clien
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Client Trip", "total_amount": 500.0, "reimbursable_from_client": True},
+        json={"title": "Client Trip", "reimbursable_from_client": True},
     )
 
     assert response.status_code == 422
@@ -404,7 +403,6 @@ async def test_create_report_invalid_client_returns_422(async_client, seeded_use
         "/reports",
         json={
             "title": "Client Trip",
-            "total_amount": 500.0,
             "reimbursable_from_client": True,
             "client": "Unknown Corp",
         },
@@ -433,7 +431,7 @@ async def test_create_report_missing_title_returns_422(async_client, seeded_user
 
 @pytest.mark.asyncio
 async def test_create_report_missing_amount_returns_422(async_client, seeded_user):
-    """Missing total_amount field → 422."""
+    """Missing title field → 422 (total_amount is now computed from lines)."""
     await async_client.post(
         "/auth/login",
         json={"username": seeded_user["username"], "password": seeded_user["password"]},
@@ -441,7 +439,7 @@ async def test_create_report_missing_amount_returns_422(async_client, seeded_use
 
     response = await async_client.post(
         "/reports",
-        json={"title": "Valid Title"},
+        json={},
     )
 
     assert response.status_code == 422

@@ -192,10 +192,9 @@ async def test_property_dashboard_returns_only_user_reports(num_users, reports_p
             max_size=500,
         ),
     ),
-    total_amount=st.floats(min_value=0.01, max_value=1000000.0, allow_nan=False, allow_infinity=False),
 )
 async def test_property_report_creation_round_trip_preserves_fields(
-    title, description, total_amount
+    title, description
 ):
     """Property 5: Report creation round-trip preserves all fields.
 
@@ -203,8 +202,8 @@ async def test_property_report_creation_round_trip_preserves_fields(
 
     For any valid ExpenseReportCreate payload, submitting it via POST /reports and then
     retrieving the report via GET /reports SHALL return a record containing the same
-    title, description, and total_amount, with status equal to "In Progress" and owner_id
-    equal to the authenticated user's id.
+    title and description, with status equal to "In Progress", owner_id equal to the
+    authenticated user's id, and total_amount equal to 0.0 (computed from lines).
     """
     async_client = create_test_client()
 
@@ -225,7 +224,7 @@ async def test_property_report_creation_round_trip_preserves_fields(
         )
         assert login_response.status_code == 200
 
-        payload = {"title": title, "total_amount": total_amount}
+        payload = {"title": title}
         if description is not None:
             payload["description"] = description
 
@@ -245,7 +244,7 @@ async def test_property_report_creation_round_trip_preserves_fields(
 
         retrieved = matching[0]
         assert retrieved["title"] == title
-        assert abs(retrieved["total_amount"] - total_amount) < 0.01
+        assert retrieved["total_amount"] == 0.0  # total_amount is computed from lines, starts at 0
         assert retrieved["status"] == "In Progress"
         assert retrieved["owner_id"] == user_id
     finally:
@@ -262,16 +261,15 @@ async def test_property_report_creation_round_trip_preserves_fields(
 @pytest.mark.asyncio
 @settings(max_examples=20, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(
-    invalid_field=st.sampled_from(["empty_title", "zero_amount", "negative_amount"]),
+    invalid_field=st.sampled_from(["empty_title"]),
 )
 async def test_property_invalid_reports_always_rejected(invalid_field):
     """Property 6: Reports with invalid fields are always rejected.
 
     **Validates: Requirements 3.4, 3.5**
 
-    For any ExpenseReportCreate payload where at least one required field is empty
-    or total_amount is not a positive number, POST /reports SHALL return 422 and
-    SHALL NOT persist any record to the database.
+    For any ExpenseReportCreate payload where at least one required field is empty,
+    POST /reports SHALL return 422 and SHALL NOT persist any record to the database.
     """
     async_client = create_test_client()
 
@@ -294,11 +292,7 @@ async def test_property_invalid_reports_always_rejected(invalid_field):
         initial_count = len(initial_response.json())
 
         if invalid_field == "empty_title":
-            payload = {"title": "", "total_amount": 100.0}
-        elif invalid_field == "zero_amount":
-            payload = {"title": "Valid title", "total_amount": 0.0}
-        elif invalid_field == "negative_amount":
-            payload = {"title": "Valid title", "total_amount": -10.0}
+            payload = {"title": ""}
         else:
             raise ValueError(f"Unknown invalid_field: {invalid_field}")
 
@@ -330,16 +324,15 @@ async def test_property_invalid_reports_always_rejected(invalid_field):
         min_size=1,
         max_size=255,
     ),
-    total_amount=st.floats(min_value=0.01, max_value=1000000.0, allow_nan=False, allow_infinity=False),
 )
-async def test_property_zod_pydantic_validation_agree(title, total_amount):
+async def test_property_zod_pydantic_validation_agree(title):
     """Property 7: Zod and Pydantic validation agree on valid inputs.
 
     **Validates: Requirements 3.4, 3.5**
 
-    For any form input that passes Zod client-side validation (non-empty title,
-    positive float), the equivalent request body SHALL also pass Pydantic server-side
-    validation — the server SHALL NOT return 422 for a client-validated payload.
+    For any form input that passes Zod client-side validation (non-empty title),
+    the equivalent request body SHALL also pass Pydantic server-side validation —
+    the server SHALL NOT return 422 for a client-validated payload.
     """
     async_client = create_test_client()
 
@@ -358,7 +351,7 @@ async def test_property_zod_pydantic_validation_agree(title, total_amount):
         )
         assert login_response.status_code == 200
 
-        payload = {"title": title, "total_amount": total_amount}
+        payload = {"title": title}
 
         response = await async_client.post("/reports", json=payload)
 
@@ -383,17 +376,13 @@ _valid_title_st = st.text(
     max_size=255,
 )
 
-# Shared strategy for valid total_amount values
-_valid_amount_st = st.floats(min_value=0.01, max_value=1_000_000.0, allow_nan=False, allow_infinity=False)
-
 
 @pytest.mark.asyncio
 @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(
     title=_valid_title_st,
-    total_amount=_valid_amount_st,
 )
-async def test_property_owner_is_always_session_user(title, total_amount):
+async def test_property_owner_is_always_session_user(title):
     """Property 1: Owner is always the session user.
 
     # Feature: expense-report-fields, Property 1: Owner is always the session user
@@ -423,7 +412,7 @@ async def test_property_owner_is_always_session_user(title, total_amount):
         )
         assert login_resp.status_code == 200
 
-        payload = {"title": title, "total_amount": total_amount}
+        payload = {"title": title}
         create_resp = await async_client.post("/reports", json=payload)
         assert create_resp.status_code == 201, (
             f"Expected 201, got {create_resp.status_code}: {create_resp.text}"
@@ -460,9 +449,8 @@ async def test_property_owner_is_always_session_user(title, total_amount):
             max_size=500,
         ),
     ),
-    total_amount=_valid_amount_st,
 )
-async def test_property_description_round_trip(description, total_amount):
+async def test_property_description_round_trip(description):
     """Property 2: Description round-trip.
 
     # Feature: expense-report-fields, Property 2: Description round-trip
@@ -491,7 +479,7 @@ async def test_property_description_round_trip(description, total_amount):
         )
         assert login_resp.status_code == 200
 
-        payload: dict = {"title": "Description Round-Trip Report", "total_amount": total_amount}
+        payload: dict = {"title": "Description Round-Trip Report"}
         if description is not None:
             payload["description"] = description
 
@@ -537,9 +525,8 @@ async def test_property_description_round_trip(description, total_amount):
 @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(
     title=_valid_title_st,
-    total_amount=_valid_amount_st,
 )
-async def test_property_reimbursable_default_is_false(title, total_amount):
+async def test_property_reimbursable_default_is_false(title):
     """Property 4 (new): Reimbursable default is false.
 
     # Feature: expense-report-fields, Property 4: Reimbursable default is false
@@ -567,7 +554,7 @@ async def test_property_reimbursable_default_is_false(title, total_amount):
         assert login_resp.status_code == 200
 
         # Deliberately omit reimbursable_from_client from the payload
-        payload = {"title": title, "total_amount": total_amount}
+        payload = {"title": title}
         create_resp = await async_client.post("/reports", json=payload)
         assert create_resp.status_code == 201, (
             f"Expected 201, got {create_resp.status_code}: {create_resp.text}"
@@ -593,9 +580,8 @@ async def test_property_reimbursable_default_is_false(title, total_amount):
 @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(
     title=_valid_title_st,
-    total_amount=_valid_amount_st,
 )
-async def test_property_client_required_when_reimbursable_true(title, total_amount):
+async def test_property_client_required_when_reimbursable_true(title):
     """Property 6 (new): Client required when reimbursable is true.
 
     # Feature: expense-report-fields, Property 6: Client required when reimbursable is true
@@ -631,7 +617,6 @@ async def test_property_client_required_when_reimbursable_true(title, total_amou
         # reimbursable=True with no client — must be rejected
         payload = {
             "title": title,
-            "total_amount": total_amount,
             "reimbursable_from_client": True,
             # client intentionally omitted
         }
@@ -663,14 +648,13 @@ async def test_property_client_required_when_reimbursable_true(title, total_amou
 @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(
     title=_valid_title_st,
-    total_amount=_valid_amount_st,
     invalid_client=st.text(
         alphabet=st.characters(min_codepoint=32, max_codepoint=126, blacklist_categories=("Cc", "Cs")),
         min_size=1,
         max_size=255,
     ).filter(lambda s: s not in CLIENTS),
 )
-async def test_property_client_validation_only_list_values_accepted(title, total_amount, invalid_client):
+async def test_property_client_validation_only_list_values_accepted(title, invalid_client):
     """Property 7 (new): Client validation — only list values accepted.
 
     # Feature: expense-report-fields, Property 7: Client validation — only list values accepted
@@ -705,7 +689,6 @@ async def test_property_client_validation_only_list_values_accepted(title, total
         # client value not in CLIENTS — must be rejected regardless of reimbursable flag
         payload = {
             "title": title,
-            "total_amount": total_amount,
             "reimbursable_from_client": True,
             "client": invalid_client,
         }
@@ -737,9 +720,8 @@ async def test_property_client_validation_only_list_values_accepted(title, total
 @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(
     title=_valid_title_st,
-    total_amount=_valid_amount_st,
 )
-async def test_property_admin_notes_always_null_on_creation(title, total_amount):
+async def test_property_admin_notes_always_null_on_creation(title):
     """Property 10: Admin notes round-trip.
 
     # Feature: expense-report-fields, Property 10: Admin notes round-trip
@@ -768,7 +750,7 @@ async def test_property_admin_notes_always_null_on_creation(title, total_amount)
         assert login_resp.status_code == 200
 
         # Payload without admin_notes (it is not part of ExpenseReportCreate)
-        payload = {"title": title, "total_amount": total_amount}
+        payload = {"title": title}
         create_resp = await async_client.post("/reports", json=payload)
         assert create_resp.status_code == 201, (
             f"Expected 201, got {create_resp.status_code}: {create_resp.text}"
