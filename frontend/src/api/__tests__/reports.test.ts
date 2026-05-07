@@ -475,4 +475,26 @@ describe('deleteReport()', () => {
     await expect(deleteReport(99)).rejects.toThrow(ApiError);
     await expect(deleteReport(99)).rejects.toMatchObject({ status: 404 });
   });
+
+  it('throws ApiError using statusText when error JSON has no detail field', async () => {
+    server.use(
+      http.delete('/reports/:id', () =>
+        HttpResponse.json({ message: 'something went wrong' }, { status: 500 }),
+      ),
+    );
+
+    await expect(deleteReport(1)).rejects.toThrow(ApiError);
+    await expect(deleteReport(1)).rejects.toMatchObject({ status: 500 });
+  });
+
+  it('throws ApiError with stringified detail when detail is a non-string', async () => {
+    server.use(
+      http.delete('/reports/:id', () =>
+        HttpResponse.json({ detail: [{ loc: ['body'], msg: 'invalid' }] }, { status: 422 }),
+      ),
+    );
+
+    await expect(deleteReport(1)).rejects.toThrow(ApiError);
+    await expect(deleteReport(1)).rejects.toMatchObject({ status: 422 });
+  });
 });

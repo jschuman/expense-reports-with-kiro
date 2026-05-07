@@ -557,6 +557,17 @@ describe('deleteLine()', () => {
     await expect(deleteLine(10, 1)).rejects.toThrow(ApiError);
     await expect(deleteLine(10, 1)).rejects.toMatchObject({ status: 422 });
   });
+
+  it('throws ApiError using statusText when error JSON has no detail field', async () => {
+    server.use(
+      http.delete('/reports/:reportId/lines/:lineId', () =>
+        HttpResponse.json({ message: 'something went wrong' }, { status: 500 }),
+      ),
+    );
+
+    await expect(deleteLine(10, 1)).rejects.toThrow(ApiError);
+    await expect(deleteLine(10, 1)).rejects.toMatchObject({ status: 500 });
+  });
 });
 
 // ---------------------------------------------------------------------------
