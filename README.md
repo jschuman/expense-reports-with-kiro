@@ -15,9 +15,16 @@ The Expense Report Web App allows authenticated users to create, view, and manag
 - **Admin Review**: Admins can accept or reject submitted reports; rejected reports require a reason (admin notes)
 - **Status Audit Log**: Every status change is recorded with a UTC timestamp for full traceability
 - **Expense Line Items**: Each report supports multiple line items (description, amount, incurred date); the report total is automatically computed as the sum of all lines
-- **Expense Report Detail View**: Dedicated page per report showing the full line-item table with currency-formatted amounts and dates, a subtotal footer row, and inline Add/Edit/Delete controls (only available to the report owner when in an editable state)
-- **Expense Line Create/Edit Form**: Dedicated form page for adding new lines or editing existing ones, with client-side validation (non-empty description, positive amount, valid date), server-side 422 field-level error display, and 409 conflict alerts for locked reports
-- **Full Client-Side Routing**: React Router routes for all report and line pages (`/reports/:reportId`, `/reports/:reportId/lines/new`, `/reports/:reportId/lines/:lineId/edit`), all protected by authentication
+- **Expense Report Detail View**: Read-only detail page (`/reports/:reportId`) showing the full line-item table with currency-formatted amounts and dates, a subtotal footer row, and a "Back to Dashboard" button. Inline Add/Edit/Delete controls are shown only to the report owner when the report is in an editable state (`In Progress` or `Rejected`).
+- **Expense Line Items Embedded in Edit Page**: The Edit Report page (`/reports/:reportId/edit`) includes the full expense lines table directly — no separate navigation needed. Owners can add, edit, and delete lines from the same page, with a delete confirmation dialog. The report total is automatically computed server-side as the sum of all lines and is never entered manually.
+- **Expense Line Create/Edit Form**: Dedicated form page for adding new lines or editing existing ones, with client-side validation (non-empty description, positive amount, valid date), server-side 422 field-level error display, and 409 conflict alerts for locked reports. After saving, the user is returned to the Edit Report page.
+- **Create Report → Edit Report Flow**: After creating a new report, the user is taken directly to the Edit Report page so they can immediately add expense lines.
+- **Dashboard View Button**: Reports in non-editable states (Submitted, Scheduled for Payment) show a **View** button on the dashboard card, linking to the read-only detail page. Admins in Submitted state see View alongside Accept/Reject.
+- **Full Client-Side Routing**: React Router routes for all report and line pages, all protected by authentication:
+  - `/reports/:reportId` — read-only detail page
+  - `/reports/:reportId/edit` — edit report + manage lines
+  - `/reports/:reportId/lines/new` — add a line
+  - `/reports/:reportId/lines/:lineId/edit` — edit a line
 - **Client Reimbursement Tracking**: Mark expenses as client-reimbursable and associate them with specific clients
 - **Automatic Metadata**: Owner and creation timestamp are automatically recorded
 - **Responsive UI**: Material UI-based interface with form validation
@@ -179,7 +186,7 @@ npm test -- --coverage   # Run with coverage report
 
 Both backend and frontend have 100% test coverage requirements:
 - Backend: All files in `backend/app/` must have 100% coverage (410 tests, 100% coverage)
-- Frontend: All utility functions in `frontend/src/` must have 100% coverage (398 tests, 100% coverage on `src/api/`, `src/hooks/`, and `src/utils/`)
+- Frontend: All utility functions in `frontend/src/` must have 100% coverage (396 tests, 100% coverage on `src/api/`, `src/hooks/`, and `src/utils/`)
 
 ### API Documentation
 

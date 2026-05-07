@@ -7,9 +7,13 @@
  *
  * Renders conditional action buttons based on report.status and currentUser.role:
  *  - "In Progress" + owner:  Edit, Delete, Submit
- *  - "Submitted"   + admin:  Accept, Reject (Reject opens RejectDialog)
+ *  - "Submitted"   + admin:  View, Accept, Reject (Reject opens RejectDialog)
  *  - "Rejected"    + owner:  Edit, Delete, Submit
- *  - "Submitted" or "Scheduled for Payment" + owner: no action buttons
+ *  - "Submitted" or "Scheduled for Payment" + owner: View
+ *  - Admin on any non-Submitted status: View
+ *
+ * The View button is shown whenever the owner has no editable actions, giving
+ * read-only access to the report detail and its expense lines.
  *
  * Requirements: 2.3, 3.1, 4.3, 5.1, 7.3, 7.4, 8.3, 10.1, 10.3
  */
@@ -42,6 +46,7 @@ interface ReportCardProps {
   onReject?: (reportId: number, adminNotes: string) => void;
   onEdit?: (reportId: number) => void;
   onDelete?: (reportId: number) => void;
+  onView?: (reportId: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -81,6 +86,7 @@ export function ReportCard({
   onReject,
   onEdit,
   onDelete,
+  onView,
 }: ReportCardProps) {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
 
@@ -96,6 +102,9 @@ export function ReportCard({
   const showOwnerEditableActions =
     isOwner && (report.status === 'In Progress' || report.status === 'Rejected');
   const showAdminSubmittedActions = isAdmin && report.status === 'Submitted';
+
+  // Show View button when the owner has no edit actions (non-editable status or admin viewing)
+  const showViewButton = !showOwnerEditableActions;
 
   function handleRejectConfirm(adminNotes: string) {
     setRejectDialogOpen(false);
@@ -216,8 +225,19 @@ export function ReportCard({
         </CardContent>
 
         {/* Action buttons */}
-        {(showOwnerEditableActions || showAdminSubmittedActions) && (
+        {(showOwnerEditableActions || showAdminSubmittedActions || showViewButton) && (
           <CardActions sx={{ px: 2, pb: 2, gap: 1 }}>
+            {showViewButton && (
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => onView?.(report.id)}
+                aria-label="view report"
+              >
+                View
+              </Button>
+            )}
+
             {showOwnerEditableActions && (
               <>
                 <Button

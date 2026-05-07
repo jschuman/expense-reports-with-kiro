@@ -38,12 +38,10 @@ afterEach(() => {
 async function renderFillAndSubmit({
   title,
   description,
-  amount,
   onSubmit,
 }: {
   title: string;
   description: string;
-  amount: string;
   onSubmit: ReturnType<typeof vi.fn>;
 }) {
   render(<ReportForm onSubmit={onSubmit} isSubmitting={false} />);
@@ -51,32 +49,29 @@ async function renderFillAndSubmit({
   await act(async () => {
     fireEvent.change(screen.getByLabelText(/title/i), { target: { value: title } });
     fireEvent.change(screen.getByLabelText(/description/i), { target: { value: description } });
-    fireEvent.change(screen.getByLabelText(/total amount/i), { target: { value: amount } });
     fireEvent.submit(screen.getByRole('button', { name: /submit report/i }).closest('form')!);
   });
 }
 
 describe('ReportForm property-based tests', () => {
   /**
-   * Property 7 (valid side): For any non-empty title, any description (optional),
-   * and positive amount, Zod accepts the input and onSubmit IS called.
+   * Property 7 (valid side): For any non-empty title and any description (optional),
+   * Zod accepts the input and onSubmit IS called.
    * Validates: Requirements 3.2, 3.4, 4.1
    */
   it(
-    'calls onSubmit for any valid input (non-empty title, optional description, positive amount)',
+    'calls onSubmit for any valid input (non-empty title, optional description)',
     async () => {
       await fc.assert(
         fc.asyncProperty(
           fc.string({ minLength: 1, maxLength: 255 }).filter((s) => s.trim().length > 0),
           fc.string(),
-          fc.double({ min: 0.01, max: 1_000_000, noNaN: true }),
-          async (title, description, amount) => {
+          async (title, description) => {
             const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
 
             await renderFillAndSubmit({
               title,
               description,
-              amount: String(amount),
               onSubmit: mockOnSubmit,
             });
 
@@ -104,60 +99,17 @@ describe('ReportForm property-based tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.string(),
-          fc.double({ min: 0.01, max: 1_000_000, noNaN: true }),
-          async (description, amount) => {
+          async (description) => {
             const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
 
             await renderFillAndSubmit({
               title: '',
               description,
-              amount: String(amount),
               onSubmit: mockOnSubmit,
             });
 
             await waitFor(() => {
               expect(screen.getByText('Title is required')).toBeInTheDocument();
-            });
-
-            expect(mockOnSubmit).not.toHaveBeenCalled();
-
-            cleanup();
-          }
-        ),
-        { numRuns: 100 }
-      );
-    },
-    30_000
-  );
-
-  /**
-   * Property 7 (invalid amount): For any non-positive amount (zero or negative),
-   * Zod rejects the input and onSubmit is NOT called.
-   * Validates: Requirements 3.4
-   */
-  it(
-    'does NOT call onSubmit when total_amount is non-positive',
-    async () => {
-      await fc.assert(
-        fc.asyncProperty(
-          fc.string({ minLength: 1, maxLength: 255 }).filter((s) => s.trim().length > 0),
-          fc.string(),
-          fc.oneof(
-            fc.constant(0),
-            fc.double({ min: -1_000_000, max: -0.001, noNaN: true })
-          ),
-          async (title, description, amount) => {
-            const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-            await renderFillAndSubmit({
-              title,
-              description,
-              amount: String(amount),
-              onSubmit: mockOnSubmit,
-            });
-
-            await waitFor(() => {
-              expect(screen.getByText('Amount must be positive')).toBeInTheDocument();
             });
 
             expect(mockOnSubmit).not.toHaveBeenCalled();

@@ -621,6 +621,34 @@ describe('Edit action wiring', () => {
 });
 
 // ---------------------------------------------------------------------------
+// View button navigates to /reports/:id (read-only detail page)
+// ---------------------------------------------------------------------------
+
+describe('View action wiring', () => {
+  it('navigates to /reports/:id when View is clicked on a Submitted report', async () => {
+    const submittedReport: ExpenseReportResponse = {
+      id: 77,
+      title: 'Conference Trip',
+      description: null,
+      total_amount: 500.0,
+      status: 'Submitted',
+      owner_id: 1,
+      owner_username: 'alice',
+      created_at: '2026-03-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+    };
+    setupDefaultMocks({ user: userRoleUser, reports: [submittedReport] });
+    renderDashboard();
+
+    await userEvent.click(screen.getByRole('button', { name: /view report/i }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/reports/77');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Requirement 10.1: Delete button calls handleDelete with the correct report ID
 // ---------------------------------------------------------------------------
 

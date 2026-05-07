@@ -398,3 +398,22 @@ describe('ExpenseReportDetailPage', () => {
     expect(mockNavigate).toHaveBeenCalledWith(`/reports/10/lines/${sampleLines[0].id}/edit`);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Back to Dashboard navigation
+// ---------------------------------------------------------------------------
+
+describe('Back to Dashboard button', () => {
+  it('navigates to / when the back button is clicked', async () => {
+    const user = userEvent.setup();
+    setupReportsMock(makeReport({ status: 'Submitted', owner_id: 1 }));
+    setupLinesMock([]);
+    setupAuthMock(OWNER_USER);
+
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /back to dashboard/i }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/');
+  });
+});

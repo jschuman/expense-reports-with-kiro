@@ -12,7 +12,6 @@ export const loginRequestSchema = z.object({
 export const expenseReportCreateSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255, 'Title must be 255 characters or less'),
   description: z.string().optional(),
-  total_amount: z.number({ invalid_type_error: 'Amount must be a number' }).positive('Amount must be positive'),
   reimbursable_from_client: z.boolean().default(false),
   client: z.string().optional(),
 }).superRefine((data, ctx) => {

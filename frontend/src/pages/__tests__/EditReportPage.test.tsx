@@ -11,6 +11,7 @@ import { EditReportPage } from '../EditReportPage';
 // Mock hooks
 vi.mock('../../hooks/useReports');
 vi.mock('../../hooks/useClients');
+vi.mock('../../hooks/useExpenseLines');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -23,9 +24,12 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 import { useReports } from '../../hooks/useReports';
 import { useClients } from '../../hooks/useClients';
+import { useExpenseLines } from '../../hooks/useExpenseLines';
+import type { ExpenseLineResponse } from '../../types/expenseReport';
 
 const mockUseReports = vi.mocked(useReports);
 const mockUseClients = vi.mocked(useClients);
+const mockUseExpenseLines = vi.mocked(useExpenseLines);
 
 const baseReport = {
   id: 42,
@@ -46,10 +50,28 @@ function renderPage(reportId = '42') {
     <MemoryRouter initialEntries={[`/reports/${reportId}/edit`]}>
       <Routes>
         <Route path="/reports/:reportId/edit" element={<EditReportPage />} />
+        <Route path="/reports/:reportId/lines/new" element={<div data-testid="add-line-page" />} />
+        <Route path="/reports/:reportId/lines/:lineId/edit" element={<div data-testid="edit-line-page" />} />
         <Route path="/" element={<div data-testid="dashboard" />} />
       </Routes>
     </MemoryRouter>
   );
+}
+
+function setupLinesMock(
+  lines: ExpenseLineResponse[] = [],
+  handleDelete = vi.fn().mockResolvedValue(undefined),
+) {
+  mockUseExpenseLines.mockReturnValue({
+    lines,
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    handleCreate: vi.fn(),
+    handleUpdate: vi.fn(),
+    handleDelete,
+  });
+  return { handleDelete };
 }
 
 describe('EditReportPage', () => {
@@ -60,6 +82,7 @@ describe('EditReportPage', () => {
       isLoading: false,
       error: null,
     });
+    setupLinesMock(); // default: no lines
   });
 
   it('pre-fills form fields from the existing report', async () => {
@@ -75,7 +98,6 @@ describe('EditReportPage', () => {
 
     expect(screen.getByDisplayValue('Q1 Travel')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Flight to NYC')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('350')).toBeInTheDocument();
   });
 
   it('calls handleUpdate with changed fields and navigates to / on success', async () => {
@@ -153,5 +175,87 @@ describe('EditReportPage', () => {
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/');
     });
+  });
+
+  it('shows empty-state message when there are no lines', () => {
+    mockUseReports.mockReturnValue({
+      reports: [baseReport],
+      isLoading: false,
+      error: null,
+      handleUpdate: vi.fn(),
+    });
+    setupLinesMock([]);
+
+    renderPage();
+
+    expect(screen.getByText(/no expense lines yet/i)).toBeInTheDocument();
+  });
+
+  it('renders lines table with Add Line button when lines exist', () => {
+    mockUseReports.mockReturnValue({
+      reports: [baseReport],
+      isLoading: false,
+      error: null,
+      handleUpdate: vi.fn(),
+    });
+    setupLinesMock([
+      { id: 1, report_id: 42, description: 'Hotel', amount: 120.5, incurred_date: '2026-04-05' },
+    ]);
+
+    renderPage();
+
+    expect(screen.getByRole('button', { name: /add line/i })).toBeInTheDocument();
+    expect(screen.getByText('Hotel')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /edit line/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /delete line/i })).toBeInTheDocument();
+  });
+
+  it('opens delete dialog and calls handleDelete on confirm', async () => {
+    const user = userEvent.setup();
+    mockUseReports.mockReturnValue({
+      reports: [baseReport],
+      isLoading: false,
+      error: null,
+      handleUpdate: vi.fn(),
+    });
+    const { handleDelete } = setupLinesMock([
+      { id: 7, report_id: 42, description: 'Taxi', amount: 25, incurred_date: '2026-04-10' },
+    ]);
+
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /delete line/i }));
+    expect(screen.getByText('Delete Expense Line')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => {
+      expect(handleDelete).toHaveBeenCalledWith(7);
+    });
+  });
+
+  it('closes delete dialog without deleting when Cancel is clicked', async () => {
+    const user = userEvent.setup();
+    mockUseReports.mockReturnValue({
+      reports: [baseReport],
+      isLoading: false,
+      error: null,
+      handleUpdate: vi.fn(),
+    });
+    const { handleDelete } = setupLinesMock([
+      { id: 7, report_id: 42, description: 'Taxi', amount: 25, incurred_date: '2026-04-10' },
+    ]);
+
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /delete line/i }));
+
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+    await user.click(cancelButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Delete Expense Line')).not.toBeInTheDocument();
+    });
+    expect(handleDelete).not.toHaveBeenCalled();
   });
 });

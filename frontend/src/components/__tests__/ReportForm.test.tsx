@@ -124,7 +124,6 @@ describe('ReportForm', () => {
       render(<ReportForm onSubmit={mockOnSubmit} isSubmitting={false} />);
 
       await user.type(screen.getByLabelText(/title/i), 'Q2 Travel');
-      await user.type(screen.getByLabelText(/total amount/i), '500');
       await user.click(screen.getByRole('checkbox', { name: /reimbursable from client/i }));
 
       // Submit without selecting a client
@@ -144,7 +143,6 @@ describe('ReportForm', () => {
       render(<ReportForm onSubmit={mockOnSubmit} isSubmitting={false} />);
 
       await user.type(screen.getByLabelText(/title/i), 'Q2 Travel');
-      await user.type(screen.getByLabelText(/total amount/i), '500');
 
       await user.click(screen.getByRole('button', { name: /submit report/i }));
 
@@ -168,7 +166,6 @@ describe('ReportForm', () => {
       render(<ReportForm onSubmit={mockOnSubmit} isSubmitting={false} />);
 
       await user.type(screen.getByLabelText(/title/i), 'Q2 Travel');
-      await user.type(screen.getByLabelText(/total amount/i), '850');
       await user.click(screen.getByRole('checkbox', { name: /reimbursable from client/i }));
 
       // Open the MUI Select and pick a client
@@ -182,7 +179,6 @@ describe('ReportForm', () => {
         expect(mockOnSubmit).toHaveBeenCalledOnce();
         expect(mockOnSubmit).toHaveBeenCalledWith({
           title: 'Q2 Travel',
-          total_amount: 850,
           reimbursable_from_client: true,
           client: 'Acme Corp',
         });
@@ -213,7 +209,6 @@ describe('ReportForm', () => {
       render(<ReportForm onSubmit={mockOnSubmit} isSubmitting={false} />);
 
       await user.type(screen.getByLabelText(/title/i), 'Q2 Travel');
-      await user.type(screen.getByLabelText(/total amount/i), '500');
 
       const checkbox = screen.getByRole('checkbox', { name: /reimbursable from client/i });
 
@@ -243,7 +238,7 @@ describe('ReportForm', () => {
   // -------------------------------------------------------------------------
 
   describe('existing field validation', () => {
-    it('shows inline validation errors when submitted with empty title and amount', async () => {
+    it('shows a validation error when title is empty', async () => {
       const user = userEvent.setup();
       render(<ReportForm onSubmit={mockOnSubmit} isSubmitting={false} />);
 
@@ -251,27 +246,10 @@ describe('ReportForm', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Title is required')).toBeInTheDocument();
-        expect(screen.getByText('Amount must be a number')).toBeInTheDocument();
       });
 
       // description is optional — no required error expected
       expect(screen.queryByText(/description is required/i)).not.toBeInTheDocument();
-      expect(mockOnSubmit).not.toHaveBeenCalled();
-    });
-
-    it('shows validation error when total_amount is 0', async () => {
-      const user = userEvent.setup();
-      render(<ReportForm onSubmit={mockOnSubmit} isSubmitting={false} />);
-
-      await user.type(screen.getByLabelText(/title/i), 'My Report');
-      await user.type(screen.getByLabelText(/total amount/i), '0');
-
-      await user.click(screen.getByRole('button', { name: /submit report/i }));
-
-      await waitFor(() => {
-        expect(screen.getByText('Amount must be positive')).toBeInTheDocument();
-      });
-
       expect(mockOnSubmit).not.toHaveBeenCalled();
     });
 
@@ -280,7 +258,6 @@ describe('ReportForm', () => {
       render(<ReportForm onSubmit={mockOnSubmit} isSubmitting={false} />);
 
       await user.type(screen.getByLabelText(/title/i), 'Q1 Travel');
-      await user.type(screen.getByLabelText(/total amount/i), '450.50');
 
       await user.click(screen.getByRole('button', { name: /submit report/i }));
 
@@ -288,7 +265,6 @@ describe('ReportForm', () => {
         expect(mockOnSubmit).toHaveBeenCalledOnce();
         expect(mockOnSubmit).toHaveBeenCalledWith({
           title: 'Q1 Travel',
-          total_amount: 450.5,
           reimbursable_from_client: false,
         });
       });

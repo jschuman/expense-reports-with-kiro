@@ -5,18 +5,22 @@
  *
  * Property 8: Dashboard Controls Match Status and Role
  *   For any expense report in any state rendered for any user, the set of action
- *   controls displayed (Submit, Edit, Delete, Accept, Reject) MUST exactly match
+ *   controls displayed (Submit, Edit, Delete, Accept, Reject, View) MUST exactly match
  *   the controls permitted by the state machine and the user's role:
  *     - No permitted action may be hidden
  *     - No forbidden action may be shown
  *
  * Permitted controls per (status, role/ownership) combination:
  *   "In Progress"           + owner (User):  Edit, Delete, Submit
- *   "Submitted"             + admin (Admin): Accept, Reject
+ *   "Submitted"             + admin (Admin): View, Accept, Reject
  *   "Rejected"              + owner (User):  Edit, Delete, Submit
- *   "Submitted"             + owner (User):  (none)
- *   "Scheduled for Payment" + any:           (none)
- *   Any status              + non-owner non-admin: (none)
+ *   "Submitted"             + owner (User):  View
+ *   "Scheduled for Payment" + owner (User):  View
+ *   "Scheduled for Payment" + admin:         View
+ *   Any status              + non-owner non-admin: View
+ *
+ * The View button is shown whenever the owner has no editable actions,
+ * giving read-only access to the report detail and its expense lines.
  *
  * Validates: Requirements 2.3, 3.1, 4.3, 5.1, 7.3, 7.4, 8.3, 10.1
  */
@@ -64,16 +68,17 @@ function expectedButtons(
   if (isOwner && (status === 'In Progress' || status === 'Rejected')) {
     return new Set(['edit report', 'delete report', 'submit report']);
   }
-  // Admin reviewing a submitted report
+  // Admin reviewing a submitted report — View + Accept + Reject
   if (isAdmin && status === 'Submitted') {
-    return new Set(['accept report', 'reject report']);
+    return new Set(['view report', 'accept report', 'reject report']);
   }
-  // All other combinations: no action buttons
-  return new Set();
+  // All other combinations: only the View button (read-only access)
+  return new Set(['view report']);
 }
 
 /** All possible action button aria-labels in the component. */
 const ALL_BUTTON_LABELS = [
+  'view report',
   'edit report',
   'delete report',
   'submit report',
@@ -242,7 +247,7 @@ describe(
     );
 
     /**
-     * Focused sub-property: admin always sees Accept, Reject when status is "Submitted".
+     * Focused sub-property: admin always sees View, Accept, Reject when status is "Submitted".
      */
     it(
       'admin always sees Accept, Reject when status is "Submitted"',
@@ -256,7 +261,7 @@ describe(
                 <ReportCard report={report} currentUser={currentUser} />
               );
 
-              for (const label of ['accept report', 'reject report']) {
+              for (const label of ['view report', 'accept report', 'reject report']) {
                 const button = container.querySelector(`[aria-label="${label}"]`);
                 if (!button) {
                   throw new Error(
@@ -274,10 +279,10 @@ describe(
     );
 
     /**
-     * Focused sub-property: no action buttons are ever shown for "Scheduled for Payment".
+     * Focused sub-property: View button is shown for all users when status is "Scheduled for Payment".
      */
     it(
-      'no action buttons are shown for any user when status is "Scheduled for Payment"',
+      'View button is shown for any user when status is "Scheduled for Payment"',
       () => {
         fc.assert(
           fc.property(
@@ -288,11 +293,19 @@ describe(
                 <ReportCard report={report} currentUser={currentUser} />
               );
 
-              for (const label of ALL_BUTTON_LABELS) {
+              const viewButton = container.querySelector(`[aria-label="view report"]`);
+              if (!viewButton) {
+                throw new Error(
+                  `Expected "view report" button for "Scheduled for Payment" but it was absent.`
+                );
+              }
+
+              // No edit/delete/submit/accept/reject
+              for (const label of ['edit report', 'delete report', 'submit report', 'accept report', 'reject report']) {
                 const button = container.querySelector(`[aria-label="${label}"]`);
                 if (button) {
                   throw new Error(
-                    `Expected no buttons for "Scheduled for Payment" but found "${label}".`
+                    `Expected no "${label}" button for "Scheduled for Payment" but it was present.`
                   );
                 }
               }
@@ -306,10 +319,10 @@ describe(
     );
 
     /**
-     * Focused sub-property: owner sees no action buttons when status is "Submitted".
+     * Focused sub-property: owner sees only View when status is "Submitted".
      */
     it(
-      'owner sees no action buttons when status is "Submitted"',
+      'owner sees only View button when status is "Submitted"',
       () => {
         fc.assert(
           fc.property(
@@ -320,11 +333,16 @@ describe(
                 <ReportCard report={report} currentUser={currentUser} />
               );
 
-              for (const label of ALL_BUTTON_LABELS) {
+              const viewButton = container.querySelector(`[aria-label="view report"]`);
+              if (!viewButton) {
+                throw new Error(`Expected "view report" for owner in "Submitted" but it was absent.`);
+              }
+
+              for (const label of ['edit report', 'delete report', 'submit report', 'accept report', 'reject report']) {
                 const button = container.querySelector(`[aria-label="${label}"]`);
                 if (button) {
                   throw new Error(
-                    `Expected no buttons for owner in "Submitted" but found "${label}".`
+                    `Expected no "${label}" for owner in "Submitted" but found it.`
                   );
                 }
               }
@@ -338,10 +356,10 @@ describe(
     );
 
     /**
-     * Focused sub-property: non-owner non-admin sees no action buttons in any state.
+     * Focused sub-property: non-owner non-admin sees only View in any state.
      */
     it(
-      'non-owner non-admin sees no action buttons in any state',
+      'non-owner non-admin sees only View button in any state',
       () => {
         fc.assert(
           fc.property(
@@ -352,11 +370,18 @@ describe(
                 <ReportCard report={report} currentUser={currentUser} />
               );
 
-              for (const label of ALL_BUTTON_LABELS) {
+              const viewButton = container.querySelector(`[aria-label="view report"]`);
+              if (!viewButton) {
+                throw new Error(
+                  `Expected "view report" for non-owner in status="${report.status}" but it was absent.`
+                );
+              }
+
+              for (const label of ['edit report', 'delete report', 'submit report', 'accept report', 'reject report']) {
                 const button = container.querySelector(`[aria-label="${label}"]`);
                 if (button) {
                   throw new Error(
-                    `Expected no buttons for non-owner in status="${report.status}" but found "${label}".`
+                    `Expected no "${label}" for non-owner in status="${report.status}" but found it.`
                   );
                 }
               }

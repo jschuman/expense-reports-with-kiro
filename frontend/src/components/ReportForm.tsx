@@ -6,9 +6,11 @@
  * Fields:
  *  - title (required)
  *  - description (optional, multiline)
- *  - total_amount (required, positive number)
  *  - reimbursable_from_client (boolean checkbox, default false)
  *  - client (dropdown from useClients(), required when reimbursable=true)
+ *
+ * Note: total_amount is computed server-side from expense lines; it is not
+ * entered by the user when creating a report.
  */
 
 import { useState } from 'react';
@@ -33,7 +35,6 @@ interface ReportFormProps {
 interface FieldErrors {
   title?: string;
   description?: string;
-  total_amount?: string;
   reimbursable_from_client?: string;
   client?: string;
 }
@@ -41,7 +42,6 @@ interface FieldErrors {
 export function ReportForm({ onSubmit, isSubmitting }: ReportFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [totalAmount, setTotalAmount] = useState('');
   const [reimbursableFromClient, setReimbursableFromClient] = useState(false);
   const [client, setClient] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -62,7 +62,6 @@ export function ReportForm({ onSubmit, isSubmitting }: ReportFormProps) {
     const rawData = {
       title,
       description: description || undefined,
-      total_amount: totalAmount === '' ? NaN : Number(totalAmount),
       reimbursable_from_client: reimbursableFromClient,
       client: reimbursableFromClient && client ? client : undefined,
     };
@@ -111,19 +110,6 @@ export function ReportForm({ onSubmit, isSubmitting }: ReportFormProps) {
         error={Boolean(errors.description)}
         helperText={errors.description ?? ' '}
         disabled={isSubmitting}
-      />
-      <TextField
-        id="total_amount"
-        label="Total Amount"
-        fullWidth
-        margin="normal"
-        type="number"
-        value={totalAmount}
-        onChange={(e) => setTotalAmount(e.target.value)}
-        error={Boolean(errors.total_amount)}
-        helperText={errors.total_amount ?? ' '}
-        disabled={isSubmitting}
-        inputProps={{ min: 0, step: 'any' }}
       />
       <FormControlLabel
         control={
