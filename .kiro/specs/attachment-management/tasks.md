@@ -49,14 +49,14 @@ This implementation plan breaks down the attachment management feature into disc
     - Test directory permissions are 0o700
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
 
-- [ ] 3. Backend Foundation: Pydantic Schemas
-  - [ ] 3.1 Create AttachmentMetadataResponse Pydantic schema
+- [x] 3. Backend Foundation: Pydantic Schemas
+  - [x] 3.1 Create AttachmentMetadataResponse Pydantic schema
     - Define fields: id, file_name, file_size, mime_type, created_at
     - Use datetime type for created_at (FastAPI will serialize to ISO 8601 UTC)
     - Add Config with from_attributes=True for ORM compatibility
     - _Requirements: 1.4, 4.2, 4.4, 8.1_
   
-  - [ ] 3.2 Write unit tests for Pydantic schemas
+  - [x] 3.2 Write unit tests for Pydantic schemas
     - Test AttachmentMetadataResponse validates correct data
     - Test schema rejects invalid data types
     - Test datetime serialization to ISO 8601 UTC format
