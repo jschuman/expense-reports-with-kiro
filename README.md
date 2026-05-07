@@ -178,8 +178,8 @@ npm test -- --coverage   # Run with coverage report
 ### Code Quality
 
 Both backend and frontend have 100% test coverage requirements:
-- Backend: All files in `backend/app/` must have 100% coverage
-- Frontend: All files in `frontend/src/api/` and `frontend/src/hooks/` must have 100% coverage
+- Backend: All files in `backend/app/` must have 100% coverage (410 tests, 100% coverage)
+- Frontend: All utility functions in `frontend/src/` must have 100% coverage (398 tests, 100% coverage on `src/api/`, `src/hooks/`, and `src/utils/`)
 
 ### API Documentation
 
