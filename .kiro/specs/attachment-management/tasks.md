@@ -62,8 +62,8 @@ This implementation plan breaks down the attachment management feature into disc
     - Test datetime serialization to ISO 8601 UTC format
     - _Requirements: 1.4, 4.2_
 
-- [ ] 4. Backend Foundation: AttachmentService Core Logic
-  - [ ] 4.1 Implement AttachmentService.upload_attachment() method
+- [x] 4. Backend Foundation: AttachmentService Core Logic
+  - [x] 4.1 Implement AttachmentService.upload_attachment() method
     - Verify user owns report or is admin (403 if not)
     - Validate file type (extension + MIME type) against whitelist (400 if invalid)
     - Validate file size ≤ 10 MB (413 if too large)
@@ -74,7 +74,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Return AttachmentMetadataResponse
     - _Requirements: 1.1, 1.2, 1.3, 1.5, 1.6, 2.1, 2.2, 2.3, 6.1, 6.4, 9.1, 12.5_
   
-  - [ ] 4.2 Implement AttachmentService.delete_attachment() method
+  - [x] 4.2 Implement AttachmentService.delete_attachment() method
     - Verify user owns report or is admin (403 if not)
     - Retrieve Attachment record (404 if not found)
     - Delete file from storage using FileStorageManager
@@ -82,20 +82,20 @@ This implementation plan breaks down the attachment management feature into disc
     - Return None (204 response)
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 9.1_
   
-  - [ ] 4.3 Implement AttachmentService.get_attachment() method
+  - [x] 4.3 Implement AttachmentService.get_attachment() method
     - Verify user owns report or is admin (403 if not)
     - Retrieve Attachment record (404 if not found)
     - Retrieve file content from storage using FileStorageManager
     - Return tuple of (file_content, mime_type, original_filename)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 9.1_
   
-  - [ ] 4.4 Implement AttachmentService.get_attachment_metadata() method
+  - [x] 4.4 Implement AttachmentService.get_attachment_metadata() method
     - Verify user owns report or is admin (403 if not)
     - Retrieve Attachment record (404 if not found)
     - Return AttachmentMetadataResponse
     - _Requirements: 4.1, 4.3, 8.4, 9.1_
   
-  - [ ] 4.5 Write unit tests for AttachmentService
+  - [x] 4.5 Write unit tests for AttachmentService
     - Test upload_attachment() with valid file succeeds
     - Test upload_attachment() with invalid MIME type returns 400
     - Test upload_attachment() with invalid extension returns 400
