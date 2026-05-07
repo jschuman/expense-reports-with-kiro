@@ -5,8 +5,12 @@
  *   /login  → LoginPage
  *
  * Protected routes (require authentication via ProtectedRoute):
- *   /            → DashboardPage
- *   /reports/new → CreateReportPage
+ *   /                                       → DashboardPage
+ *   /reports/new                            → CreateReportPage
+ *   /reports/:reportId                      → ExpenseReportDetailPage
+ *   /reports/:reportId/edit                 → EditReportPage
+ *   /reports/:reportId/lines/new            → ExpenseLineDetailPage
+ *   /reports/:reportId/lines/:lineId/edit   → ExpenseLineDetailPage
  *
  * Any unmatched path redirects to /.
  */
@@ -17,6 +21,8 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CreateReportPage } from './pages/CreateReportPage';
 import { EditReportPage } from './pages/EditReportPage';
+import { ExpenseReportDetailPage } from './pages/ExpenseReportDetailPage';
+import { ExpenseLineDetailPage } from './pages/ExpenseLineDetailPage';
 
 function App() {
   return (
@@ -29,7 +35,10 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/reports/new" element={<CreateReportPage />} />
+          <Route path="/reports/:reportId" element={<ExpenseReportDetailPage />} />
           <Route path="/reports/:reportId/edit" element={<EditReportPage />} />
+          <Route path="/reports/:reportId/lines/new" element={<ExpenseLineDetailPage />} />
+          <Route path="/reports/:reportId/lines/:lineId/edit" element={<ExpenseLineDetailPage />} />
         </Route>
 
         {/* Catch-all */}

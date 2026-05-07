@@ -220,14 +220,14 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
     - Server 409 response: `Alert` with server detail message displayed
     - _Requirements: 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 3.3, 3.4, 3.5, 3.8_
 
-- [ ] 15. Add new routes to `App.tsx` and update existing frontend tests
-  - [ ] 15.1 Add three new protected routes to `frontend/src/App.tsx`:
+- [x] 15. Add new routes to `App.tsx` and update existing frontend tests
+  - [x] 15.1 Add three new protected routes to `frontend/src/App.tsx`:
     - `/reports/:reportId` → `<ExpenseReportDetailPage />`
     - `/reports/:reportId/lines/new` → `<ExpenseLineDetailPage />`
     - `/reports/:reportId/lines/:lineId/edit` → `<ExpenseLineDetailPage />`
     - Retain the existing `/reports/:reportId/edit` route unchanged
     - _Requirements: 2.2, 3.2_
-  - [ ] 15.2 Update existing frontend tests that pass `total_amount` in report create or update payloads
+  - [x] 15.2 Update existing frontend tests that pass `total_amount` in report create or update payloads
     - Remove `total_amount` from those payloads to match the updated `ExpenseReportCreate` and `ExpenseReportUpdate` types
     - Verify all pre-existing frontend tests pass after the type change
     - _Requirements: 5.6_
