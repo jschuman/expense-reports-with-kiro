@@ -141,12 +141,12 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
     - `ExpenseReportResponse` retains `total_amount` as a read-only field
     - _Requirements: 5.6_
 
-- [ ] 10. Create the `expenseLines` API module and its unit tests
-  - [ ] 10.1 Create `frontend/src/api/expenseLines.ts` with `listLines`, `createLine`, `updateLine`, and `deleteLine` functions
+- [x] 10. Create the `expenseLines` API module and its unit tests
+  - [x] 10.1 Create `frontend/src/api/expenseLines.ts` with `listLines`, `createLine`, `updateLine`, and `deleteLine` functions
     - All functions use `apiFetch` from `client.ts`
     - `deleteLine` handles 204 No Content (no JSON body), following the same pattern as `deleteReport` in `reports.ts`
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
-  - [ ] 10.2 Write Vitest unit tests for `expenseLines.ts`
+  - [x] 10.2 Write Vitest unit tests for `expenseLines.ts`
     - Mock `apiFetch`; test each function's URL construction, HTTP method, and request body
     - Test `deleteLine` handles the void/204 response correctly
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
