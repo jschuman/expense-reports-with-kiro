@@ -6,19 +6,19 @@ This implementation plan breaks down the attachment management feature into disc
 
 ## Tasks
 
-- [ ] 1. Backend Foundation: Database Schema and Models
-  - [ ] 1.1 Create Attachment SQLAlchemy ORM model
+- [x] 1. Backend Foundation: Database Schema and Models
+  - [x] 1.1 Create Attachment SQLAlchemy ORM model
     - Define Attachment table with id, expense_report_line_id (FK, UNIQUE), file_name, file_size, mime_type, storage_path, created_at columns
     - Add relationship to ExpenseReportLine with back_populates
     - Implement cascade delete on line deletion
     - _Requirements: 7.1, 7.2, 7.3_
   
-  - [ ] 1.2 Update ExpenseReportLine model with attachment relationship
+  - [x] 1.2 Update ExpenseReportLine model with attachment relationship
     - Add attachment relationship to ExpenseReportLine model
     - Ensure one-to-one relationship is properly configured
     - _Requirements: 1.6, 7.1_
   
-  - [ ] 1.3 Write unit tests for Attachment model
+  - [x] 1.3 Write unit tests for Attachment model
     - Test model creation with valid data
     - Test unique constraint on expense_report_line_id
     - Test cascade delete behavior
