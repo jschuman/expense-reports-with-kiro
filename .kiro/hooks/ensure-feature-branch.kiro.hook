@@ -1,13 +1,14 @@
 {
   "enabled": true,
   "name": "Ensure Feature Branch for Spec",
-  "description": "Checks that we're on a feature branch before starting spec task execution. If on main, creates a new feature branch based on the spec name.",
+  "description": "Creates a feature branch when a requirements document is created. If on main, creates a new feature branch based on the spec name.",
   "version": "1",
   "when": {
-    "type": "preTaskExecution"
+    "type": "fileCreated",
+    "patterns": [".kiro/specs/*/requirements.md"]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "Before starting this spec task, check the current git branch. If we're on 'main' or 'master', create a new feature branch with a name based on the spec feature name (e.g., 'feature/expense-report-fields'). If already on a feature branch, confirm it's appropriate for this spec and proceed. Always follow git safety guidelines: never force push, always create new branches from main."
+    "prompt": "A requirements document has been created. Check the current git branch. If we're on 'main' or 'master', create a new feature branch with a name based on the spec feature name (e.g., 'feature/attachment-management'). If already on a feature branch, confirm it's appropriate for this spec and proceed. Always follow git safety guidelines: never force push, always create new branches from main."
   }
 }
