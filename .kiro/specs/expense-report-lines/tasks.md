@@ -176,8 +176,8 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
     - Test that the date is not shifted by timezone offset (local date parsing)
     - _Requirements: 6.4_
 
-- [ ] 13. Create `ExpenseReportDetailPage` and its unit tests
-  - [ ] 13.1 Create `frontend/src/pages/ExpenseReportDetailPage.tsx`
+- [x] 13. Create `ExpenseReportDetailPage` and its unit tests
+  - [x] 13.1 Create `frontend/src/pages/ExpenseReportDetailPage.tsx`
     - Fetch the report (by `reportId` from URL params) and lines via `useExpenseLines(reportId)`
     - Display report header: title, status badge (MUI `Chip`), description, `total_amount` (read-only, currency-formatted), reimbursable/client info
     - Render `Expense_Lines_Section` as an MUI `Table` with columns: Description, Amount (currency-formatted), Date (`formatIncurredDate`), and Actions (conditionally shown)
@@ -190,7 +190,7 @@ Add line-item support to the Expense Report Web App. The implementation proceeds
     - After successful delete, stay on page and refresh lines list
     - Display `ErrorAlert` for API errors; display inline `Alert` for 403 and 404 responses
     - _Requirements: 2.1, 2.2, 2.8, 3.1, 3.2, 3.8, 4.1, 4.2, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
-  - [ ] 13.2 Write Vitest unit tests for `ExpenseReportDetailPage`
+  - [x] 13.2 Write Vitest unit tests for `ExpenseReportDetailPage`
     - Render with mock report (`In Progress`, owner = current user): verify table columns present, Add button visible, Edit/Delete buttons visible per row
     - Render with mock report (`Submitted`, owner = current user): verify Add/Edit/Delete buttons absent
     - Render with mock report (`In Progress`, owner ≠ current user): verify Add/Edit/Delete buttons absent
