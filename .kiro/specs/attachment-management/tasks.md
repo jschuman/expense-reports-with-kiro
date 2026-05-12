@@ -233,19 +233,19 @@ This implementation plan breaks down the attachment management feature into disc
     - Use Hypothesis to generate file access attempts
     - _Requirements: 12.1, 12.3, 12.4_
 
-- [ ] 7. Backend: Checkpoint - Ensure all backend tests pass
+- [x] 7. Backend: Checkpoint - Ensure all backend tests pass
   - Ensure all unit tests, integration tests, and property-based tests pass
   - Verify 100% code coverage on backend/app/ (excluding __pycache__ and .pyc files)
   - Ask the user if questions arise
 
-- [ ] 8. Frontend: TypeScript Types and API Client
-  - [ ] 8.1 Create TypeScript types for attachments
+- [x] 8. Frontend: TypeScript Types and API Client
+  - [x] 8.1 Create TypeScript types for attachments
     - Define AttachmentMetadata interface matching backend response
     - Define AttachmentUploadError interface with error types
     - Export types from frontend/src/types/attachments.ts
     - _Requirements: 1.4, 4.2, 10.1_
   
-  - [ ] 8.2 Implement API client functions for attachment operations
+  - [x] 8.2 Implement API client functions for attachment operations
     - Implement uploadAttachment() with multipart form data and progress tracking
     - Implement deleteAttachment() with DELETE request
     - Implement downloadAttachment() with file download trigger
@@ -254,7 +254,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Export functions from frontend/src/api/attachments.ts
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 11.1-11.6_
   
-  - [ ] 8.3 Write unit tests for API client functions
+  - [x] 8.3 Write unit tests for API client functions
     - Test uploadAttachment() sends multipart form data
     - Test uploadAttachment() tracks progress
     - Test uploadAttachment() handles error responses

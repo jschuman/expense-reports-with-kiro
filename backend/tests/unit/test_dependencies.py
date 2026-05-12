@@ -9,8 +9,9 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException
 
-from app.dependencies import get_current_admin, get_current_user
+from app.dependencies import get_current_admin, get_current_user, get_storage
 from app.models.user import User
+from app.services.file_storage import FileStorageManager
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +36,22 @@ def _make_db(user: "User | None") -> MagicMock:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
+
+def test_get_storage_returns_file_storage_manager_instance():
+    """get_storage() returns a FileStorageManager singleton."""
+    import app.dependencies as deps
+    # Reset the singleton so this test exercises the creation path.
+    original = deps._storage_manager
+    deps._storage_manager = None
+    try:
+        result = get_storage()
+        assert isinstance(result, FileStorageManager)
+        # Second call returns the same instance.
+        result2 = get_storage()
+        assert result is result2
+    finally:
+        deps._storage_manager = original
 
 
 def test_get_current_user_returns_user_for_valid_session():

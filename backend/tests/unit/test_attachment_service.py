@@ -323,6 +323,66 @@ class TestUploadAttachment:
             )
         assert exc_info.value.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_upload_line_belongs_to_different_report_returns_404(
+        self, db_session, storage, owner, report, line
+    ):
+        """Line exists but belongs to a different report → 404."""
+        other_report = ExpenseReport(
+            title="Other Report",
+            status="In Progress",
+            owner_id=owner.id,
+            created_at=datetime.now(timezone.utc),
+            reimbursable_from_client=False,
+        )
+        db_session.add(other_report)
+        db_session.commit()
+        db_session.refresh(other_report)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await attachment_service.upload_attachment(
+                report_id=other_report.id,
+                line_id=line.id,  # line belongs to `report`, not `other_report`
+                file=_make_upload_file(),
+                current_user=owner,
+                db=db_session,
+                storage=storage,
+            )
+        assert exc_info.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_upload_replaces_attachment_when_physical_file_already_gone(
+        self, db_session, storage, owner, report, line
+    ):
+        """Replacement upload succeeds even if the previous physical file was deleted."""
+        # Seed a DB record whose physical file does NOT exist.
+        att = Attachment(
+            expense_report_line_id=line.id,
+            file_name="ghost.pdf",
+            file_size=100,
+            mime_type="application/pdf",
+            storage_path="/nonexistent/path/ghost.pdf",
+        )
+        db_session.add(att)
+        db_session.commit()
+
+        # Should not raise even though the old file is gone from disk.
+        result = await attachment_service.upload_attachment(
+            report_id=report.id,
+            line_id=line.id,
+            file=_make_upload_file(filename="new.pdf"),
+            current_user=owner,
+            db=db_session,
+            storage=storage,
+        )
+        assert result.file_name == "new.pdf"
+        count = (
+            db_session.query(Attachment)
+            .filter(Attachment.expense_report_line_id == line.id)
+            .count()
+        )
+        assert count == 1
+
 
 # ---------------------------------------------------------------------------
 # delete_attachment tests
