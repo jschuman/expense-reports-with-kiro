@@ -264,8 +264,8 @@ This implementation plan breaks down the attachment management feature into disc
     - Test error handling for each error type (invalid type, too large, network, server)
     - _Requirements: 8.1-8.4, 11.1-11.6_
 
-- [ ] 9. Frontend: Attachment Upload Component
-  - [ ] 9.1 Create AttachmentUploadComponent with drag-and-drop
+- [x] 9. Frontend: Attachment Upload Component
+  - [x] 9.1 Create AttachmentUploadComponent with drag-and-drop
     - Render file input with drag-and-drop zone
     - Accept file picker selection
     - Display progress indicator during upload
@@ -275,7 +275,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Display error messages for each error type
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 11.1-11.6_
   
-  - [ ] 9.2 Write unit tests for AttachmentUploadComponent
+  - [x] 9.2 Write unit tests for AttachmentUploadComponent
     - Test component renders file input
     - Test drag-and-drop triggers upload
     - Test file picker triggers upload
