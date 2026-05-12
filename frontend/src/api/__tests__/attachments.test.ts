@@ -109,6 +109,20 @@ function makeXhrStub() {
     fireAbort() {
       listeners['abort']?.({} as Event);
     },
+    /**
+     * Fire a load event using a raw response body string (not JSON-serialised).
+     * Does NOT modify statusText — callers set xhrStub.statusText before calling.
+     * Useful for testing the malformed-JSON-on-success branch and empty-statusText branch.
+     */
+    fireLoadRaw(status: number, rawText: string) {
+      stub.status = status;
+      stub.responseText = rawText;
+      listeners['load']?.({} as Event);
+    },
+    /** Fire a progress event where lengthComputable is false. */
+    fireProgressNonComputable() {
+      uploadListeners['progress']?.({ lengthComputable: false, loaded: 0, total: 0 } as unknown as Event);
+    },
   };
 
   return stub;
@@ -479,5 +493,151 @@ describe('getAttachmentMetadata()', () => {
     );
 
     await expect(getAttachmentMetadata(10, 5)).rejects.toMatchObject({ type: 'SERVER_ERROR' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Coverage gap tests
+// ---------------------------------------------------------------------------
+
+describe('uploadAttachment() — coverage gaps', () => {
+  let xhrStub: ReturnType<typeof makeXhrStub>;
+
+  beforeEach(() => {
+    xhrStub = makeXhrStub();
+    vi.stubGlobal('XMLHttpRequest', vi.fn().mockImplementation(function () { return xhrStub; }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('rejects with SERVER_ERROR when 2xx response body is malformed JSON (line 80)', async () => {
+    const promise = uploadAttachment(10, 5, makeFile());
+    xhrStub.statusText = 'OK';
+    xhrStub.fireLoadRaw(200, '{not valid json{{');
+    await expect(promise).rejects.toMatchObject({
+      type: 'SERVER_ERROR',
+      message: 'Invalid JSON response',
+    });
+  });
+
+  it('does not call onProgress when event is not length-computable', async () => {
+    const onProgress = vi.fn();
+    const promise = uploadAttachment(10, 5, makeFile(), onProgress);
+    xhrStub.fireProgressNonComputable();
+    xhrStub.fireLoad(201, sampleMetadata);
+    await promise;
+    // onProgress should NOT have been called because lengthComputable was false
+    expect(onProgress).not.toHaveBeenCalled();
+  });
+
+  it('uses JSON.stringify for non-string detail in XHR error response body', async () => {
+    const promise = uploadAttachment(10, 5, makeFile());
+    xhrStub.fireLoad(400, { detail: { code: 'INVALID', reason: 'bad type' } });
+    const err = await promise.catch((e: unknown) => e);
+    expect(err).toMatchObject({ type: 'INVALID_FILE_TYPE' });
+    // message should be the JSON-stringified detail object
+    expect((err as { message: string }).message).toContain('INVALID');
+  });
+
+  it('falls back to String(status) when statusText is empty', async () => {
+    const promise = uploadAttachment(10, 5, makeFile());
+    xhrStub.statusText = '';
+    xhrStub.fireLoadRaw(400, 'bad body');
+    const err = await promise.catch((e: unknown) => e);
+    expect(err).toMatchObject({ type: 'INVALID_FILE_TYPE' });
+  });
+});
+
+describe('deleteAttachment() — coverage gaps', () => {
+  it('rejects with NETWORK_ERROR when fetch itself throws (line 145)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network failure')));
+
+    await expect(deleteAttachment(10, 5)).rejects.toMatchObject({ type: 'NETWORK_ERROR' });
+
+    vi.unstubAllGlobals();
+  });
+
+  it('rejects with NETWORK_ERROR when fetch rejects with a non-Error value (line 41 false branch)', async () => {
+    // Rejecting with a plain string — not an Error instance — hits the false branch
+    // of `err instanceof Error ? err.message : 'Unknown error'` in mapError().
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue('plain string rejection'));
+
+    await expect(deleteAttachment(10, 5)).rejects.toMatchObject({
+      type: 'NETWORK_ERROR',
+      message: 'Unknown error',
+    });
+
+    vi.unstubAllGlobals();
+  });
+
+  it('handles non-string detail in error response body', async () => {
+    server.use(
+      http.delete('/reports/:reportId/lines/:lineId/attachments', () =>
+        HttpResponse.json({ detail: { code: 'ERR' } }, { status: 500 }),
+      ),
+    );
+
+    const err = await deleteAttachment(10, 5).catch((e: unknown) => e);
+    expect(err).toMatchObject({ type: 'SERVER_ERROR' });
+    expect((err as { message: string }).message).toContain('ERR');
+  });
+
+  it('uses statusText when error response body has no detail field (line 131 false branch)', async () => {
+    server.use(
+      http.delete('/reports/:reportId/lines/:lineId/attachments', () =>
+        HttpResponse.json({}, { status: 500 }),
+      ),
+    );
+
+    const err = await deleteAttachment(10, 5).catch((e: unknown) => e);
+    expect(err).toMatchObject({ type: 'SERVER_ERROR' });
+  });
+});
+
+describe('downloadAttachment() — coverage gaps', () => {
+  beforeEach(() => {
+    URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  afterEach(() => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    delete (URL as Record<string, unknown>)['createObjectURL'];
+    // @ts-ignore
+    delete (URL as Record<string, unknown>)['revokeObjectURL'];
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('rejects with NETWORK_ERROR when fetch itself throws (line 196)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network failure')));
+
+    await expect(downloadAttachment(10, 5)).rejects.toMatchObject({ type: 'NETWORK_ERROR' });
+  });
+
+  it('handles non-string detail in error response body', async () => {
+    server.use(
+      http.get('/reports/:reportId/lines/:lineId/attachments', () =>
+        HttpResponse.json({ detail: { code: 'ERR' } }, { status: 403 }),
+      ),
+    );
+
+    const err = await downloadAttachment(10, 5).catch((e: unknown) => e);
+    expect(err).toMatchObject({ type: 'FORBIDDEN' });
+    expect((err as { message: string }).message).toContain('ERR');
+  });
+
+  it('uses statusText when error response body has no detail field (line 170 false branch)', async () => {
+    server.use(
+      http.get('/reports/:reportId/lines/:lineId/attachments', () =>
+        HttpResponse.json({}, { status: 403 }),
+      ),
+    );
+
+    const err = await downloadAttachment(10, 5).catch((e: unknown) => e);
+    expect(err).toMatchObject({ type: 'FORBIDDEN' });
   });
 });

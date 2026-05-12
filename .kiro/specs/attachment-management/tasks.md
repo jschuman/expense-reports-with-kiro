@@ -324,7 +324,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Test dialog renders with correct message text
     - _Requirements: 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 12. Frontend: Checkpoint - Ensure all frontend tests pass
+- [x] 12. Frontend: Checkpoint - Ensure all frontend tests pass
   - Ensure all unit tests pass
   - Verify 100% code coverage on frontend/src/ utility functions
   - Ask the user if questions arise
