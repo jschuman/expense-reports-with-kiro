@@ -12,7 +12,7 @@ Requirements: 2.1, 2.2, 2.4, 2.5, 3.2, 3.3, 3.5, 3.6, 4.1, 4.2,
               7.1, 7.2, 7.5, 7.6, 8.1, 8.2
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import httpx
 import pytest
@@ -23,6 +23,7 @@ from sqlalchemy.pool import StaticPool
 import app.models as _models  # noqa: F401 — register all ORM models with Base
 from app.db.database import Base, get_db
 from app.main import app
+from app.models.expense_line import ExpenseLine
 from app.models.expense_report import ExpenseReport
 from app.models.role import Role
 from app.models.user import User
@@ -132,6 +133,22 @@ def _seed_report(async_client, owner_id: int, status: str, title: str = "Test Re
         session.close()
 
 
+def _seed_line(async_client, report_id: int, amount: float = 50.0) -> None:
+    """Insert an expense line for the given report."""
+    session = async_client._test_session_factory()
+    try:
+        line = ExpenseLine(
+            report_id=report_id,
+            description="Test line",
+            amount=amount,
+            incurred_date=date.today(),
+        )
+        session.add(line)
+        session.commit()
+    finally:
+        session.close()
+
+
 async def _login(client, credentials: dict) -> None:
     """Log in the given user via the auth endpoint."""
     await client.post(
@@ -152,6 +169,7 @@ async def test_submit_in_progress_report_returns_200_and_submitted_status(
 ):
     """Owner submits an 'In Progress' report → 200, status becomes 'Submitted'."""
     report_id = _seed_report(async_client, owner["id"], "In Progress")
+    _seed_line(async_client, report_id)
     await _login(async_client, owner)
 
     response = await async_client.post(f"/reports/{report_id}/submit")
@@ -168,6 +186,7 @@ async def test_submit_rejected_report_returns_200_and_submitted_status(
 ):
     """Owner resubmits a 'Rejected' report → 200, status becomes 'Submitted'."""
     report_id = _seed_report(async_client, owner["id"], "Rejected")
+    _seed_line(async_client, report_id)
     await _login(async_client, owner)
 
     response = await async_client.post(f"/reports/{report_id}/submit")

@@ -18,8 +18,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.models.expense_line import ExpenseLine
 from app.models.expense_report import ExpenseReport
 from app.models.status_audit_log import StatusAuditLog
 from app.models.user import User
@@ -94,6 +96,30 @@ def submit_report(db: Session, report_id: int, current_user: User) -> ExpenseRep
         raise HTTPException(
             status_code=422,
             detail="Report must have a title before it can be submitted",
+        )
+
+    # Field validation: report must have at least one expense line
+    line_count = (
+        db.query(func.count(ExpenseLine.id))
+        .filter(ExpenseLine.report_id == report.id)
+        .scalar()
+    ) or 0
+    if line_count == 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Report must have at least one expense line before it can be submitted",
+        )
+
+    # Field validation: total amount must be greater than zero
+    total = (
+        db.query(func.sum(ExpenseLine.amount))
+        .filter(ExpenseLine.report_id == report.id)
+        .scalar()
+    ) or 0.0
+    if total <= 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Report total must be greater than $0.00 before it can be submitted",
         )
 
     # Apply transition + audit entry atomically

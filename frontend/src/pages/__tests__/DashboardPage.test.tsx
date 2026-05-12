@@ -443,8 +443,10 @@ describe('Submit action wiring', () => {
       login: vi.fn(),
       logout: vi.fn(),
     });
-    // No lines → attachment check passes immediately and submit fires directly
-    mockListLines.mockResolvedValue([]);
+    // One line with non-zero amount → passes validation, no missing attachments → submit fires
+    mockListLines.mockResolvedValue([
+      { id: 1, report_id: 42, description: 'Flight', amount: 300, incurred_date: '2026-04-02' },
+    ]);
     mockGetMetadata.mockResolvedValue({
       id: 1,
       file_name: 'r.pdf',

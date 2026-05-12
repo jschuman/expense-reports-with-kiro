@@ -46,6 +46,7 @@ export function DashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Missing-attachment warning dialog state
   const [pendingSubmitReportId, setPendingSubmitReportId] = useState<number | null>(null);
@@ -84,29 +85,37 @@ export function DashboardPage() {
    */
   const handleSubmitWithCheck = useCallback(
     async (reportId: number) => {
-      // Fetch lines and check each one for an attachment in parallel.
-      const lines = await listLines(reportId);
+      setSubmitError(null);
+      try {
+        const lines = await listLines(reportId);
 
-      if (lines.length === 0) {
-        // No lines → no missing attachments; submit directly.
-        await handleSubmit(reportId);
-        return;
-      }
+        if (lines.length === 0) {
+          setSubmitError('A report must have at least one expense line before it can be submitted.');
+          return;
+        }
 
-      const results = await Promise.allSettled(
-        lines.map((line) => getAttachmentMetadata(reportId, line.id)),
-      );
+        const total = lines.reduce((sum, l) => sum + l.amount, 0);
+        if (total <= 0) {
+          setSubmitError('A report total must be greater than $0.00 before it can be submitted.');
+          return;
+        }
 
-      const missing = results.filter(
-        (r) => r.status === 'rejected',
-      ).length;
+        const results = await Promise.allSettled(
+          lines.map((line) => getAttachmentMetadata(reportId, line.id)),
+        );
 
-      if (missing > 0) {
-        setMissingCount(missing);
-        setPendingSubmitReportId(reportId);
-        setWarningOpen(true);
-      } else {
-        await handleSubmit(reportId);
+        const missing = results.filter((r) => r.status === 'rejected').length;
+
+        if (missing > 0) {
+          setMissingCount(missing);
+          setPendingSubmitReportId(reportId);
+          setWarningOpen(true);
+        } else {
+          await handleSubmit(reportId);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to submit report';
+        setSubmitError(message);
       }
     },
     [handleSubmit],
@@ -123,7 +132,12 @@ export function DashboardPage() {
   const handleSubmitWithout = useCallback(async () => {
     setWarningOpen(false);
     if (pendingSubmitReportId !== null) {
-      await handleSubmit(pendingSubmitReportId);
+      try {
+        await handleSubmit(pendingSubmitReportId);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to submit report';
+        setSubmitError(message);
+      }
     }
     setPendingSubmitReportId(null);
   }, [handleSubmit, pendingSubmitReportId]);
@@ -178,6 +192,12 @@ export function DashboardPage() {
       {logoutError && (
         <Alert severity="error" sx={{ mb: 2 }} data-testid="logout-error">
           {logoutError}
+        </Alert>
+      )}
+
+      {submitError && (
+        <Alert severity="error" sx={{ mb: 2 }} data-testid="submit-error" onClose={() => setSubmitError(null)}>
+          {submitError}
         </Alert>
       )}
 

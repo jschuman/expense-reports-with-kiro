@@ -148,7 +148,7 @@ describe('DashboardPage — submission with attachment check', () => {
       expect(screen.queryByTestId('missing-attachment-dialog')).not.toBeInTheDocument();
     });
 
-    it('proceeds directly when there are no lines', async () => {
+    it('shows an error and does NOT submit when the report has no lines', async () => {
       setupMocks();
       mockListLines.mockResolvedValue([]);
 
@@ -156,7 +156,10 @@ describe('DashboardPage — submission with attachment check', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
 
-      await waitFor(() => expect(mockHandleSubmit).toHaveBeenCalledWith(42));
+      await waitFor(() =>
+        expect(screen.getByTestId('submit-error')).toBeInTheDocument(),
+      );
+      expect(mockHandleSubmit).not.toHaveBeenCalled();
     });
   });
 
@@ -318,6 +321,60 @@ describe('DashboardPage — submission with attachment check', () => {
 
       await waitFor(() =>
         expect(screen.queryByTestId('missing-attachment-dialog')).not.toBeInTheDocument(),
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Validation errors: no lines / $0 total
+  // -------------------------------------------------------------------------
+
+  describe('submission validation errors', () => {
+    it('shows error and does NOT submit when all line amounts sum to zero', async () => {
+      setupMocks();
+      const zeroLines: ExpenseLineResponse[] = [
+        { id: 10, report_id: 42, description: 'Freebie', amount: 0, incurred_date: '2026-04-02' },
+      ];
+      mockListLines.mockResolvedValue(zeroLines);
+
+      renderDashboard();
+
+      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('submit-error')).toBeInTheDocument(),
+      );
+      expect(mockHandleSubmit).not.toHaveBeenCalled();
+    });
+
+    it('shows error when no lines exist', async () => {
+      setupMocks();
+      mockListLines.mockResolvedValue([]);
+
+      renderDashboard();
+
+      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('submit-error')).toBeInTheDocument(),
+      );
+      expect(mockHandleSubmit).not.toHaveBeenCalled();
+    });
+
+    it('clears the submit error when the error alert is closed', async () => {
+      setupMocks();
+      mockListLines.mockResolvedValue([]);
+
+      renderDashboard();
+
+      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await waitFor(() => screen.getByTestId('submit-error'));
+
+      // MUI Alert close button
+      await userEvent.click(screen.getByRole('button', { name: /close/i }));
+
+      await waitFor(() =>
+        expect(screen.queryByTestId('submit-error')).not.toBeInTheDocument(),
       );
     });
   });

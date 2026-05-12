@@ -14,7 +14,7 @@ Requirements: 3.3, 3.5, 5.3, 6.5, 7.5, 9.1, 9.2, 11.1, 11.2, 11.4, 11.6
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 from fastapi import HTTPException
@@ -25,6 +25,7 @@ from sqlalchemy.pool import StaticPool
 
 import app.models  # noqa: F401 — register all ORM models with Base
 from app.db.database import Base
+from app.models.expense_line import ExpenseLine
 from app.models.expense_report import ExpenseReport
 from app.models.role import Role
 from app.models.status_audit_log import StatusAuditLog
@@ -133,6 +134,21 @@ def _make_report(session, owner: User, status: str) -> ExpenseReport:
     return report
 
 
+def _ensure_line(session, report: ExpenseReport) -> None:
+    """Add an expense line to a report if it has none (required for submit)."""
+    from sqlalchemy import func
+    count = session.query(func.count(ExpenseLine.id)).filter(ExpenseLine.report_id == report.id).scalar() or 0
+    if count == 0:
+        line = ExpenseLine(
+            report_id=report.id,
+            description="Test line",
+            amount=50.0,
+            incurred_date=date.today(),
+        )
+        session.add(line)
+        session.commit()
+
+
 def _audit_entries(session, report_id: int) -> list[StatusAuditLog]:
     return (
         session.query(StatusAuditLog)
@@ -145,6 +161,7 @@ def _audit_entries(session, report_id: int) -> list[StatusAuditLog]:
 def _apply_action(session, report: ExpenseReport, action: str, owner: User, admin: User):
     """Dispatch an action to the appropriate service function."""
     if action == "submit":
+        _ensure_line(session, report)
         return status_service.submit_report(session, report.id, owner)
     elif action == "accept":
         return status_service.accept_report(session, report.id, admin)
@@ -318,6 +335,9 @@ def test_property_7_submit_transition_correctness(initial_status: str):
         owner = _make_owner(session)
         report = _make_report(session, owner, initial_status)
         report_id = report.id
+
+        # Add a line so the submit validation passes
+        _ensure_line(session, report)
 
         # Count audit entries before the submit
         entries_before = _audit_entries(session, report_id)

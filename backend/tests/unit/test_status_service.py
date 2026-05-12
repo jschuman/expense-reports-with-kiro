@@ -19,6 +19,7 @@ from sqlalchemy.pool import StaticPool
 import app.models  # noqa: F401 — register all ORM models with Base
 from app.db.database import Base
 from app.models.expense_report import ExpenseReport
+from app.models.expense_line import ExpenseLine
 from app.models.role import Role
 from app.models.status_audit_log import StatusAuditLog
 from app.models.user import User
@@ -114,6 +115,20 @@ def _audit_entries(db_session, report_id: int) -> list[StatusAuditLog]:
     )
 
 
+def _add_line(db_session, report_id: int, amount: float = 50.0) -> ExpenseLine:
+    """Helper: add a single expense line to a report."""
+    from datetime import date
+    line = ExpenseLine(
+        report_id=report_id,
+        description="Test line",
+        amount=amount,
+        incurred_date=date.today(),
+    )
+    db_session.add(line)
+    db_session.commit()
+    return line
+
+
 # ---------------------------------------------------------------------------
 # submit_report — success paths
 # ---------------------------------------------------------------------------
@@ -128,6 +143,7 @@ class TestSubmitReportSuccess:
         Requirements: 3.3, 11.2
         """
         report = _make_report(db_session, owner, "In Progress")
+        _add_line(db_session, report.id)
         report_id = report.id
 
         result = status_service.submit_report(db_session, report_id, owner)
@@ -148,6 +164,7 @@ class TestSubmitReportSuccess:
         Requirements: 7.5, 11.2
         """
         report = _make_report(db_session, owner, "Rejected")
+        _add_line(db_session, report.id)
         report_id = report.id
 
         result = status_service.submit_report(db_session, report_id, owner)
@@ -237,10 +254,38 @@ class TestSubmitReportErrors:
 
         assert exc_info.value.status_code == 422
 
+    def test_submit_raises_422_when_no_lines(self, db_session, owner):
+        """submit_report raises 422 when the report has no expense lines."""
+        report = _make_report(db_session, owner, "In Progress")
 
-# ---------------------------------------------------------------------------
-# accept_report — success path
-# ---------------------------------------------------------------------------
+        with pytest.raises(HTTPException) as exc_info:
+            status_service.submit_report(db_session, report.id, owner)
+
+        assert exc_info.value.status_code == 422
+        assert "expense line" in exc_info.value.detail.lower()
+        db_session.refresh(report)
+        assert report.status == "In Progress"
+
+    def test_submit_raises_422_when_total_is_zero(self, db_session, owner):
+        """submit_report raises 422 when every line has a $0.00 amount."""
+        from datetime import date
+        report = _make_report(db_session, owner, "In Progress")
+        line = ExpenseLine(
+            report_id=report.id,
+            description="Zero-cost item",
+            amount=0.0,
+            incurred_date=date.today(),
+        )
+        db_session.add(line)
+        db_session.commit()
+
+        with pytest.raises(HTTPException) as exc_info:
+            status_service.submit_report(db_session, report.id, owner)
+
+        assert exc_info.value.status_code == 422
+        assert "total" in exc_info.value.detail.lower()
+        db_session.refresh(report)
+        assert report.status == "In Progress"
 
 
 class TestAcceptReportSuccess:
