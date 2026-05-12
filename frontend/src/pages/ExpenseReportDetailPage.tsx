@@ -10,7 +10,7 @@
  * Requirements: 2.1, 2.2, 2.8, 3.1, 3.2, 3.8, 4.1, 4.2, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -39,6 +39,9 @@ import { useExpenseLines } from '../hooks/useExpenseLines';
 import { useReports } from '../hooks/useReports';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { formatIncurredDate } from '../utils/formatDate';
+import { getAttachmentMetadata } from '../api/attachments';
+import { AttachmentDisplayComponent } from '../components/AttachmentDisplayComponent';
+import type { AttachmentMetadata } from '../types/attachments';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -71,14 +74,46 @@ export function ExpenseReportDetailPage() {
 
   const [deleteLineId, setDeleteLineId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [attachmentMap, setAttachmentMap] = useState<Record<number, AttachmentMetadata | null>>({});
 
   const report = reports.find((r) => r.id === reportIdNum);
+
+  const isAdmin = user?.role === 'Admin';
 
   const canEdit =
     report !== undefined &&
     EDITABLE_STATUSES.has(report.status) &&
     user !== null &&
     user.id === report.owner_id;
+
+  const fetchAttachmentsForAdmin = useCallback(async () => {
+    if (!isAdmin || lines.length === 0) return;
+    const results = await Promise.allSettled(
+      lines.map((line) => getAttachmentMetadata(reportIdNum, line.id)),
+    );
+    const map: Record<number, AttachmentMetadata | null> = {};
+    results.forEach((result, i) => {
+      const lineId = lines[i].id;
+      map[lineId] = result.status === 'fulfilled' ? result.value : null;
+    });
+    setAttachmentMap(map);
+  }, [isAdmin, lines, reportIdNum]);
+
+  useEffect(() => {
+    void fetchAttachmentsForAdmin();
+  }, [fetchAttachmentsForAdmin]);
+
+  const refreshAttachment = useCallback(
+    async (lineId: number) => {
+      try {
+        const metadata = await getAttachmentMetadata(reportIdNum, lineId);
+        setAttachmentMap((prev) => ({ ...prev, [lineId]: metadata }));
+      } catch {
+        setAttachmentMap((prev) => ({ ...prev, [lineId]: null }));
+      }
+    },
+    [reportIdNum],
+  );
 
   async function confirmDelete() {
     if (deleteLineId === null) return;
@@ -181,29 +216,43 @@ export function ExpenseReportDetailPage() {
             </TableHead>
             <TableBody>
               {lines.map((line) => (
-                <TableRow key={line.id}>
-                  <TableCell>{line.description}</TableCell>
-                  <TableCell>{formatCurrency(line.amount)}</TableCell>
-                  <TableCell>{formatIncurredDate(line.incurred_date)}</TableCell>
-                  {canEdit && (
-                    <TableCell>
-                      <IconButton
-                        aria-label="edit"
-                        onClick={() =>
-                          navigate(`/reports/${reportId}/lines/${line.id}/edit`)
-                        }
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        aria-label="delete"
-                        onClick={() => setDeleteLineId(line.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
+                <Fragment key={line.id}>
+                  <TableRow>
+                    <TableCell>{line.description}</TableCell>
+                    <TableCell>{formatCurrency(line.amount)}</TableCell>
+                    <TableCell>{formatIncurredDate(line.incurred_date)}</TableCell>
+                    {canEdit && (
+                      <TableCell>
+                        <IconButton
+                          aria-label="edit"
+                          onClick={() =>
+                            navigate(`/reports/${reportId}/lines/${line.id}/edit`)
+                          }
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          aria-label="delete"
+                          onClick={() => setDeleteLineId(line.id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                  {isAdmin && (
+                    <TableRow data-testid={`attachment-row-${line.id}`}>
+                      <TableCell colSpan={canEdit ? 4 : 3} sx={{ pt: 0 }}>
+                        <AttachmentDisplayComponent
+                          reportId={reportIdNum}
+                          lineId={line.id}
+                          attachment={attachmentMap[line.id] ?? null}
+                          onRefresh={() => void refreshAttachment(line.id)}
+                        />
+                      </TableCell>
+                    </TableRow>
                   )}
-                </TableRow>
+                </Fragment>
               ))}
             </TableBody>
             <TableFooter>

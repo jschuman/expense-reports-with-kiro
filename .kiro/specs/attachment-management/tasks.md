@@ -370,14 +370,14 @@ This implementation plan breaks down the attachment management feature into disc
     - Test "Submit Without Attachments" button proceeds with submission
     - _Requirements: 5.1-5.6_
 
-- [ ] 15. Integration: Admin Attachment Access
-  - [ ] 15.1 Update frontend to show attachment section for admins
+- [x] 15. Integration: Admin Attachment Access
+  - [x] 15.1 Update frontend to show attachment section for admins
     - Check user role in component
     - Show AttachmentDisplayComponent for admins viewing any report
     - Allow admins to download attachments from any report
     - _Requirements: 13.1, 13.2, 13.3, 13.6_
   
-  - [ ] 15.2 Write integration tests for admin attachment access
+  - [x] 15.2 Write integration tests for admin attachment access
     - Test admin can view attachments from any report
     - Test admin can download attachments from any report
     - Test admin can view attachment metadata from any report
