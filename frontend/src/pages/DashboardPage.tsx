@@ -29,6 +29,9 @@ import { useAuth } from '../hooks/useAuth';
 import { ReportCard } from '../components/ReportCard';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorAlert } from '../components/ErrorAlert';
+import { MissingAttachmentWarningDialog } from '../components/MissingAttachmentWarningDialog';
+import { listLines } from '../api/expenseLines';
+import { getAttachmentMetadata } from '../api/attachments';
 
 export function DashboardPage() {
   const {
@@ -43,6 +46,11 @@ export function DashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [logoutError, setLogoutError] = useState<string | null>(null);
+
+  // Missing-attachment warning dialog state
+  const [pendingSubmitReportId, setPendingSubmitReportId] = useState<number | null>(null);
+  const [missingCount, setMissingCount] = useState(0);
+  const [warningOpen, setWarningOpen] = useState(false);
 
   // Requirement 2.3 / 3.3: page title reflects the user's role
   const pageTitle =
@@ -69,6 +77,56 @@ export function DashboardPage() {
     },
     [navigate],
   );
+
+  /**
+   * Intercepts the submit action to check for missing attachments.
+   * Requirements: 5.1-5.6.
+   */
+  const handleSubmitWithCheck = useCallback(
+    async (reportId: number) => {
+      // Fetch lines and check each one for an attachment in parallel.
+      const lines = await listLines(reportId);
+
+      if (lines.length === 0) {
+        // No lines → no missing attachments; submit directly.
+        await handleSubmit(reportId);
+        return;
+      }
+
+      const results = await Promise.allSettled(
+        lines.map((line) => getAttachmentMetadata(reportId, line.id)),
+      );
+
+      const missing = results.filter(
+        (r) => r.status === 'rejected',
+      ).length;
+
+      if (missing > 0) {
+        setMissingCount(missing);
+        setPendingSubmitReportId(reportId);
+        setWarningOpen(true);
+      } else {
+        await handleSubmit(reportId);
+      }
+    },
+    [handleSubmit],
+  );
+
+  const handleAddAttachments = useCallback(() => {
+    setWarningOpen(false);
+    if (pendingSubmitReportId !== null) {
+      navigate(`/reports/${pendingSubmitReportId}/edit`);
+    }
+    setPendingSubmitReportId(null);
+  }, [navigate, pendingSubmitReportId]);
+
+  const handleSubmitWithout = useCallback(async () => {
+    setWarningOpen(false);
+    if (pendingSubmitReportId !== null) {
+      await handleSubmit(pendingSubmitReportId);
+    }
+    setPendingSubmitReportId(null);
+  }, [handleSubmit, pendingSubmitReportId]);
 
   /**
    * Navigates to the read-only detail page for the given report.
@@ -135,7 +193,7 @@ export function DashboardPage() {
           key={report.id}
           report={report}
           currentUser={user ?? { id: 0, username: '', role: 'User' }}
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmitWithCheck}
           onAccept={handleAccept}
           onReject={handleReject}
           onEdit={handleEdit}
@@ -143,6 +201,14 @@ export function DashboardPage() {
           onView={handleView}
         />
       ))}
+
+      {/* Missing attachment warning dialog — shown before submission */}
+      <MissingAttachmentWarningDialog
+        open={warningOpen}
+        missingCount={missingCount}
+        onAddAttachments={handleAddAttachments}
+        onSubmitWithout={handleSubmitWithout}
+      />
     </Container>
   );
 }

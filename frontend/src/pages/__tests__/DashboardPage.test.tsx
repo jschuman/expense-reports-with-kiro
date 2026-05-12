@@ -32,6 +32,8 @@ import type { ExpenseReportResponse } from '../../types/expenseReport';
 
 vi.mock('../../hooks/useReports');
 vi.mock('../../hooks/useAuth');
+vi.mock('../../api/expenseLines');
+vi.mock('../../api/attachments');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -44,9 +46,13 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 import { useReports } from '../../hooks/useReports';
 import { useAuth } from '../../hooks/useAuth';
+import { listLines } from '../../api/expenseLines';
+import { getAttachmentMetadata } from '../../api/attachments';
 
 const mockUseReports = vi.mocked(useReports);
 const mockUseAuth = vi.mocked(useAuth);
+const mockListLines = vi.mocked(listLines);
+const mockGetMetadata = vi.mocked(getAttachmentMetadata);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -437,12 +443,23 @@ describe('Submit action wiring', () => {
       login: vi.fn(),
       logout: vi.fn(),
     });
+    // No lines → attachment check passes immediately and submit fires directly
+    mockListLines.mockResolvedValue([]);
+    mockGetMetadata.mockResolvedValue({
+      id: 1,
+      file_name: 'r.pdf',
+      file_size: 100,
+      mime_type: 'application/pdf',
+      created_at: '2026-01-01T00:00:00Z',
+    });
     renderDashboard();
 
     await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
 
-    expect(handleSubmit).toHaveBeenCalledOnce();
-    expect(handleSubmit).toHaveBeenCalledWith(42);
+    await waitFor(() => {
+      expect(handleSubmit).toHaveBeenCalledOnce();
+      expect(handleSubmit).toHaveBeenCalledWith(42);
+    });
   });
 });
 

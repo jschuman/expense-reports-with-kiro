@@ -352,8 +352,8 @@ This implementation plan breaks down the attachment management feature into disc
     - Test authorization flow: user uploads → different user cannot access → admin can access
     - _Requirements: 1.1-1.6, 3.1-3.5, 4.1-4.5, 9.1-9.4_
 
-- [ ] 14. Integration: Update Report Submission Logic
-  - [ ] 14.1 Add missing attachment check to report submission
+- [x] 14. Integration: Update Report Submission Logic
+  - [x] 14.1 Add missing attachment check to report submission
     - Query all lines in report
     - Identify lines without attachments
     - If missing attachments exist, show MissingAttachmentWarningDialog
@@ -362,7 +362,7 @@ This implementation plan breaks down the attachment management feature into disc
     - If no missing attachments, proceed directly to submission
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
   
-  - [ ] 14.2 Write integration tests for report submission with missing attachments
+  - [x] 14.2 Write integration tests for report submission with missing attachments
     - Test submit with all attachments present → no warning
     - Test submit with missing attachments → warning appears
     - Test warning shows correct count of missing lines
