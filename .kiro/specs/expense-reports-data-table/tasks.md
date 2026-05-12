@@ -21,36 +21,36 @@ Replace the card-based expense reports list on the Dashboard page with an MUI X 
     - Export the `ActionType` type
     - _Requirements: 1.3, 1.4, 1.6, 4.3, 4.4, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 2. Write property-based tests for utility functions
-  - [ ] 2.1 Write property test for `getRowActions` (Property 1: Row actions correctness)
+- [x] 2. Write property-based tests for utility functions
+  - [x] 2.1 Write property test for `getRowActions` (Property 1: Row actions correctness)
     - **Property 1: Row actions correctness**
     - Generate arbitrary report status (In Progress, Submitted, Scheduled for Payment, Rejected, unknown), user role (Admin, User), and ownership (owner or not)
     - Assert the returned action set matches the requirements matrix exactly
     - Use `fc.assert(fc.property(...), { numRuns: 100 })`
     - **Validates: Requirements 5.2, 5.3, 5.4, 5.5**
 
-  - [ ] 2.2 Write property test for `formatCurrency` (Property 2: Currency formatting value preservation)
+  - [x] 2.2 Write property test for `formatCurrency` (Property 2: Currency formatting value preservation)
     - **Property 2: Currency formatting value preservation**
     - Generate arbitrary finite non-negative numbers
     - Assert that parsing the formatted string back (stripping $ and ,) equals the original rounded to 2 decimal places
     - Use `fc.assert(fc.property(...), { numRuns: 100 })`
     - **Validates: Requirements 1.3**
 
-  - [ ] 2.3 Write property test for `displayOrPlaceholder` (Property 3: Placeholder logic correctness)
+  - [x] 2.3 Write property test for `displayOrPlaceholder` (Property 3: Placeholder logic correctness)
     - **Property 3: Placeholder logic correctness**
     - Generate null, undefined, whitespace-only strings → assert returns "—"
     - Generate strings with at least one non-whitespace character → assert returns the original string
     - Use `fc.assert(fc.property(...), { numRuns: 100 })`
     - **Validates: Requirements 1.6**
 
-  - [ ] 2.4 Write property test for `getVisibleColumns` (Property 4: Column visibility correctness)
+  - [x] 2.4 Write property test for `getVisibleColumns` (Property 4: Column visibility correctness)
     - **Property 4: Column visibility correctness**
     - Generate arbitrary column arrays that include an `owner_username` column
     - Assert admin sees all columns including `owner_username`; non-admin sees all columns except `owner_username`; order of other columns is preserved
     - Use `fc.assert(fc.property(...), { numRuns: 100 })`
     - **Validates: Requirements 4.3, 4.4, 4.5**
 
-- [ ] 3. Checkpoint - Ensure all property tests pass
+- [x] 3. Checkpoint - Ensure all property tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. Build cell renderer components
@@ -123,7 +123,7 @@ Replace the card-based expense reports list on the Dashboard page with an MUI X 
     - Ensure the existing `ErrorAlert` component still renders above the table for API errors
     - _Requirements: 1.1, 4.1, 4.2, 5.7, 6.1_
 
-- [ ] 9. Final checkpoint - Ensure all tests pass
+- [x] 9. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

@@ -1,0 +1,256 @@
+// Feature: expense-reports-data-table, Property 1: Row actions correctness
+// Feature: expense-reports-data-table, Property 2: Currency formatting value preservation
+// Feature: expense-reports-data-table, Property 3: Placeholder logic correctness
+// Feature: expense-reports-data-table, Property 4: Column visibility correctness
+import { describe, it, expect } from 'vitest';
+import fc from 'fast-check';
+import type { GridColDef } from '@mui/x-data-grid';
+import {
+  getRowActions,
+  formatCurrency,
+  displayOrPlaceholder,
+  getVisibleColumns,
+  type ActionType,
+} from '../tableUtils';
+import type { ExpenseReportResponse } from '../../types/expenseReport';
+import type { UserResponse } from '../../types/auth';
+
+/**
+ * Validates: Requirements 5.2, 5.3, 5.4, 5.5
+ *
+ * Property 1: Row actions correctness
+ * For any combination of report status, user role, and ownership,
+ * getRowActions returns exactly the action set specified by the requirements matrix.
+ */
+describe('getRowActions - Property 1: Row actions correctness', () => {
+  const knownStatuses = ['In Progress', 'Submitted', 'Scheduled for Payment', 'Rejected'];
+  const unknownStatuses = ['Paid', 'Cancelled', 'Draft', 'Unknown', ''];
+
+  const statusArb = fc.oneof(
+    fc.constantFrom(...knownStatuses),
+    fc.constantFrom(...unknownStatuses)
+  );
+
+  const roleArb = fc.constantFrom('Admin', 'User');
+  const ownershipArb = fc.boolean(); // true = owner, false = not owner
+
+  function buildInputs(status: string, role: string, isOwner: boolean) {
+    const userId = 1;
+    const ownerId = isOwner ? userId : 999;
+
+    const report: ExpenseReportResponse = {
+      id: 1,
+      title: 'Test Report',
+      description: null,
+      total_amount: 100,
+      status,
+      owner_id: ownerId,
+      owner_username: 'testuser',
+      created_at: '2026-01-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+    };
+
+    const currentUser: UserResponse = {
+      id: userId,
+      username: 'testuser',
+      role,
+    };
+
+    return { report, currentUser };
+  }
+
+  /**
+   * Computes the expected actions based on the requirements matrix:
+   * 1. Status "In Progress" or "Rejected" AND user is owner → ['edit', 'delete', 'submit']
+   * 2. Status "Submitted" AND user is Admin → ['view', 'accept', 'reject']
+   * 3. Status "Submitted" or "Scheduled for Payment" AND user is owner (non-admin) → ['view']
+   * 4. Admin AND status is NOT "Submitted" → ['view']
+   * 5. Any other case → ['view']
+   */
+  function expectedActions(status: string, role: string, isOwner: boolean): ActionType[] {
+    const isAdmin = role === 'Admin';
+
+    if ((status === 'In Progress' || status === 'Rejected') && isOwner) {
+      return ['edit', 'delete', 'submit'];
+    }
+
+    if (status === 'Submitted' && isAdmin) {
+      return ['view', 'accept', 'reject'];
+    }
+
+    if ((status === 'Submitted' || status === 'Scheduled for Payment') && isOwner && !isAdmin) {
+      return ['view'];
+    }
+
+    if (isAdmin && status !== 'Submitted') {
+      return ['view'];
+    }
+
+    return ['view'];
+  }
+
+  it('should return the correct action set for any status, role, and ownership combination', () => {
+    fc.assert(
+      fc.property(statusArb, roleArb, ownershipArb, (status, role, isOwner) => {
+        const { report, currentUser } = buildInputs(status, role, isOwner);
+        const actual = getRowActions(report, currentUser);
+        const expected = expectedActions(status, role, isOwner);
+
+        expect(actual).toEqual(expected);
+      }),
+      { numRuns: 100 }
+    );
+  });
+});
+
+/**
+ * Validates: Requirements 1.3
+ *
+ * Property 2: Currency formatting value preservation
+ * For any finite non-negative number, formatting it as US currency and then
+ * parsing the numeric value back (stripping $ and ,) produces a value equal
+ * to the original number rounded to two decimal places.
+ */
+describe('formatCurrency - Property 2: Currency formatting value preservation', () => {
+  it('parsing the formatted string back equals the original rounded to 2 decimal places', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0, max: 1e12, noNaN: true, noDefaultInfinity: true }),
+        (amount) => {
+          const formatted = formatCurrency(amount);
+
+          // Strip $ and , to parse back to a number
+          const parsed = parseFloat(formatted.replace(/[$,]/g, ''));
+
+          // The original rounded to 2 decimal places
+          const expected = Math.round(amount * 100) / 100;
+
+          expect(parsed).toBe(expected);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
+/**
+ * Validates: Requirements 1.6
+ *
+ * Property 3: Placeholder logic correctness
+ * For any null, undefined, or whitespace-only string, displayOrPlaceholder returns "—".
+ * For any string with at least one non-whitespace character, displayOrPlaceholder returns the original string.
+ */
+describe('displayOrPlaceholder - Property 3: Placeholder logic correctness', () => {
+  it('returns "—" for null, undefined, and whitespace-only strings', () => {
+    const whitespaceCharArb = fc.constantFrom(' ', '\t', '\n', '\r', '\f', '\v');
+    const whitespaceOnlyArb = fc
+      .array(whitespaceCharArb, { minLength: 0, maxLength: 20 })
+      .map((chars) => chars.join(''));
+    const emptyishArb = fc.oneof(
+      fc.constant(null),
+      fc.constant(undefined),
+      whitespaceOnlyArb
+    );
+
+    fc.assert(
+      fc.property(emptyishArb, (value) => {
+        expect(displayOrPlaceholder(value as string | null | undefined)).toBe('—');
+      }),
+      { numRuns: 100 }
+    );
+  });
+
+  it('returns the original string for strings with at least one non-whitespace character', () => {
+    const nonEmptyStringArb = fc
+      .string({ minLength: 1, maxLength: 100 })
+      .filter((s) => s.trim().length > 0);
+
+    fc.assert(
+      fc.property(nonEmptyStringArb, (value) => {
+        expect(displayOrPlaceholder(value)).toBe(value);
+      }),
+      { numRuns: 100 }
+    );
+  });
+});
+
+/**
+ * Validates: Requirements 4.3, 4.4, 4.5
+ *
+ * Property 4: Column visibility correctness
+ * Admin sees all columns including owner_username.
+ * Non-admin sees all columns except owner_username.
+ * Order of other columns is preserved in both cases.
+ */
+describe('getVisibleColumns - Property 4: Column visibility correctness', () => {
+  const nonOwnerFieldArb = fc
+    .string({ minLength: 1, maxLength: 20 })
+    .filter((s) => s !== 'owner_username' && s.trim().length > 0);
+
+  const colDefArb = (fieldArb: fc.Arbitrary<string>): fc.Arbitrary<GridColDef> =>
+    fieldArb.map((field) => ({
+      field,
+      headerName: field.charAt(0).toUpperCase() + field.slice(1),
+    }));
+
+  const columnsWithOwnerArb: fc.Arbitrary<GridColDef[]> = fc
+    .tuple(
+      fc.array(colDefArb(nonOwnerFieldArb), { minLength: 0, maxLength: 10 }),
+      fc.nat({ max: 10 })
+    )
+    .map(([otherCols, insertIndex]) => {
+      const ownerCol: GridColDef = { field: 'owner_username', headerName: 'Owner' };
+      const idx = Math.min(insertIndex, otherCols.length);
+      const result = [...otherCols];
+      result.splice(idx, 0, ownerCol);
+      return result;
+    });
+
+  it('admin sees all columns including owner_username', () => {
+    fc.assert(
+      fc.property(columnsWithOwnerArb, (columns) => {
+        const visible = getVisibleColumns(columns, true);
+
+        expect(visible).toHaveLength(columns.length);
+        expect(visible).toEqual(columns);
+
+        const hasOwner = visible.some((col) => col.field === 'owner_username');
+        expect(hasOwner).toBe(true);
+      }),
+      { numRuns: 100 }
+    );
+  });
+
+  it('non-admin sees all columns except owner_username', () => {
+    fc.assert(
+      fc.property(columnsWithOwnerArb, (columns) => {
+        const visible = getVisibleColumns(columns, false);
+
+        const hasOwner = visible.some((col) => col.field === 'owner_username');
+        expect(hasOwner).toBe(false);
+
+        const expectedCols = columns.filter((col) => col.field !== 'owner_username');
+        expect(visible).toHaveLength(expectedCols.length);
+      }),
+      { numRuns: 100 }
+    );
+  });
+
+  it('order of non-owner columns is preserved for both admin and non-admin', () => {
+    fc.assert(
+      fc.property(columnsWithOwnerArb, (columns) => {
+        const nonOwnerColumns = columns.filter((col) => col.field !== 'owner_username');
+
+        const adminVisible = getVisibleColumns(columns, true);
+        const adminNonOwner = adminVisible.filter((col) => col.field !== 'owner_username');
+        expect(adminNonOwner.map((c) => c.field)).toEqual(nonOwnerColumns.map((c) => c.field));
+
+        const userVisible = getVisibleColumns(columns, false);
+        expect(userVisible.map((c) => c.field)).toEqual(nonOwnerColumns.map((c) => c.field));
+      }),
+      { numRuns: 100 }
+    );
+  });
+});
