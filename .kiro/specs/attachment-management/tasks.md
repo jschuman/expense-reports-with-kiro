@@ -308,8 +308,8 @@ This implementation plan breaks down the attachment management feature into disc
     - Test component handles missing attachment gracefully
     - _Requirements: 10.1, 10.2, 10.7, 10.8_
 
-- [ ] 11. Frontend: Missing Attachment Warning Dialog
-  - [ ] 11.1 Create MissingAttachmentWarningDialog component
+- [x] 11. Frontend: Missing Attachment Warning Dialog
+  - [x] 11.1 Create MissingAttachmentWarningDialog component
     - Display warning message with count of missing attachments
     - Render "Add Attachments" button
     - Render "Submit Without Attachments" button
@@ -317,7 +317,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Call onSubmitWithout callback on "Submit Without Attachments" click
     - _Requirements: 5.2, 5.3, 5.4, 5.5_
   
-  - [ ] 11.2 Write unit tests for MissingAttachmentWarningDialog
+  - [x] 11.2 Write unit tests for MissingAttachmentWarningDialog
     - Test dialog displays correct count of missing attachments
     - Test "Add Attachments" button calls onAddAttachments callback
     - Test "Submit Without Attachments" button calls onSubmitWithout callback
