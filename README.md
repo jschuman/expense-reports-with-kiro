@@ -27,6 +27,7 @@ The Expense Report Web App allows authenticated users to create, view, and manag
   - `/reports/:reportId/lines/:lineId/edit` — edit a line
 - **Client Reimbursement Tracking**: Mark expenses as client-reimbursable and associate them with specific clients
 - **Automatic Metadata**: Owner and creation timestamp are automatically recorded
+- **Expense Reports Data Table**: MUI X DataGrid-based table view on the Dashboard with sortable/filterable columns, role-based column visibility, and context-sensitive row actions
 - **Responsive UI**: Material UI-based interface with form validation
 
 ### Tech Stack
