@@ -329,15 +329,15 @@ This implementation plan breaks down the attachment management feature into disc
   - Verify 100% code coverage on frontend/src/ utility functions
   - Ask the user if questions arise
 
-- [ ] 13. Integration: Update Expense Report Line Editor
-  - [ ] 13.1 Integrate AttachmentUploadComponent into line editor
+- [x] 13. Integration: Update Expense Report Line Editor
+  - [x] 13.1 Integrate AttachmentUploadComponent into line editor
     - Add AttachmentUploadComponent to expense report line editor page
     - Pass reportId and lineId props
     - Implement onUploadSuccess to refresh attachment display
     - Implement onUploadError to show error message
     - _Requirements: 10.1-10.8_
   
-  - [ ] 13.2 Integrate AttachmentDisplayComponent into line editor
+  - [x] 13.2 Integrate AttachmentDisplayComponent into line editor
     - Add AttachmentDisplayComponent to expense report line editor page
     - Pass reportId and lineId props
     - Fetch current attachment metadata on component mount
@@ -345,7 +345,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Implement onRefresh to reload attachment metadata
     - _Requirements: 10.1, 10.2, 10.7, 10.8_
   
-  - [ ] 13.3 Write integration tests for line editor with attachments
+  - [x] 13.3 Write integration tests for line editor with attachments
     - Test upload flow: select file → validate → store → display
     - Test delete flow: delete → verify removed from DB → verify file deleted
     - Test replacement flow: upload A → upload B → verify only B exists

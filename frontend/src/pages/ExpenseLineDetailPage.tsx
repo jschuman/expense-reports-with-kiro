@@ -14,17 +14,22 @@
  * Requirements: 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 3.2, 3.3, 3.4, 3.5, 3.8
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Container from '@mui/material/Container';
+import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useExpenseLines } from '../hooks/useExpenseLines';
 import { ApiError } from '../api/client';
+import { getAttachmentMetadata } from '../api/attachments';
+import { AttachmentUploadComponent } from '../components/AttachmentUploadComponent';
+import { AttachmentDisplayComponent } from '../components/AttachmentDisplayComponent';
+import type { AttachmentMetadata, AttachmentUploadError } from '../types/attachments';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -87,6 +92,28 @@ export function ExpenseLineDetailPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Attachment state — only relevant in edit mode
+  const [attachmentMetadata, setAttachmentMetadata] = useState<AttachmentMetadata | null>(null);
+
+  const fetchAttachment = useCallback(async () => {
+    if (!isEditMode || lineIdNum === undefined) return;
+    try {
+      const metadata = await getAttachmentMetadata(reportIdNum, lineIdNum);
+      setAttachmentMetadata(metadata);
+    } catch (err) {
+      // 404 means no attachment exists yet — treat as null, not an error
+      if (err instanceof ApiError && err.status === 404) {
+        setAttachmentMetadata(null);
+      }
+      // Other errors are silently ignored; the display component handles its own errors
+    }
+  }, [isEditMode, reportIdNum, lineIdNum]);
+
+  // Fetch attachment metadata on mount (edit mode only)
+  useEffect(() => {
+    void fetchAttachment();
+  }, [fetchAttachment]);
+
   const existingLine = isEditMode ? lines.find((l) => l.id === lineIdNum) : undefined;
 
   // Pre-populate form in edit mode once the line is available
@@ -111,6 +138,14 @@ export function ExpenseLineDetailPage() {
       errors.incurred_date = 'Date is required';
     }
     return errors;
+  }
+
+  function handleAttachmentUploadSuccess(metadata: AttachmentMetadata) {
+    setAttachmentMetadata(metadata);
+  }
+
+  function handleAttachmentUploadError(_error: AttachmentUploadError) {
+    // AttachmentUploadComponent displays its own inline error; nothing extra needed.
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -233,6 +268,32 @@ export function ExpenseLineDetailPage() {
           </Button>
         </Box>
       </Box>
+
+      {/* Attachment section — only available after the line has been saved */}
+      {isEditMode && lineIdNum !== undefined && (
+        <Box sx={{ mt: 4 }} data-testid="attachment-section">
+          <Divider sx={{ mb: 3 }} />
+          <Typography variant="h6" gutterBottom>
+            Attachment
+          </Typography>
+
+          <Box sx={{ mb: 3 }}>
+            <AttachmentDisplayComponent
+              reportId={reportIdNum}
+              lineId={lineIdNum}
+              attachment={attachmentMetadata}
+              onRefresh={fetchAttachment}
+            />
+          </Box>
+
+          <AttachmentUploadComponent
+            reportId={reportIdNum}
+            lineId={lineIdNum}
+            onUploadSuccess={handleAttachmentUploadSuccess}
+            onUploadError={handleAttachmentUploadError}
+          />
+        </Box>
+      )}
     </Container>
   );
 }
