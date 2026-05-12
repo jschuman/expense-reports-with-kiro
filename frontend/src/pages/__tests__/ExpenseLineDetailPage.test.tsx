@@ -5,13 +5,16 @@
  * - Render in create mode: all fields empty, submit button present, cancel navigates back
  * - Render in edit mode: form pre-populated with existing line values
  * - Loading spinner shown while loading in edit mode
- * - Submit in create mode with valid data: handleCreate called with correct payload; navigates to detail page
+ * - Submit in create mode with valid data: handleCreate called with correct payload; attachment section shown
+ * - Submit in create mode: Done button navigates back to report editor
  * - Submit in edit mode with valid data: handleUpdate called with correct payload; navigates to detail page
  * - Submit with empty description: client-side error shown, no API call
  * - Submit with zero amount: client-side error shown, no API call
  * - Submit with negative amount: client-side error shown, no API call
  * - Server 422 response: field-level error messages displayed
  * - Server 409 response: Alert with server detail message displayed
+ * - Attachment section shown in edit mode with display and upload components
+ * - Form fields disabled after line creation (attachment section visible)
  *
  * Requirements: 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 3.3, 3.4, 3.5, 3.8
  */
@@ -29,6 +32,25 @@ import { ApiError } from '../../api/client';
 // ---------------------------------------------------------------------------
 
 vi.mock('../../hooks/useExpenseLines');
+
+vi.mock('../../api/attachments', () => ({
+  getAttachmentMetadata: vi.fn().mockRejectedValue(new (class extends Error { status = 404; constructor() { super('Not found'); } })()),
+  uploadAttachment: vi.fn(),
+  deleteAttachment: vi.fn(),
+  downloadAttachment: vi.fn(),
+}));
+
+vi.mock('../../components/AttachmentUploadComponent', () => ({
+  AttachmentUploadComponent: ({ reportId, lineId }: { reportId: number; lineId: number }) => (
+    <div data-testid="attachment-upload" data-report-id={reportId} data-line-id={lineId} />
+  ),
+}));
+
+vi.mock('../../components/AttachmentDisplayComponent', () => ({
+  AttachmentDisplayComponent: ({ reportId, lineId }: { reportId: number; lineId: number }) => (
+    <div data-testid="attachment-display" data-report-id={reportId} data-line-id={lineId} />
+  ),
+}));
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -175,7 +197,7 @@ describe('ExpenseLineDetailPage', () => {
   // Valid submissions
   // -------------------------------------------------------------------------
 
-  it('calls handleCreate with correct payload and navigates to detail page on success', async () => {
+  it('calls handleCreate with correct payload and shows attachment section on success', async () => {
     const { handleCreate } = setupLinesMock();
     renderCreateMode();
 
@@ -191,8 +213,41 @@ describe('ExpenseLineDetailPage', () => {
         amount: 120,
         incurred_date: '2026-04-10',
       });
-      expect(mockNavigate).toHaveBeenCalledWith('/reports/10/edit');
     });
+
+    // Attachment section is shown instead of navigating away
+    await waitFor(() => {
+      expect(screen.getByTestId('attachment-section')).toBeInTheDocument();
+    });
+
+    // Form fields are disabled after creation
+    expect(screen.getByLabelText(/description/i)).toBeDisabled();
+    expect(screen.getByLabelText(/amount/i)).toBeDisabled();
+
+    // Done button is present to navigate back
+    expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument();
+
+    // Should NOT have navigated yet
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('Done button navigates back to report editor after line creation', async () => {
+    setupLinesMock();
+    renderCreateMode();
+
+    await userEvent.type(screen.getByLabelText(/description/i), 'Hotel stay');
+    await userEvent.type(screen.getByLabelText(/amount/i), '120');
+    fireEvent.change(screen.getByLabelText(/^Date/i), { target: { value: '2026-04-10' } });
+
+    await userEvent.click(screen.getByRole('button', { name: /add line/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('attachment-section')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /done/i }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/reports/10/edit');
   });
 
   it('calls handleUpdate with correct payload and navigates to detail page on success', async () => {
@@ -317,5 +372,58 @@ describe('ExpenseLineDetailPage', () => {
       expect(screen.getByRole('alert')).toBeInTheDocument();
       expect(screen.getByText('Report is not editable')).toBeInTheDocument();
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // Attachment section
+  // -------------------------------------------------------------------------
+
+  it('shows attachment section in edit mode with upload and display components', async () => {
+    setupLinesMock([sampleLine]);
+    renderEditMode();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('attachment-section')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('attachment-upload')).toBeInTheDocument();
+    expect(screen.getByTestId('attachment-display')).toBeInTheDocument();
+  });
+
+  it('does not show attachment section in create mode before submission', () => {
+    setupLinesMock();
+    renderCreateMode();
+
+    expect(screen.queryByTestId('attachment-section')).not.toBeInTheDocument();
+  });
+
+  it('hides Add Line and Cancel buttons after line creation (attachment section visible)', async () => {
+    setupLinesMock();
+    renderCreateMode();
+
+    await userEvent.type(screen.getByLabelText(/description/i), 'Hotel stay');
+    await userEvent.type(screen.getByLabelText(/amount/i), '120');
+    fireEvent.change(screen.getByLabelText(/^Date/i), { target: { value: '2026-04-10' } });
+
+    await userEvent.click(screen.getByRole('button', { name: /add line/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('attachment-section')).toBeInTheDocument();
+    });
+
+    // Add Line and Cancel buttons should be hidden
+    expect(screen.queryByRole('button', { name: /add line/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument();
+  });
+
+  it('does not show Done button in edit mode', async () => {
+    setupLinesMock([sampleLine]);
+    renderEditMode();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('attachment-section')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('button', { name: /done/i })).not.toBeInTheDocument();
   });
 });

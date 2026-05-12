@@ -92,13 +92,15 @@ export function ExpenseLineDetailPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Attachment state — only relevant in edit mode
+  // Attachment state — available in both create and edit modes
   const [attachmentMetadata, setAttachmentMetadata] = useState<AttachmentMetadata | null>(null);
+  const [showAttachmentSection, setShowAttachmentSection] = useState(isEditMode);
+  const [createdLineId, setCreatedLineId] = useState<number | undefined>(lineIdNum);
 
   const fetchAttachment = useCallback(async () => {
-    if (!isEditMode || lineIdNum === undefined) return;
+    if (createdLineId === undefined) return;
     try {
-      const metadata = await getAttachmentMetadata(reportIdNum, lineIdNum);
+      const metadata = await getAttachmentMetadata(reportIdNum, createdLineId);
       setAttachmentMetadata(metadata);
     } catch (err) {
       // 404 means no attachment exists yet — treat as null, not an error
@@ -107,9 +109,9 @@ export function ExpenseLineDetailPage() {
       }
       // Other errors are silently ignored; the display component handles its own errors
     }
-  }, [isEditMode, reportIdNum, lineIdNum]);
+  }, [reportIdNum, createdLineId]);
 
-  // Fetch attachment metadata on mount (edit mode only)
+  // Fetch attachment metadata on mount (edit mode) or after line creation
   useEffect(() => {
     void fetchAttachment();
   }, [fetchAttachment]);
@@ -171,7 +173,12 @@ export function ExpenseLineDetailPage() {
       if (isEditMode && lineIdNum !== undefined) {
         await handleUpdate(lineIdNum, formData);
       } else {
-        await handleCreate(formData);
+        // In create mode, create the line and then show attachment section
+        const newLine = await handleCreate(formData);
+        setCreatedLineId(newLine.id);
+        setShowAttachmentSection(true);
+        // Don't navigate yet — let user add attachment if desired
+        return;
       }
       navigate(`/reports/${reportId}/edit`);
     } catch (err) {
@@ -222,7 +229,7 @@ export function ExpenseLineDetailPage() {
           onChange={(e) => setDescription(e.target.value)}
           error={Boolean(fieldErrors.description)}
           helperText={fieldErrors.description ?? ' '}
-          disabled={isSubmitting}
+          disabled={isSubmitting || (showAttachmentSection && !isEditMode)}
           required
         />
         <TextField
@@ -235,7 +242,7 @@ export function ExpenseLineDetailPage() {
           onChange={(e) => setAmount(e.target.value)}
           error={Boolean(fieldErrors.amount)}
           helperText={fieldErrors.amount ?? ' '}
-          disabled={isSubmitting}
+          disabled={isSubmitting || (showAttachmentSection && !isEditMode)}
           required
           inputProps={{ min: 0.01, step: 'any' }}
         />
@@ -249,28 +256,30 @@ export function ExpenseLineDetailPage() {
           onChange={(e) => setIncurredDate(e.target.value)}
           error={Boolean(fieldErrors.incurred_date)}
           helperText={fieldErrors.incurred_date ?? ' '}
-          disabled={isSubmitting}
+          disabled={isSubmitting || (showAttachmentSection && !isEditMode)}
           required
           InputLabelProps={{ shrink: true }}
         />
 
-        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-          <Button type="submit" variant="contained" disabled={isSubmitting}>
-            {isEditMode ? 'Save Changes' : 'Add Line'}
-          </Button>
-          <Button
-            type="button"
-            variant="outlined"
-            onClick={() => navigate(`/reports/${reportId}/edit`)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-        </Box>
+        {!(showAttachmentSection && !isEditMode) && (
+          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+            <Button type="submit" variant="contained" disabled={isSubmitting}>
+              {isEditMode ? 'Save Changes' : 'Add Line'}
+            </Button>
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={() => navigate(`/reports/${reportId}/edit`)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+          </Box>
+        )}
       </Box>
 
-      {/* Attachment section — only available after the line has been saved */}
-      {isEditMode && lineIdNum !== undefined && (
+      {/* Attachment section — available after line creation or in edit mode */}
+      {showAttachmentSection && createdLineId !== undefined && (
         <Box sx={{ mt: 4 }} data-testid="attachment-section">
           <Divider sx={{ mb: 3 }} />
           <Typography variant="h6" gutterBottom>
@@ -280,7 +289,7 @@ export function ExpenseLineDetailPage() {
           <Box sx={{ mb: 3 }}>
             <AttachmentDisplayComponent
               reportId={reportIdNum}
-              lineId={lineIdNum}
+              lineId={createdLineId}
               attachment={attachmentMetadata}
               onRefresh={fetchAttachment}
             />
@@ -288,10 +297,21 @@ export function ExpenseLineDetailPage() {
 
           <AttachmentUploadComponent
             reportId={reportIdNum}
-            lineId={lineIdNum}
+            lineId={createdLineId}
             onUploadSuccess={handleAttachmentUploadSuccess}
             onUploadError={handleAttachmentUploadError}
           />
+
+          {!isEditMode && (
+            <Box sx={{ mt: 3 }}>
+              <Button
+                variant="contained"
+                onClick={() => navigate(`/reports/${reportId}/edit`)}
+              >
+                Done
+              </Button>
+            </Box>
+          )}
         </Box>
       )}
     </Container>
