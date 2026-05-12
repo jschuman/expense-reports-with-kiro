@@ -384,7 +384,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Test non-admin cannot access other users' attachments
     - _Requirements: 13.1, 13.3, 13.5, 13.6_
 
-- [ ] 16. Final Checkpoint - Ensure all tests pass
+- [x] 16. Final Checkpoint - Ensure all tests pass
   - Ensure all unit tests, integration tests, and property-based tests pass
   - Verify 100% code coverage on backend/app/ and frontend/src/
   - Verify all requirements are covered by implementation tasks
