@@ -286,8 +286,8 @@ This implementation plan breaks down the attachment management feature into disc
     - Test form data is preserved after error
     - _Requirements: 10.1-10.8, 11.1-11.6_
 
-- [ ] 10. Frontend: Attachment Display Component
-  - [ ] 10.1 Create AttachmentDisplayComponent
+- [x] 10. Frontend: Attachment Display Component
+  - [x] 10.1 Create AttachmentDisplayComponent
     - Display current attachment metadata (file name, size, upload timestamp)
     - Render download button (enabled if attachment exists)
     - Render delete button (enabled if attachment exists)
@@ -297,7 +297,7 @@ This implementation plan breaks down the attachment management feature into disc
     - Call onRefresh callback after delete to update parent
     - _Requirements: 10.1, 10.2, 10.7, 10.8_
   
-  - [ ] 10.2 Write unit tests for AttachmentDisplayComponent
+  - [x] 10.2 Write unit tests for AttachmentDisplayComponent
     - Test component displays attachment metadata when present
     - Test download button is enabled when attachment exists
     - Test download button is disabled when no attachment
