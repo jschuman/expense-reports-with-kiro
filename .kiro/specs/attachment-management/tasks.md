@@ -170,64 +170,64 @@ This implementation plan breaks down the attachment management feature into disc
     - Test GET metadata requires ownership or admin role (403 if unauthorized)
     - _Requirements: 8.1-8.6, 9.1-9.4_
 
-- [ ] 6. Backend: Property-Based Tests
-  - [ ] 6.1 Write property test for file type validation (Property 1)
+- [x] 6. Backend: Property-Based Tests
+  - [x] 6.1 Write property test for file type validation (Property 1)
     - For any file with MIME type and extension in whitelist, upload succeeds
     - For any file with MIME type or extension not in whitelist, upload fails with 400
     - Use Hypothesis to generate valid and invalid file types
     - _Requirements: 2.1, 2.2, 2.3_
   
-  - [ ] 6.2 Write property test for file size enforcement (Property 2)
+  - [x] 6.2 Write property test for file size enforcement (Property 2)
     - For any file ≤ 10 MB, upload succeeds
     - For any file > 10 MB, upload fails with 413
     - Use Hypothesis to generate files of various sizes
     - _Requirements: 6.1, 6.2, 6.4_
   
-  - [ ] 6.3 Write property test for upload round-trip (Property 3)
+  - [x] 6.3 Write property test for upload round-trip (Property 3)
     - For any valid file uploaded, retrieving it returns identical content and metadata
     - Use Hypothesis to generate various file types and sizes
     - _Requirements: 1.3, 4.1, 4.2_
   
-  - [ ] 6.4 Write property test for one-to-one attachment invariant (Property 4)
+  - [x] 6.4 Write property test for one-to-one attachment invariant (Property 4)
     - For any expense report line, after any operation, line has 0 or 1 attachment
     - Use Hypothesis to generate sequences of upload/delete operations
     - _Requirements: 1.6, 7.4_
   
-  - [ ] 6.5 Write property test for attachment replacement idempotence (Property 5)
+  - [x] 6.5 Write property test for attachment replacement idempotence (Property 5)
     - For any line, uploading file A then file B results in only B being stored
     - File A is deleted and not retrievable
     - Use Hypothesis to generate file sequences
     - _Requirements: 1.5_
   
-  - [ ] 6.6 Write property test for deletion idempotence (Property 6)
+  - [x] 6.6 Write property test for deletion idempotence (Property 6)
     - For any attachment, first delete returns 204, second returns 404
     - Use Hypothesis to generate delete sequences
     - _Requirements: 3.1, 3.2, 3.4_
   
-  - [ ] 6.7 Write property test for authorization enforcement (Property 7)
+  - [x] 6.7 Write property test for authorization enforcement (Property 7)
     - For any attachment, non-owner non-admin gets 403
     - For any attachment, owner gets access
     - For any attachment, admin gets access
     - Use Hypothesis to generate user/role combinations
     - _Requirements: 4.5, 9.1, 9.2_
   
-  - [ ] 6.8 Write property test for admin access override (Property 8)
+  - [x] 6.8 Write property test for admin access override (Property 8)
     - For any attachment, admin can access regardless of ownership
     - Use Hypothesis to generate admin/non-admin user combinations
     - _Requirements: 13.1, 13.3, 13.5_
   
-  - [ ] 6.9 Write property test for timestamp accuracy (Property 9)
+  - [x] 6.9 Write property test for timestamp accuracy (Property 9)
     - For any attachment, created_at is set to current UTC time (within 1 second)
     - Use Hypothesis to generate multiple attachments
     - _Requirements: 7.2_
   
-  - [ ] 6.10 Write property test for file content validation (Property 10)
+  - [x] 6.10 Write property test for file content validation (Property 10)
     - For any file with mismatched content/MIME type, upload fails with 400
     - For any file with matching content/MIME type, upload succeeds
     - Use Hypothesis to generate files with various content/MIME combinations
     - _Requirements: 12.5_
   
-  - [ ] 6.11 Write property test for secure file storage (Property 12)
+  - [x] 6.11 Write property test for secure file storage (Property 12)
     - For any uploaded file, it's only accessible through API endpoints
     - Files are stored with UUID-based names in non-web-accessible directory
     - Use Hypothesis to generate file access attempts
