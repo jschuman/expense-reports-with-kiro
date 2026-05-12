@@ -10,7 +10,7 @@
  * Requirements: 2.1, 2.2, 2.8, 3.1, 3.2, 3.8, 4.1, 4.2, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
  */
 
-import { useState, useEffect, useCallback, Fragment } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -32,6 +32,7 @@ import TableFooter from '@mui/material/TableFooter';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useAuth } from '../hooks/useAuth';
@@ -39,8 +40,7 @@ import { useExpenseLines } from '../hooks/useExpenseLines';
 import { useReports } from '../hooks/useReports';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { formatIncurredDate } from '../utils/formatDate';
-import { getAttachmentMetadata } from '../api/attachments';
-import { AttachmentDisplayComponent } from '../components/AttachmentDisplayComponent';
+import { getAttachmentMetadata, downloadAttachment } from '../api/attachments';
 import type { AttachmentMetadata } from '../types/attachments';
 
 // ---------------------------------------------------------------------------
@@ -78,16 +78,14 @@ export function ExpenseReportDetailPage() {
 
   const report = reports.find((r) => r.id === reportIdNum);
 
-  const isAdmin = user?.role === 'Admin';
-
   const canEdit =
     report !== undefined &&
     EDITABLE_STATUSES.has(report.status) &&
     user !== null &&
     user.id === report.owner_id;
 
-  const fetchAttachmentsForAdmin = useCallback(async () => {
-    if (!isAdmin || lines.length === 0) return;
+  const fetchAttachments = useCallback(async () => {
+    if (lines.length === 0) return;
     const results = await Promise.allSettled(
       lines.map((line) => getAttachmentMetadata(reportIdNum, line.id)),
     );
@@ -97,23 +95,11 @@ export function ExpenseReportDetailPage() {
       map[lineId] = result.status === 'fulfilled' ? result.value : null;
     });
     setAttachmentMap(map);
-  }, [isAdmin, lines, reportIdNum]);
+  }, [lines, reportIdNum]);
 
   useEffect(() => {
-    void fetchAttachmentsForAdmin();
-  }, [fetchAttachmentsForAdmin]);
-
-  const refreshAttachment = useCallback(
-    async (lineId: number) => {
-      try {
-        const metadata = await getAttachmentMetadata(reportIdNum, lineId);
-        setAttachmentMap((prev) => ({ ...prev, [lineId]: metadata }));
-      } catch {
-        setAttachmentMap((prev) => ({ ...prev, [lineId]: null }));
-      }
-    },
-    [reportIdNum],
-  );
+    void fetchAttachments();
+  }, [fetchAttachments]);
 
   async function confirmDelete() {
     if (deleteLineId === null) return;
@@ -216,43 +202,45 @@ export function ExpenseReportDetailPage() {
             </TableHead>
             <TableBody>
               {lines.map((line) => (
-                <Fragment key={line.id}>
-                  <TableRow>
-                    <TableCell>{line.description}</TableCell>
-                    <TableCell>{formatCurrency(line.amount)}</TableCell>
-                    <TableCell>{formatIncurredDate(line.incurred_date)}</TableCell>
-                    {canEdit && (
-                      <TableCell>
+                <TableRow key={line.id}>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      {attachmentMap[line.id] ? (
                         <IconButton
-                          aria-label="edit"
-                          onClick={() =>
-                            navigate(`/reports/${reportId}/lines/${line.id}/edit`)
-                          }
+                          size="small"
+                          aria-label="download attachment"
+                          onClick={() => void downloadAttachment(reportIdNum, line.id)}
+                          sx={{ p: 0 }}
                         >
-                          <EditIcon />
+                          <AttachFileIcon fontSize="small" color="action" />
                         </IconButton>
-                        <IconButton
-                          aria-label="delete"
-                          onClick={() => setDeleteLineId(line.id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                  {isAdmin && (
-                    <TableRow data-testid={`attachment-row-${line.id}`}>
-                      <TableCell colSpan={canEdit ? 4 : 3} sx={{ pt: 0 }}>
-                        <AttachmentDisplayComponent
-                          reportId={reportIdNum}
-                          lineId={line.id}
-                          attachment={attachmentMap[line.id] ?? null}
-                          onRefresh={() => void refreshAttachment(line.id)}
-                        />
-                      </TableCell>
-                    </TableRow>
+                      ) : (
+                        <Box sx={{ width: 20 }} />
+                      )}
+                      {line.description}
+                    </Box>
+                  </TableCell>
+                  <TableCell>{formatCurrency(line.amount)}</TableCell>
+                  <TableCell>{formatIncurredDate(line.incurred_date)}</TableCell>
+                  {canEdit && (
+                    <TableCell>
+                      <IconButton
+                        aria-label="edit"
+                        onClick={() =>
+                          navigate(`/reports/${reportId}/lines/${line.id}/edit`)
+                        }
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        aria-label="delete"
+                        onClick={() => setDeleteLineId(line.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
                   )}
-                </Fragment>
+                </TableRow>
               ))}
             </TableBody>
             <TableFooter>

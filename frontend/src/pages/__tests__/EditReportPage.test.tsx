@@ -12,6 +12,7 @@ import { EditReportPage } from '../EditReportPage';
 vi.mock('../../hooks/useReports');
 vi.mock('../../hooks/useClients');
 vi.mock('../../hooks/useExpenseLines');
+vi.mock('../../api/attachments');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -25,11 +26,13 @@ vi.mock('react-router-dom', async (importOriginal) => {
 import { useReports } from '../../hooks/useReports';
 import { useClients } from '../../hooks/useClients';
 import { useExpenseLines } from '../../hooks/useExpenseLines';
+import { getAttachmentMetadata } from '../../api/attachments';
 import type { ExpenseLineResponse } from '../../types/expenseReport';
 
 const mockUseReports = vi.mocked(useReports);
 const mockUseClients = vi.mocked(useClients);
 const mockUseExpenseLines = vi.mocked(useExpenseLines);
+const mockGetMetadata = vi.mocked(getAttachmentMetadata);
 
 const baseReport = {
   id: 42,
@@ -77,6 +80,7 @@ function setupLinesMock(
 describe('EditReportPage', () => {
   beforeEach(() => {
     mockNavigate.mockReset();
+    mockGetMetadata.mockRejectedValue({ status: 404 });
     mockUseClients.mockReturnValue({
       clients: ['Acme Corp', 'Globex Industries'],
       isLoading: false,

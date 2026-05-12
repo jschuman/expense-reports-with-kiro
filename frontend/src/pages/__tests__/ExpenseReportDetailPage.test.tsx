@@ -28,6 +28,7 @@ import type { ExpenseReportResponse, ExpenseLineResponse } from '../../types/exp
 vi.mock('../../hooks/useReports');
 vi.mock('../../hooks/useAuth');
 vi.mock('../../hooks/useExpenseLines');
+vi.mock('../../api/attachments');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -41,10 +42,12 @@ vi.mock('react-router-dom', async (importOriginal) => {
 import { useReports } from '../../hooks/useReports';
 import { useAuth } from '../../hooks/useAuth';
 import { useExpenseLines } from '../../hooks/useExpenseLines';
+import { getAttachmentMetadata } from '../../api/attachments';
 
 const mockUseReports = vi.mocked(useReports);
 const mockUseAuth = vi.mocked(useAuth);
 const mockUseExpenseLines = vi.mocked(useExpenseLines);
+const mockGetMetadata = vi.mocked(getAttachmentMetadata);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -149,6 +152,8 @@ function renderPage(reportId = '10') {
 describe('ExpenseReportDetailPage', () => {
   beforeEach(() => {
     mockNavigate.mockReset();
+    // Default: no attachments for any line
+    mockGetMetadata.mockRejectedValue({ status: 404 });
   });
 
   // -------------------------------------------------------------------------

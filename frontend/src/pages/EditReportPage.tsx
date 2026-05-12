@@ -12,7 +12,7 @@
  * enforces this; the frontend redirects to / if the report is not found.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -41,6 +41,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useReports } from '../hooks/useReports';
@@ -49,6 +50,8 @@ import { useExpenseLines } from '../hooks/useExpenseLines';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { expenseReportUpdateSchema } from '../types/schemas';
 import { formatIncurredDate } from '../utils/formatDate';
+import { getAttachmentMetadata, downloadAttachment } from '../api/attachments';
+import type { AttachmentMetadata } from '../types/attachments';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -96,6 +99,24 @@ export function EditReportPage() {
   // Line delete dialog state
   const [deleteLineId, setDeleteLineId] = useState<number | null>(null);
   const [deleteLineError, setDeleteLineError] = useState<string | null>(null);
+  const [attachmentMap, setAttachmentMap] = useState<Record<number, AttachmentMetadata | null>>({});
+
+  const fetchAttachments = useCallback(async () => {
+    if (lines.length === 0) return;
+    const results = await Promise.allSettled(
+      lines.map((line) => getAttachmentMetadata(reportIdNum, line.id)),
+    );
+    const map: Record<number, AttachmentMetadata | null> = {};
+    results.forEach((result, i) => {
+      const lineId = lines[i].id;
+      map[lineId] = result.status === 'fulfilled' ? result.value : null;
+    });
+    setAttachmentMap(map);
+  }, [lines, reportIdNum]);
+
+  useEffect(() => {
+    void fetchAttachments();
+  }, [fetchAttachments]);
 
   // Populate fields once the report is available
   useEffect(() => {
@@ -303,7 +324,23 @@ export function EditReportPage() {
             <TableBody>
               {lines.map((line) => (
                 <TableRow key={line.id}>
-                  <TableCell>{line.description}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      {attachmentMap[line.id] ? (
+                        <IconButton
+                          size="small"
+                          aria-label="download attachment"
+                          onClick={() => void downloadAttachment(reportIdNum, line.id)}
+                          sx={{ p: 0 }}
+                        >
+                          <AttachFileIcon fontSize="small" color="action" />
+                        </IconButton>
+                      ) : (
+                        <Box sx={{ width: 20 }} />
+                      )}
+                      {line.description}
+                    </Box>
+                  </TableCell>
                   <TableCell>{formatCurrency(line.amount)}</TableCell>
                   <TableCell>{formatIncurredDate(line.incurred_date)}</TableCell>
                   <TableCell>

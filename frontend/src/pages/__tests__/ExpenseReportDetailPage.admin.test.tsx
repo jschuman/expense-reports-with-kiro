@@ -1,9 +1,9 @@
 /**
- * Integration tests for ExpenseReportDetailPage — admin attachment access.
+ * Integration tests for ExpenseReportDetailPage — attachment download icon.
  *
- * Tests that admins see the AttachmentDisplayComponent for each line of any
- * expense report, can refresh attachment state, and that non-admin users do
- * not see attachment rows.
+ * Tests that the paperclip download icon appears in the description column
+ * when a line has an attachment, triggers a download on click, and is absent
+ * when no attachment exists — for both admin and regular users.
  *
  * API functions are mocked so no real HTTP calls are made.
  *
@@ -36,14 +36,13 @@ vi.mock('react-router-dom', async (importOriginal) => {
 import { useReports } from '../../hooks/useReports';
 import { useAuth } from '../../hooks/useAuth';
 import { useExpenseLines } from '../../hooks/useExpenseLines';
-import { getAttachmentMetadata, downloadAttachment, deleteAttachment } from '../../api/attachments';
+import { getAttachmentMetadata, downloadAttachment } from '../../api/attachments';
 
 const mockUseReports = vi.mocked(useReports);
 const mockUseAuth = vi.mocked(useAuth);
 const mockUseExpenseLines = vi.mocked(useExpenseLines);
 const mockGetMetadata = vi.mocked(getAttachmentMetadata);
 const mockDownload = vi.mocked(downloadAttachment);
-const mockDelete = vi.mocked(deleteAttachment);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -144,87 +143,120 @@ function renderPage(reportId = '10') {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('Admin attachment access (Req 13.1, 13.2, 13.3, 13.5, 13.6)', () => {
+describe('Attachment download icon in lines table (Req 13.1, 13.2, 13.3, 13.5, 13.6)', () => {
   beforeEach(() => {
     mockNavigate.mockReset();
     mockGetMetadata.mockReset();
     mockDownload.mockReset();
-    mockDelete.mockReset();
   });
 
   // -------------------------------------------------------------------------
-  // 13.2 — attachment section visible to admin
+  // Icon visibility
   // -------------------------------------------------------------------------
 
-  it('shows an attachment row for each line when the user is admin', async () => {
+  it('shows the download icon when the line has an attachment (admin)', async () => {
     setupReportsMock(REPORT);
-    setupLinesMock([LINE_1, LINE_2]);
+    setupLinesMock([LINE_1]);
     setupAuthMock(ADMIN_USER);
     mockGetMetadata.mockResolvedValue(ATTACHMENT_1);
 
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId('attachment-row-1')).toBeInTheDocument();
-      expect(screen.getByTestId('attachment-row-2')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /download attachment/i })).toBeInTheDocument();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // 13.5 — non-admin cannot access other users' attachment rows
-  // -------------------------------------------------------------------------
-
-  it('does NOT show attachment rows when the user is a non-admin (User role)', () => {
+  it('shows the download icon when the line has an attachment (regular user / owner)', async () => {
     setupReportsMock(REPORT);
-    setupLinesMock([LINE_1, LINE_2]);
+    setupLinesMock([LINE_1]);
     setupAuthMock(OWNER_USER);
-    // getAttachmentMetadata should never be called for non-admins
-    mockGetMetadata.mockResolvedValue(ATTACHMENT_1);
-
-    renderPage();
-
-    expect(screen.queryByTestId('attachment-row-1')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('attachment-row-2')).not.toBeInTheDocument();
-    expect(mockGetMetadata).not.toHaveBeenCalled();
-  });
-
-  // -------------------------------------------------------------------------
-  // 13.6 — admin can view attachment metadata (filename, size, date)
-  // -------------------------------------------------------------------------
-
-  it('displays attachment metadata when an attachment exists for a line', async () => {
-    setupReportsMock(REPORT);
-    setupLinesMock([LINE_1]);
-    setupAuthMock(ADMIN_USER);
     mockGetMetadata.mockResolvedValue(ATTACHMENT_1);
 
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId('attachment-filename')).toHaveTextContent('receipt.pdf');
+      expect(screen.getByRole('button', { name: /download attachment/i })).toBeInTheDocument();
     });
-    expect(screen.getByTestId('attachment-filesize')).toBeInTheDocument();
-    expect(screen.getByTestId('attachment-date')).toBeInTheDocument();
   });
 
-  it('shows the no-attachment placeholder when a line has no attachment', async () => {
+  it('does not show the download icon when the line has no attachment', async () => {
     setupReportsMock(REPORT);
     setupLinesMock([LINE_1]);
-    setupAuthMock(ADMIN_USER);
+    setupAuthMock(OWNER_USER);
     mockGetMetadata.mockRejectedValue({ status: 404 });
 
     renderPage();
 
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByRole('button', { name: /download attachment/i })).not.toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // Multiple lines — icon only on lines with attachments
+  // -------------------------------------------------------------------------
+
+  it('shows icon only for lines that have an attachment', async () => {
+    setupReportsMock(REPORT);
+    setupLinesMock([LINE_1, LINE_2]);
+    setupAuthMock(OWNER_USER);
+    mockGetMetadata
+      .mockResolvedValueOnce(ATTACHMENT_1)    // LINE_1 has attachment
+      .mockRejectedValueOnce({ status: 404 }); // LINE_2 does not
+
+    renderPage();
+
     await waitFor(() => {
-      expect(screen.getByTestId('no-attachment-message')).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /download attachment/i })).toHaveLength(1);
     });
   });
 
   // -------------------------------------------------------------------------
-  // 13.1 — admin fetches metadata for each line (any report, any owner)
+  // Clicking the icon triggers download
   // -------------------------------------------------------------------------
 
-  it('calls getAttachmentMetadata with the correct reportId and lineId for each line', async () => {
+  it('calls downloadAttachment with correct reportId and lineId when icon is clicked', async () => {
+    setupReportsMock(REPORT);
+    setupLinesMock([LINE_1]);
+    setupAuthMock(OWNER_USER);
+    mockGetMetadata.mockResolvedValue(ATTACHMENT_1);
+    mockDownload.mockResolvedValue(undefined);
+
+    renderPage();
+
+    await waitFor(() => screen.getByRole('button', { name: /download attachment/i }));
+    await userEvent.click(screen.getByRole('button', { name: /download attachment/i }));
+
+    expect(mockDownload).toHaveBeenCalledOnce();
+    expect(mockDownload).toHaveBeenCalledWith(10, 1);
+  });
+
+  it('calls downloadAttachment with the correct lineId for each respective line', async () => {
+    setupReportsMock(REPORT);
+    setupLinesMock([LINE_1, LINE_2]);
+    setupAuthMock(OWNER_USER);
+    mockGetMetadata.mockResolvedValue(ATTACHMENT_1);
+    mockDownload.mockResolvedValue(undefined);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /download attachment/i })).toHaveLength(2);
+    });
+
+    const [btn1, btn2] = screen.getAllByRole('button', { name: /download attachment/i });
+    await userEvent.click(btn1);
+    expect(mockDownload).toHaveBeenLastCalledWith(10, 1);
+
+    await userEvent.click(btn2);
+    expect(mockDownload).toHaveBeenLastCalledWith(10, 2);
+  });
+
+  // -------------------------------------------------------------------------
+  // Metadata fetch
+  // -------------------------------------------------------------------------
+
+  it('calls getAttachmentMetadata for each line on mount', async () => {
     setupReportsMock(REPORT);
     setupLinesMock([LINE_1, LINE_2]);
     setupAuthMock(ADMIN_USER);
@@ -245,77 +277,7 @@ describe('Admin attachment access (Req 13.1, 13.2, 13.3, 13.5, 13.6)', () => {
 
     renderPage();
 
-    // Give time for any async effects to fire
     await new Promise((r) => setTimeout(r, 50));
     expect(mockGetMetadata).not.toHaveBeenCalled();
-  });
-
-  // -------------------------------------------------------------------------
-  // 13.3 — admin can download attachments
-  // -------------------------------------------------------------------------
-
-  it('allows admin to click the download button for an attachment', async () => {
-    setupReportsMock(REPORT);
-    setupLinesMock([LINE_1]);
-    setupAuthMock(ADMIN_USER);
-    mockGetMetadata.mockResolvedValue(ATTACHMENT_1);
-    mockDownload.mockResolvedValue(undefined);
-
-    renderPage();
-
-    await waitFor(() => screen.getByTestId('download-button'));
-    await userEvent.click(screen.getByTestId('download-button'));
-
-    expect(mockDownload).toHaveBeenCalledWith(10, 1);
-  });
-
-  // -------------------------------------------------------------------------
-  // Refresh — after delete, attachment state updates per line
-  // -------------------------------------------------------------------------
-
-  it('refreshes a single line attachment after delete confirmation', async () => {
-    setupReportsMock(REPORT);
-    setupLinesMock([LINE_1]);
-    setupAuthMock(ADMIN_USER);
-    mockGetMetadata.mockResolvedValueOnce(ATTACHMENT_1); // initial fetch
-    mockDelete.mockResolvedValue(undefined);
-    mockGetMetadata.mockRejectedValue({ status: 404 }); // after delete
-
-    renderPage();
-
-    // Wait for initial metadata to load
-    await waitFor(() => screen.getByTestId('delete-button'));
-
-    // Click delete → confirm dialog
-    await userEvent.click(screen.getByTestId('delete-button'));
-    await waitFor(() => screen.getByTestId('confirm-delete-button'));
-    await userEvent.click(screen.getByTestId('confirm-delete-button'));
-
-    // After deletion, AttachmentDisplayComponent calls onRefresh,
-    // which re-fetches the metadata (now 404 → null → no-attachment-message)
-    await waitFor(() => {
-      expect(screen.getByTestId('no-attachment-message')).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Mixed lines — some with attachments, some without
-  // -------------------------------------------------------------------------
-
-  it('shows attachment metadata for lines that have it and placeholder for lines that do not', async () => {
-    setupReportsMock(REPORT);
-    setupLinesMock([LINE_1, LINE_2]);
-    setupAuthMock(ADMIN_USER);
-    // LINE_1 has an attachment; LINE_2 does not
-    mockGetMetadata
-      .mockResolvedValueOnce(ATTACHMENT_1) // for LINE_1
-      .mockRejectedValueOnce({ status: 404 }); // for LINE_2
-
-    renderPage();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('attachment-filename')).toHaveTextContent('receipt.pdf');
-      expect(screen.getByTestId('no-attachment-message')).toBeInTheDocument();
-    });
   });
 });
