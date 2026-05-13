@@ -123,7 +123,7 @@ Replace the card-based expense reports list on the Dashboard page with an MUI X 
     - Ensure the existing `ErrorAlert` component still renders above the table for API errors
     - _Requirements: 1.1, 4.1, 4.2, 5.7, 6.1_
 
-- [-] 9. Final checkpoint - Ensure all tests pass
+- [x] 9. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
