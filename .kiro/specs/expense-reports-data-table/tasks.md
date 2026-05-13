@@ -100,8 +100,8 @@ Replace the card-based expense reports list on the Dashboard page with an MUI X 
     - Manage RejectDialog open/close state within the component
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2.1–2.10, 3.1–3.9, 4.1–4.5, 5.1, 5.6, 6.1, 6.2, 6.3, 7.1, 7.2, 7.3_
 
-- [ ] 7. Write unit tests for ExpenseReportsTable
-  - [ ] 7.1 Write unit tests for ExpenseReportsTable rendering and behavior
+- [x] 7. Write unit tests for ExpenseReportsTable
+  - [x] 7.1 Write unit tests for ExpenseReportsTable rendering and behavior
     - Test columns render in correct order (Title, Amount, Status, Owner, Created, Reimbursable, Client, Admin Notes, Actions)
     - Test Amount column displays formatted currency (e.g., "$1,234.56")
     - Test Created column displays formatted date
