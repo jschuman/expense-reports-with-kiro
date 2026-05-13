@@ -53,14 +53,14 @@ Replace the card-based expense reports list on the Dashboard page with an MUI X 
 - [x] 3. Checkpoint - Ensure all property tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Build cell renderer components
-  - [ ] 4.1 Create `StatusChip` component in `frontend/src/components/StatusChip.tsx`
+- [x] 4. Build cell renderer components
+  - [x] 4.1 Create `StatusChip` component in `frontend/src/components/StatusChip.tsx`
     - Accept a `status: string` prop
     - Map status to MUI Chip color: "In Progress" → default, "Submitted" → primary, "Scheduled for Payment" → success, "Rejected" → error, any other → default
     - Render an MUI `<Chip>` with the label set to the status string
     - _Requirements: 1.7_
 
-  - [ ] 4.2 Create `ActionCell` component in `frontend/src/components/ActionCell.tsx`
+  - [x] 4.2 Create `ActionCell` component in `frontend/src/components/ActionCell.tsx`
     - Accept `ActionCellProps` (report, currentUser, action handlers)
     - Call `getRowActions()` to determine which buttons to render
     - Render MUI `IconButton` for each action with accessible `aria-label` including the report title (e.g., "Edit Trip to NYC")
