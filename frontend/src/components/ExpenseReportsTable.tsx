@@ -99,7 +99,8 @@ export function ExpenseReportsTable({
       {
         field: 'title',
         headerName: 'Title',
-        flex: 1,
+        flex: 2,
+        minWidth: 200,
         type: 'string',
       },
       {
@@ -152,6 +153,7 @@ export function ExpenseReportsTable({
         field: 'admin_notes',
         headerName: 'Admin Notes',
         flex: 1,
+        minWidth: 130,
         type: 'string',
         renderCell: (params) => displayOrPlaceholder(params.value),
       },

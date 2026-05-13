@@ -29,6 +29,7 @@ import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
@@ -199,7 +200,12 @@ export function EditReportPage() {
   const subtotal = lines.reduce((sum, line) => sum + line.amount, 0);
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Box sx={{ mb: 2 }}>
+        <Button variant="text" onClick={() => navigate('/')}>
+          ← Back to Dashboard
+        </Button>
+      </Box>
       <Box mb={3}>
         <Typography variant="h4" component="h1">
           Edit Report
@@ -322,19 +328,21 @@ export function EditReportPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {lines.map((line) => (
+              {[...lines].sort((a, b) => a.incurred_date.localeCompare(b.incurred_date)).map((line) => (
                 <TableRow key={line.id}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       {attachmentMap[line.id] ? (
-                        <IconButton
-                          size="small"
-                          aria-label="download attachment"
-                          onClick={() => void downloadAttachment(reportIdNum, line.id)}
-                          sx={{ p: 0 }}
-                        >
-                          <AttachFileIcon fontSize="small" color="action" />
-                        </IconButton>
+                        <Tooltip title="Download attachment">
+                          <IconButton
+                            size="small"
+                            aria-label="download attachment"
+                            onClick={() => void downloadAttachment(reportIdNum, line.id)}
+                            sx={{ p: 0 }}
+                          >
+                            <AttachFileIcon fontSize="small" color="action" />
+                          </IconButton>
+                        </Tooltip>
                       ) : (
                         <Box sx={{ width: 20 }} />
                       )}
@@ -344,20 +352,24 @@ export function EditReportPage() {
                   <TableCell>{formatCurrency(line.amount)}</TableCell>
                   <TableCell>{formatIncurredDate(line.incurred_date)}</TableCell>
                   <TableCell>
-                    <IconButton
-                      aria-label="edit line"
-                      size="small"
-                      onClick={() => navigate(`/reports/${reportId}/lines/${line.id}/edit`)}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      aria-label="delete line"
-                      size="small"
-                      onClick={() => setDeleteLineId(line.id)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+                    <Tooltip title="Edit line">
+                      <IconButton
+                        aria-label="edit line"
+                        size="small"
+                        onClick={() => navigate(`/reports/${reportId}/lines/${line.id}/edit`)}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete line">
+                      <IconButton
+                        aria-label="delete line"
+                        size="small"
+                        onClick={() => setDeleteLineId(line.id)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}

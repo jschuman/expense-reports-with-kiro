@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import { useReports } from '../hooks/useReports';
@@ -39,6 +40,11 @@ export function CreateReportPage() {
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Box sx={{ mb: 2 }}>
+        <Button variant="text" onClick={() => navigate('/')}>
+          ← Back to Dashboard
+        </Button>
+      </Box>
       <Box mb={3}>
         <Typography variant="h4" component="h1">
           Create New Report

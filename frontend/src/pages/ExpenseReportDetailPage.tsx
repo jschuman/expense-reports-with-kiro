@@ -24,6 +24,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -201,19 +202,21 @@ export function ExpenseReportDetailPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {lines.map((line) => (
+              {[...lines].sort((a, b) => a.incurred_date.localeCompare(b.incurred_date)).map((line) => (
                 <TableRow key={line.id}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       {attachmentMap[line.id] ? (
-                        <IconButton
-                          size="small"
-                          aria-label="download attachment"
-                          onClick={() => void downloadAttachment(reportIdNum, line.id)}
-                          sx={{ p: 0 }}
-                        >
-                          <AttachFileIcon fontSize="small" color="action" />
-                        </IconButton>
+                        <Tooltip title="Download attachment">
+                          <IconButton
+                            size="small"
+                            aria-label="download attachment"
+                            onClick={() => void downloadAttachment(reportIdNum, line.id)}
+                            sx={{ p: 0 }}
+                          >
+                            <AttachFileIcon fontSize="small" color="action" />
+                          </IconButton>
+                        </Tooltip>
                       ) : (
                         <Box sx={{ width: 20 }} />
                       )}
@@ -224,20 +227,24 @@ export function ExpenseReportDetailPage() {
                   <TableCell>{formatIncurredDate(line.incurred_date)}</TableCell>
                   {canEdit && (
                     <TableCell>
-                      <IconButton
-                        aria-label="edit"
-                        onClick={() =>
-                          navigate(`/reports/${reportId}/lines/${line.id}/edit`)
-                        }
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        aria-label="delete"
-                        onClick={() => setDeleteLineId(line.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      <Tooltip title="Edit line">
+                        <IconButton
+                          aria-label="edit"
+                          onClick={() =>
+                            navigate(`/reports/${reportId}/lines/${line.id}/edit`)
+                          }
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete line">
+                        <IconButton
+                          aria-label="delete"
+                          onClick={() => setDeleteLineId(line.id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   )}
                 </TableRow>
