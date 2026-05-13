@@ -1,14 +1,14 @@
 {
   "enabled": true,
   "name": "Ensure Feature Branch for Spec",
-  "description": "Creates a feature branch when a requirements document is created. If on main, creates a new feature branch based on the spec name.",
-  "version": "1",
+  "description": "When a spec file is created, immediately creates a feature branch if currently on main/master.",
+  "version": "4",
   "when": {
     "type": "fileCreated",
-    "patterns": [".kiro/specs/*/requirements.md"]
+    "patterns": [".kiro/specs/**/*"]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "A requirements document has been created. Check the current git branch. If we're on 'main' or 'master', create a new feature branch with a name based on the spec feature name (e.g., 'feature/attachment-management'). If already on a feature branch, confirm it's appropriate for this spec and proceed. Always follow git safety guidelines: never force push, always create new branches from main."
+    "prompt": "IMMEDIATELY run 'git branch --show-current' to check the current branch. If the result is 'main' or 'master', run 'git checkout -b feature/<spec-name>' where <spec-name> is extracted from the spec directory path (e.g., .kiro/specs/status-history-table/ becomes feature/status-history-table). If already on a feature/ branch, do nothing. Do NOT skip this step. Do NOT defer it."
   }
 }
