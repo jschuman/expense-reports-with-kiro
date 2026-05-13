@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { listReports, createReport, submitReport, acceptReport, rejectReport, updateReport, deleteReport } from '../reports';
+import { listReports, createReport, submitReport, acceptReport, rejectReport, updateReport, deleteReport, getStatusHistory } from '../reports';
 import { ApiError } from '../client';
 
 const server = setupServer();
@@ -496,5 +496,56 @@ describe('deleteReport()', () => {
 
     await expect(deleteReport(1)).rejects.toThrow(ApiError);
     await expect(deleteReport(1)).rejects.toMatchObject({ status: 422 });
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// getStatusHistory()
+// ---------------------------------------------------------------------------
+
+describe('getStatusHistory()', () => {
+  it('sends GET /reports/{id}/status-history and returns StatusAuditLogEntry[] on 200', async () => {
+    const sampleEntries = [
+      { id: 1, expense_report_id: 42, status: 'In Progress', changed_at: '2026-04-20T10:00:00Z' },
+      { id: 2, expense_report_id: 42, status: 'Submitted', changed_at: '2026-04-23T17:00:00Z' },
+    ];
+
+    let capturedMethod: string | undefined;
+    let capturedUrl: string | undefined;
+
+    server.use(
+      http.get('/reports/:id/status-history', ({ request }) => {
+        capturedMethod = request.method;
+        capturedUrl = request.url;
+        return HttpResponse.json(sampleEntries, { status: 200 });
+      }),
+    );
+
+    const result = await getStatusHistory(42);
+
+    expect(result).toEqual(sampleEntries);
+    expect(capturedMethod).toBe('GET');
+    expect(capturedUrl).toContain('/reports/42/status-history');
+  });
+
+  it('returns an empty array when the server returns []', async () => {
+    server.use(
+      http.get('/reports/:id/status-history', () => HttpResponse.json([], { status: 200 })),
+    );
+
+    const result = await getStatusHistory(1);
+    expect(result).toEqual([]);
+  });
+
+  it('throws ApiError on 401', async () => {
+    server.use(
+      http.get('/reports/:id/status-history', () =>
+        HttpResponse.json({ detail: 'Not authenticated' }, { status: 401 }),
+      ),
+    );
+
+    await expect(getStatusHistory(1)).rejects.toThrow(ApiError);
+    await expect(getStatusHistory(1)).rejects.toMatchObject({ status: 401 });
   });
 });

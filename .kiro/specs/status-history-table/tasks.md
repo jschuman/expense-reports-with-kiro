@@ -49,22 +49,22 @@ This plan implements a read-only status history table on expense report detail p
     - Minimum 100 iterations
     - _Requirements: 1.4_
 
-- [~] 2. Checkpoint - Backend verification
+- [x] 2. Checkpoint - Backend verification
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 3. Implement frontend API client and StatusHistoryTable component
-  - [~] 3.1 Add `getStatusHistory` function to `frontend/src/api/reports.ts`
+- [x] 3. Implement frontend API client and StatusHistoryTable component
+  - [x] 3.1 Add `getStatusHistory` function to `frontend/src/api/reports.ts`
     - Export an async function that calls `GET /reports/${reportId}/status-history`
     - Use the existing `apiFetch` client from `frontend/src/api/client.ts`
     - Return typed `StatusAuditLogEntry[]` (interface already exists in `frontend/src/types/expenseReport.ts`)
     - _Requirements: 1.1_
 
-  - [~] 3.2 Write unit tests for `getStatusHistory` in `frontend/src/api/__tests__/reports.test.ts`
+  - [x] 3.2 Write unit tests for `getStatusHistory` in `frontend/src/api/__tests__/reports.test.ts`
     - Test that the function calls the correct endpoint URL
     - Test that it returns the parsed response array
     - _Requirements: 1.1_
 
-  - [~] 3.3 Create `StatusHistoryTable` component in `frontend/src/components/StatusHistoryTable.tsx`
+  - [x] 3.3 Create `StatusHistoryTable` component in `frontend/src/components/StatusHistoryTable.tsx`
     - Accept `entries: StatusAuditLogEntry[]` prop
     - Render MUI `Table` with "Status" and "Date" column headers
     - Render one `TableRow` per entry with `StatusChip` for status and `formatUtcDate(entry.changed_at)` for date
@@ -73,7 +73,7 @@ This plan implements a read-only status history table on expense report detail p
     - No internal scroll container — all rows render inline
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 5.1, 5.2, 5.3, 5.4_
 
-  - [~] 3.4 Write unit tests for `StatusHistoryTable` in `frontend/src/components/__tests__/StatusHistoryTable.test.tsx`
+  - [x] 3.4 Write unit tests for `StatusHistoryTable` in `frontend/src/components/__tests__/StatusHistoryTable.test.tsx`
     - Test correct number of rows rendered
     - Test StatusChip rendered with correct status for each row
     - Test formatted dates displayed (not raw ISO strings)
@@ -82,7 +82,7 @@ This plan implements a read-only status history table on expense report detail p
     - Test no interactive elements (buttons, inputs) in the table
     - _Requirements: 3.1, 3.2, 3.4, 3.5, 3.6, 3.7, 5.1, 5.3_
 
-  - [~] 3.5 Write property tests for `StatusHistoryTable` in `frontend/src/components/__tests__/StatusHistoryTable.property.test.tsx`
+  - [x] 3.5 Write property tests for `StatusHistoryTable` in `frontend/src/components/__tests__/StatusHistoryTable.property.test.tsx`
     - **Property 4: Conditional display threshold**
     - **Validates: Requirements 2.1, 2.2**
     - Generate arrays of `StatusAuditLogEntry` with arbitrary lengths using fast-check
@@ -90,7 +90,7 @@ This plan implements a read-only status history table on expense report detail p
     - Minimum 100 iterations
     - _Requirements: 2.1, 2.2_
 
-  - [~] 3.6 Write property test for row content completeness in `frontend/src/components/__tests__/StatusHistoryTable.property.test.tsx`
+  - [x] 3.6 Write property test for row content completeness in `frontend/src/components/__tests__/StatusHistoryTable.property.test.tsx`
     - **Property 5: Row content completeness**
     - **Validates: Requirements 3.2, 5.2**
     - Generate non-empty arrays of entries using fast-check
@@ -98,7 +98,7 @@ This plan implements a read-only status history table on expense report detail p
     - Minimum 100 iterations
     - _Requirements: 3.2, 5.2_
 
-  - [~] 3.7 Write property test for date formatting in `frontend/src/utils/__tests__/formatDate.property.test.ts`
+  - [x] 3.7 Write property test for date formatting in `frontend/src/utils/__tests__/formatDate.property.test.ts`
     - **Property 6: Date formatting produces human-readable non-ISO output**
     - **Validates: Requirements 3.4, 3.5, 3.6**
     - Generate valid UTC ISO 8601 datetime strings using fast-check

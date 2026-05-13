@@ -5,7 +5,7 @@
  * POST /reports/{id}/reject
  */
 
-import type { ExpenseReportCreate, ExpenseReportResponse, ExpenseReportUpdate } from '../types/expenseReport';
+import type { ExpenseReportCreate, ExpenseReportResponse, ExpenseReportUpdate, StatusAuditLogEntry } from '../types/expenseReport';
 import { apiFetch, ApiError } from './client';
 
 /**
@@ -102,4 +102,12 @@ export async function deleteReport(reportId: number): Promise<void> {
     throw new ApiError(response.status, message);
   }
   // 204 No Content — no body to parse
+}
+
+/**
+ * GET /reports/{id}/status-history
+ * Returns the status audit log entries for a specific report, ordered chronologically.
+ */
+export async function getStatusHistory(reportId: number): Promise<StatusAuditLogEntry[]> {
+  return apiFetch<StatusAuditLogEntry[]>(`/reports/${reportId}/status-history`);
 }
