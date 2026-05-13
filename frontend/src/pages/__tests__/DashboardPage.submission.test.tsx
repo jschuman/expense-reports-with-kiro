@@ -142,7 +142,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() => expect(mockHandleSubmit).toHaveBeenCalledWith(42));
       expect(screen.queryByTestId('missing-attachment-dialog')).not.toBeInTheDocument();
@@ -154,7 +154,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() =>
         expect(screen.getByTestId('submit-error')).toBeInTheDocument(),
@@ -176,7 +176,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() =>
         expect(screen.getByTestId('missing-attachment-dialog')).toBeInTheDocument(),
@@ -190,7 +190,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() =>
         expect(screen.getByTestId('missing-attachment-dialog')).toBeInTheDocument(),
@@ -212,7 +212,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() =>
         expect(screen.getByTestId('missing-attachment-message')).toHaveTextContent('2'),
@@ -229,7 +229,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() =>
         expect(screen.getByTestId('missing-attachment-message')).toHaveTextContent('1'),
@@ -249,7 +249,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() =>
         expect(screen.getByTestId('add-attachments-button')).toBeInTheDocument(),
@@ -267,7 +267,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() =>
         expect(screen.getByTestId('add-attachments-button')).toBeInTheDocument(),
@@ -293,7 +293,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() =>
         expect(screen.getByTestId('submit-without-button')).toBeInTheDocument(),
@@ -311,7 +311,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() =>
         expect(screen.getByTestId('submit-without-button')).toBeInTheDocument(),
@@ -339,7 +339,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() =>
         expect(screen.getByTestId('submit-error')).toBeInTheDocument(),
@@ -353,7 +353,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
       await waitFor(() =>
         expect(screen.getByTestId('submit-error')).toBeInTheDocument(),
@@ -367,7 +367,7 @@ describe('DashboardPage — submission with attachment check', () => {
 
       renderDashboard();
 
-      await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+      await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
       await waitFor(() => screen.getByTestId('submit-error'));
 
       // MUI Alert close button

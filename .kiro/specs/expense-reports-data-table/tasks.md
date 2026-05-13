@@ -114,8 +114,8 @@ Replace the card-based expense reports list on the Dashboard page with an MUI X 
     - Test RejectDialog opens when Reject action is triggered
     - _Requirements: 1.2, 1.3, 1.4, 1.5, 1.6, 4.3, 4.4, 6.1, 6.2, 5.6_
 
-- [ ] 8. Integrate into DashboardPage
-  - [ ] 8.1 Replace card-based list with ExpenseReportsTable in DashboardPage
+- [x] 8. Integrate into DashboardPage
+  - [x] 8.1 Replace card-based list with ExpenseReportsTable in DashboardPage
     - Import `ExpenseReportsTable` component
     - Remove or replace the existing `ReportCard` mapping/rendering logic
     - Pass `reports`, `isLoading`, `currentUser` from existing hooks (`useReports`, `useAuth`)
@@ -123,7 +123,7 @@ Replace the card-based expense reports list on the Dashboard page with an MUI X 
     - Ensure the existing `ErrorAlert` component still renders above the table for API errors
     - _Requirements: 1.1, 4.1, 4.2, 5.7, 6.1_
 
-- [ ] 9. Final checkpoint - Ensure all tests pass
+- [-] 9. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

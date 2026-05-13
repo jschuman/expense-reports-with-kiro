@@ -301,16 +301,16 @@ describe('Page title based on role', () => {
 // ---------------------------------------------------------------------------
 
 describe('owner_username display for admin users', () => {
-  it('renders owner_username on report cards when admin views all reports', () => {
+  it('renders owner_username in the table when admin views all reports', () => {
     setupDefaultMocks({ user: adminRoleUser, reports: sampleReports });
     renderDashboard();
 
-    // Both owner usernames should be visible in the report cards
+    // Both owner usernames should be visible in the DataGrid
     expect(screen.getByText('alice')).toBeInTheDocument();
     expect(screen.getByText('bob')).toBeInTheDocument();
   });
 
-  it('renders report cards with owner_username for regular user viewing own reports', () => {
+  it('hides owner_username column for regular user viewing own reports', () => {
     const ownReports: ExpenseReportResponse[] = [
       {
         id: 1,
@@ -329,7 +329,8 @@ describe('owner_username display for admin users', () => {
     setupDefaultMocks({ user: userRoleUser, reports: ownReports });
     renderDashboard();
 
-    expect(screen.getByText('alice')).toBeInTheDocument();
+    // Owner column is hidden for non-admin users
+    expect(screen.queryByRole('columnheader', { name: /owner/i })).not.toBeInTheDocument();
   });
 });
 
@@ -357,7 +358,8 @@ describe('currentUser passed to ReportCard', () => {
     renderDashboard();
 
     // Submit button is only shown when currentUser is the owner and status is In Progress
-    expect(screen.getByRole('button', { name: /submit report/i })).toBeInTheDocument();
+    // ActionCell uses aria-label format: "Submit {title}"
+    expect(screen.getByRole('button', { name: /submit q1 travel/i })).toBeInTheDocument();
   });
 
   it('passes admin user to each ReportCard so Accept/Reject buttons render for Submitted reports', () => {
@@ -378,8 +380,9 @@ describe('currentUser passed to ReportCard', () => {
     renderDashboard();
 
     // Accept and Reject buttons are only shown when currentUser is Admin and status is Submitted
-    expect(screen.getByRole('button', { name: /accept report/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /reject report/i })).toBeInTheDocument();
+    // ActionCell uses aria-label format: "Accept {title}", "Reject {title}"
+    expect(screen.getByRole('button', { name: /accept submitted report/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /reject submitted report/i })).toBeInTheDocument();
   });
 
   it('renders no action buttons for a non-owner User viewing a Submitted report', () => {
@@ -399,9 +402,9 @@ describe('currentUser passed to ReportCard', () => {
     setupDefaultMocks({ user: userRoleUser, reports: [submittedReport] });
     renderDashboard();
 
-    expect(screen.queryByRole('button', { name: /submit report/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /accept report/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /reject report/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /submit submitted report/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /accept submitted report/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /reject submitted report/i })).not.toBeInTheDocument();
   });
 });
 
@@ -456,7 +459,7 @@ describe('Submit action wiring', () => {
     });
     renderDashboard();
 
-    await userEvent.click(screen.getByRole('button', { name: /submit report/i }));
+    await userEvent.click(screen.getByRole('button', { name: /submit travel expenses/i }));
 
     await waitFor(() => {
       expect(handleSubmit).toHaveBeenCalledOnce();
@@ -505,7 +508,7 @@ describe('Accept action wiring', () => {
     });
     renderDashboard();
 
-    await userEvent.click(screen.getByRole('button', { name: /accept report/i }));
+    await userEvent.click(screen.getByRole('button', { name: /accept submitted report/i }));
 
     expect(handleAccept).toHaveBeenCalledOnce();
     expect(handleAccept).toHaveBeenCalledWith(55);
@@ -553,7 +556,7 @@ describe('Reject action wiring', () => {
     renderDashboard();
 
     // Open the reject dialog
-    await userEvent.click(screen.getByRole('button', { name: /reject report/i }));
+    await userEvent.click(screen.getByRole('button', { name: /reject submitted report/i }));
 
     // Type admin notes into the dialog text field
     const notesInput = screen.getByRole('textbox');
@@ -602,7 +605,7 @@ describe('Reject action wiring', () => {
     renderDashboard();
 
     // Open the reject dialog
-    await userEvent.click(screen.getByRole('button', { name: /reject report/i }));
+    await userEvent.click(screen.getByRole('button', { name: /reject submitted report/i }));
 
     // Cancel without confirming
     await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
@@ -633,7 +636,7 @@ describe('Edit action wiring', () => {
     setupDefaultMocks({ user: userRoleUser, reports: [inProgressReport] });
     renderDashboard();
 
-    await userEvent.click(screen.getByRole('button', { name: /edit report/i }));
+    await userEvent.click(screen.getByRole('button', { name: /edit travel expenses/i }));
 
     expect(mockNavigate).toHaveBeenCalledWith('/reports/88/edit');
   });
@@ -661,7 +664,7 @@ describe('View action wiring', () => {
     setupDefaultMocks({ user: userRoleUser, reports: [submittedReport] });
     renderDashboard();
 
-    await userEvent.click(screen.getByRole('button', { name: /view report/i }));
+    await userEvent.click(screen.getByRole('button', { name: /view conference trip/i }));
 
     expect(mockNavigate).toHaveBeenCalledWith('/reports/77');
   });
@@ -707,7 +710,7 @@ describe('Delete action wiring', () => {
     });
     renderDashboard();
 
-    await userEvent.click(screen.getByRole('button', { name: /delete report/i }));
+    await userEvent.click(screen.getByRole('button', { name: /delete travel expenses/i }));
 
     expect(handleDelete).toHaveBeenCalledOnce();
     expect(handleDelete).toHaveBeenCalledWith(99);
@@ -726,7 +729,7 @@ describe('existing DashboardPage behaviour', () => {
     expect(screen.getByText('No expense reports yet')).toBeInTheDocument();
   });
 
-  it('renders ReportCard components when reports are present', () => {
+  it('renders report data in the DataGrid when reports are present', () => {
     setupDefaultMocks({ reports: sampleReports });
     renderDashboard();
 

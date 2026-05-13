@@ -6,15 +6,15 @@
  * Provides a "Create New Report" button and a "Logout" button.
  * Logout calls the auth API and redirects to /login on success.
  *
- * Action buttons on each ReportCard are wired to useReports handlers:
- *  - onSubmit  → handleSubmit  (In Progress / Rejected → Submitted)
+ * Action handlers wired to ExpenseReportsTable via useReports:
+ *  - onSubmit  → handleSubmitWithCheck (In Progress / Rejected → Submitted, with attachment check)
  *  - onAccept  → handleAccept  (Submitted → Scheduled for Payment)
  *  - onReject  → handleReject  (Submitted → Rejected, requires admin notes)
  *  - onEdit    → navigate to /reports/:id/edit
  *  - onDelete  → handleDelete  (removes report)
  *  - onView    → navigate to /reports/:id (read-only detail page)
  *
- * Requirements: 2.3, 3.1, 4.3, 4.5, 4.6, 4.7, 5.1, 7.3, 7.4, 8.3, 10.1
+ * Requirements: 1.1, 2.3, 3.1, 4.1, 4.2, 4.3, 4.5, 4.6, 4.7, 5.1, 5.7, 6.1, 7.3, 7.4, 8.3, 10.1
  */
 
 import { useState, useCallback } from 'react';
@@ -26,8 +26,7 @@ import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import { useReports } from '../hooks/useReports';
 import { useAuth } from '../hooks/useAuth';
-import { ReportCard } from '../components/ReportCard';
-import { EmptyState } from '../components/EmptyState';
+import { ExpenseReportsTable } from '../components/ExpenseReportsTable';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { MissingAttachmentWarningDialog } from '../components/MissingAttachmentWarningDialog';
 import { listLines } from '../api/expenseLines';
@@ -203,24 +202,20 @@ export function DashboardPage() {
 
       <ErrorAlert message={error} />
 
-      {!isLoading && !error && reports.length === 0 && <EmptyState />}
-
-      {/* Requirements: 2.3, 3.1, 4.3, 5.1, 7.3, 7.4, 8.3, 10.1
-          Pass currentUser so ReportCard can render role-appropriate action buttons.
-          Each action handler updates local state optimistically via useReports. */}
-      {reports.map((report) => (
-        <ReportCard
-          key={report.id}
-          report={report}
-          currentUser={user ?? { id: 0, username: '', role: 'User' }}
-          onSubmit={handleSubmitWithCheck}
-          onAccept={handleAccept}
-          onReject={handleReject}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onView={handleView}
-        />
-      ))}
+      {/* Requirements: 1.1, 4.1, 4.2, 5.7, 6.1
+          ExpenseReportsTable replaces the card-based list with an MUI X DataGrid.
+          Action handlers and user context are passed as props. */}
+      <ExpenseReportsTable
+        reports={reports}
+        isLoading={isLoading}
+        currentUser={user ?? { id: 0, username: '', role: 'User' }}
+        onSubmit={handleSubmitWithCheck}
+        onAccept={handleAccept}
+        onReject={handleReject}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onView={handleView}
+      />
 
       {/* Missing attachment warning dialog — shown before submission */}
       <MissingAttachmentWarningDialog
