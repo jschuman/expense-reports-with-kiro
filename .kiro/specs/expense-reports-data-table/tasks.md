@@ -84,8 +84,8 @@ Replace the card-based expense reports list on the Dashboard page with an MUI X 
     - Test aria-labels include the report title
     - _Requirements: 5.2, 5.3, 5.4, 5.5, 7.4_
 
-- [ ] 6. Build the ExpenseReportsTable component
-  - [ ] 6.1 Create `ExpenseReportsTable` component in `frontend/src/components/ExpenseReportsTable.tsx`
+- [x] 6. Build the ExpenseReportsTable component
+  - [x] 6.1 Create `ExpenseReportsTable` component in `frontend/src/components/ExpenseReportsTable.tsx`
     - Accept `ExpenseReportsTableProps` (reports, isLoading, currentUser, action handlers)
     - Define `GridColDef[]` column configuration matching the design (Title, Amount, Status, Owner, Created, Reimbursable, Client, Admin Notes, Actions)
     - Use `getVisibleColumns()` to conditionally exclude Owner column for non-admins
@@ -123,7 +123,7 @@ Replace the card-based expense reports list on the Dashboard page with an MUI X 
     - Ensure the existing `ErrorAlert` component still renders above the table for API errors
     - _Requirements: 1.1, 4.1, 4.2, 5.7, 6.1_
 
-- [x] 9. Final checkpoint - Ensure all tests pass
+- [ ] 9. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
