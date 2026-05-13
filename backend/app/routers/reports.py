@@ -7,18 +7,20 @@ report_service and status_service.
 
 from typing import List
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.database import get_db
 from app.dependencies import get_current_admin, get_current_user
 from app.models.expense_report import ExpenseReport
+from app.models.status_audit_log import StatusAuditLog
 from app.models.user import User
 from app.schemas.expense_report import (
     ExpenseReportCreate,
     ExpenseReportResponse,
     ExpenseReportUpdate,
     RejectRequest,
+    StatusAuditLogEntry,
 )
 from app.services import report_service, status_service
 
@@ -207,3 +209,52 @@ def delete_report(
     Requirements: 2.2, 2.5, 4.2, 7.2, 8.2
     """
     report_service.delete_report(db, report_id, current_user)
+
+
+@router.get("/{report_id}/status-history", response_model=List[StatusAuditLogEntry])
+def get_status_history(
+    report_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> List[StatusAuditLogEntry]:
+    """Return the status change history for an expense report.
+
+    Returns all audit log entries for the given report, ordered by
+    changed_at from earliest to latest.
+
+    Authorization: the authenticated user must be the report owner or
+    have the Admin role.
+
+    Returns 200 with a JSON array of StatusAuditLogEntry on success.
+    Returns 401 when no valid session cookie is present.
+    Returns 404 when the report does not exist.
+    Returns 403 when the user is not the owner and not an Admin.
+
+    Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7
+    """
+    report = db.query(ExpenseReport).filter(ExpenseReport.id == report_id).first()
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # Reload user with role relationship in current session
+    user_with_role = (
+        db.query(User)
+        .options(joinedload(User.role))
+        .filter(User.id == current_user.id)
+        .one()
+    )
+
+    is_owner = report.owner_id == current_user.id
+    is_admin = user_with_role.role.name == "Admin"
+
+    if not is_owner and not is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    entries = (
+        db.query(StatusAuditLog)
+        .filter(StatusAuditLog.expense_report_id == report_id)
+        .order_by(StatusAuditLog.changed_at.asc())
+        .all()
+    )
+
+    return entries
