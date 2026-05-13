@@ -68,14 +68,14 @@ Replace the card-based expense reports list on the Dashboard page with an MUI X 
     - For Reject, call `onReject(reportId)` which will trigger the RejectDialog in the parent
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 7.4_
 
-- [ ] 5. Write unit tests for cell renderer components
-  - [ ] 5.1 Write unit tests for `StatusChip`
+- [x] 5. Write unit tests for cell renderer components
+  - [x] 5.1 Write unit tests for `StatusChip`
     - Test each status value maps to the correct chip color
     - Test unknown status values render with default color
     - Test the chip label displays the status text
     - _Requirements: 1.7_
 
-  - [ ] 5.2 Write unit tests for `ActionCell`
+  - [x] 5.2 Write unit tests for `ActionCell`
     - Test correct buttons render for owner with "In Progress" status (Edit, Delete, Submit)
     - Test correct buttons render for admin with "Submitted" status (View, Accept, Reject)
     - Test correct buttons render for owner (non-admin) with "Submitted" status (View only)
