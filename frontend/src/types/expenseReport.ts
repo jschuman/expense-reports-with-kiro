@@ -32,6 +32,7 @@ export interface ExpenseReportUpdate {
   description?: string;
   reimbursable_from_client?: boolean;
   client?: string;
+  admin_notes?: string;
 }
 
 /**

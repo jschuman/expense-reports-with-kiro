@@ -40,6 +40,27 @@ class ExpenseReportUpdate(BaseModel):
         return self
 
 
+class AdminExpenseReportUpdate(BaseModel):
+    """Request body for PUT /reports/{id} when caller is Admin. All fields optional."""
+
+    title: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    description: Optional[str] = Field(default=None)
+    reimbursable_from_client: Optional[bool] = Field(default=None)
+    client: Optional[str] = Field(default=None)
+    admin_notes: Optional[str] = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def validate_client(self) -> "AdminExpenseReportUpdate":
+        if self.reimbursable_from_client and not self.client:
+            raise ValueError("client is required when reimbursable_from_client is true")
+        if self.client is not None:
+            from app.constants import CLIENTS
+
+            if self.client not in CLIENTS:
+                raise ValueError(f"client must be one of: {CLIENTS}")
+        return self
+
+
 class StatusAuditLogEntry(BaseModel):
     """Response schema for a single audit log entry."""
 

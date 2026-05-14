@@ -15,7 +15,12 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.expense_line import ExpenseLine
 from app.models.expense_report import ExpenseReport
 from app.models.status_audit_log import StatusAuditLog
-from app.schemas.expense_report import ExpenseReportCreate, ExpenseReportUpdate
+from app.schemas.expense_report import (
+    AdminExpenseReportUpdate,
+    ExpenseReportCreate,
+    ExpenseReportUpdate,
+)
+
 
 
 def _compute_total(db: Session, report_id: int) -> float:
@@ -134,6 +139,33 @@ def update_report(
             status_code=409,
             detail=f"Cannot perform this action on a report with status '{report.status}'",
         )
+
+    # Apply only the fields that were explicitly provided (non-None)
+    update_data = data.model_dump(exclude_none=True)
+    for field, value in update_data.items():
+        setattr(report, field, value)
+
+    db.commit()
+    db.refresh(report)
+    return report
+
+
+def admin_update_report(
+    db: Session,
+    report_id: int,
+    data: AdminExpenseReportUpdate,
+) -> ExpenseReport:
+    """Update an expense report as an Admin (no status/ownership restrictions).
+
+    Applies only explicitly provided (non-None) fields.  Does NOT change the
+    report's status.  Validates field constraints via the Pydantic schema.
+    Returns 404 if report not found.
+
+    Requirements: 1.1, 1.3, 1.4, 1.6, 1.7, 6.2, 6.3, 6.4
+    """
+    report = db.get(ExpenseReport, report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
 
     # Apply only the fields that were explicitly provided (non-None)
     update_data = data.model_dump(exclude_none=True)

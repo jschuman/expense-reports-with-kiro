@@ -623,3 +623,205 @@ def test_compute_total_returns_zero_when_report_has_no_lines(db_session, user_a)
     total = report_service._compute_total(db_session, report.id)
 
     assert total == 0.0
+
+
+# ---------------------------------------------------------------------------
+# admin_update_report
+# ---------------------------------------------------------------------------
+
+
+def test_admin_update_report_success_in_progress(db_session, user_a):
+    """admin_update_report applies changes when report is 'In Progress'.
+
+    Requirements: 1.1, 1.4
+    """
+    from app.schemas.expense_report import AdminExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "In Progress")
+
+    data = AdminExpenseReportUpdate(title="Admin Updated")
+    updated = report_service.admin_update_report(db_session, report.id, data)
+
+    assert updated.title == "Admin Updated"
+    assert updated.status == "In Progress"
+
+
+def test_admin_update_report_success_submitted(db_session, user_a):
+    """admin_update_report applies changes when report is 'Submitted'.
+
+    Requirements: 1.1, 1.4
+    """
+    from app.schemas.expense_report import AdminExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "Submitted")
+
+    data = AdminExpenseReportUpdate(title="Admin Fixed")
+    updated = report_service.admin_update_report(db_session, report.id, data)
+
+    assert updated.title == "Admin Fixed"
+    assert updated.status == "Submitted"
+
+
+def test_admin_update_report_success_rejected(db_session, user_a):
+    """admin_update_report applies changes when report is 'Rejected'.
+
+    Requirements: 1.1, 1.4
+    """
+    from app.schemas.expense_report import AdminExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "Rejected")
+
+    data = AdminExpenseReportUpdate(title="Admin Corrected")
+    updated = report_service.admin_update_report(db_session, report.id, data)
+
+    assert updated.title == "Admin Corrected"
+    assert updated.status == "Rejected"
+
+
+def test_admin_update_report_success_scheduled_for_payment(db_session, user_a):
+    """admin_update_report applies changes when report is 'Scheduled for Payment'.
+
+    Requirements: 1.1, 1.4
+    """
+    from app.schemas.expense_report import AdminExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "Scheduled for Payment")
+
+    data = AdminExpenseReportUpdate(description="Updated by admin")
+    updated = report_service.admin_update_report(db_session, report.id, data)
+
+    assert updated.description == "Updated by admin"
+    assert updated.status == "Scheduled for Payment"
+
+
+def test_admin_update_report_does_not_change_status(db_session, user_a):
+    """admin_update_report never changes the report's status.
+
+    Requirements: 1.4
+    """
+    from app.schemas.expense_report import AdminExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "Submitted")
+    original_status = report.status
+
+    data = AdminExpenseReportUpdate(title="New Title", description="New Desc")
+    updated = report_service.admin_update_report(db_session, report.id, data)
+
+    assert updated.status == original_status
+
+
+def test_admin_update_report_partial_update_preserves_unprovided_fields(db_session, user_a):
+    """admin_update_report only applies provided fields; unprovided fields keep their values.
+
+    Requirements: 1.3, 6.4
+    """
+    from app.schemas.expense_report import AdminExpenseReportUpdate
+
+    report = ExpenseReport(
+        title="Original Title",
+        description="Original Description",
+        status="In Progress",
+        owner_id=user_a.id,
+        created_at=datetime.now(timezone.utc),
+        reimbursable_from_client=True,
+        client="Acme Corp",
+        admin_notes="Original notes",
+    )
+    db_session.add(report)
+    db_session.commit()
+    db_session.refresh(report)
+
+    # Only update title — all other fields should be preserved
+    data = AdminExpenseReportUpdate(title="Updated Title")
+    updated = report_service.admin_update_report(db_session, report.id, data)
+
+    assert updated.title == "Updated Title"
+    assert updated.description == "Original Description"
+    assert updated.reimbursable_from_client is True
+    assert updated.client == "Acme Corp"
+    assert updated.admin_notes == "Original notes"
+
+
+def test_admin_update_report_raises_404_for_nonexistent_report(db_session):
+    """admin_update_report raises 404 when the report does not exist.
+
+    Requirements: 1.7
+    """
+    from fastapi import HTTPException
+
+    from app.schemas.expense_report import AdminExpenseReportUpdate
+
+    data = AdminExpenseReportUpdate(title="Ghost")
+    with pytest.raises(HTTPException) as exc_info:
+        report_service.admin_update_report(db_session, 99999, data)
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Report not found"
+
+
+def test_admin_update_report_updates_admin_notes(db_session, user_a):
+    """admin_update_report persists admin_notes when provided.
+
+    Requirements: 6.2
+    """
+    from app.schemas.expense_report import AdminExpenseReportUpdate
+
+    report = _make_report(db_session, user_a, "Submitted")
+
+    data = AdminExpenseReportUpdate(admin_notes="Please fix the amounts")
+    updated = report_service.admin_update_report(db_session, report.id, data)
+
+    assert updated.admin_notes == "Please fix the amounts"
+
+
+def test_admin_update_report_clears_admin_notes_with_empty_string(db_session, user_a):
+    """admin_update_report stores empty string when admin_notes is explicitly set to ''.
+
+    Requirements: 6.3
+    """
+    from app.schemas.expense_report import AdminExpenseReportUpdate
+
+    report = ExpenseReport(
+        title="Report With Notes",
+        status="In Progress",
+        owner_id=user_a.id,
+        created_at=datetime.now(timezone.utc),
+        reimbursable_from_client=False,
+        admin_notes="Some existing notes",
+    )
+    db_session.add(report)
+    db_session.commit()
+    db_session.refresh(report)
+
+    data = AdminExpenseReportUpdate(admin_notes="")
+    updated = report_service.admin_update_report(db_session, report.id, data)
+
+    assert updated.admin_notes == ""
+
+
+def test_admin_update_report_admin_notes_only_without_other_fields(db_session, user_a):
+    """admin_update_report allows updating only admin_notes without modifying other fields.
+
+    Requirements: 6.4
+    """
+    from app.schemas.expense_report import AdminExpenseReportUpdate
+
+    report = ExpenseReport(
+        title="Keep This Title",
+        description="Keep This Description",
+        status="Submitted",
+        owner_id=user_a.id,
+        created_at=datetime.now(timezone.utc),
+        reimbursable_from_client=False,
+    )
+    db_session.add(report)
+    db_session.commit()
+    db_session.refresh(report)
+
+    data = AdminExpenseReportUpdate(admin_notes="Admin feedback only")
+    updated = report_service.admin_update_report(db_session, report.id, data)
+
+    assert updated.admin_notes == "Admin feedback only"
+    assert updated.title == "Keep This Title"
+    assert updated.description == "Keep This Description"
+    assert updated.reimbursable_from_client is False

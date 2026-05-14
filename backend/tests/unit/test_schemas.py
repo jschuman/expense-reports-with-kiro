@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from app.constants import CLIENTS
 from app.schemas.auth import LoginRequest, UserResponse
 from app.schemas.expense_report import (
+    AdminExpenseReportUpdate,
     ExpenseReportCreate,
     ExpenseReportResponse,
     ExpenseReportUpdate,
@@ -472,3 +473,123 @@ class TestStatusAuditLogEntry:
     def test_missing_changed_at_is_rejected(self):
         with pytest.raises(ValidationError):
             StatusAuditLogEntry(id=1, expense_report_id=1, status="Submitted")
+
+
+# ---------------------------------------------------------------------------
+# AdminExpenseReportUpdate — valid and invalid inputs
+# ---------------------------------------------------------------------------
+
+
+class TestAdminExpenseReportUpdateValid:
+    """Tests for AdminExpenseReportUpdate schema — valid inputs.
+
+    Requirements: 1.5, 6.1
+    """
+
+    def test_valid_payload_with_all_fields(self):
+        update = AdminExpenseReportUpdate(
+            title="Q1 Travel",
+            description="Client visit",
+            reimbursable_from_client=True,
+            client="Acme Corp",
+            admin_notes="Approved by finance",
+        )
+        assert update.title == "Q1 Travel"
+        assert update.description == "Client visit"
+        assert update.reimbursable_from_client is True
+        assert update.client == "Acme Corp"
+        assert update.admin_notes == "Approved by finance"
+
+    def test_partial_fields_title_only(self):
+        update = AdminExpenseReportUpdate(title="New Title")
+        assert update.title == "New Title"
+        assert update.description is None
+        assert update.reimbursable_from_client is None
+        assert update.client is None
+        assert update.admin_notes is None
+
+    def test_partial_fields_admin_notes_only(self):
+        update = AdminExpenseReportUpdate(admin_notes="Internal note")
+        assert update.admin_notes == "Internal note"
+        assert update.title is None
+
+    def test_all_none_is_accepted(self):
+        """An empty update (all fields None) is valid — nothing to change."""
+        update = AdminExpenseReportUpdate()
+        assert update.title is None
+        assert update.admin_notes is None
+
+    def test_admin_notes_at_max_length(self):
+        """admin_notes at exactly 1000 characters should be accepted."""
+        notes = "A" * 1000
+        update = AdminExpenseReportUpdate(admin_notes=notes)
+        assert len(update.admin_notes) == 1000
+
+    def test_title_at_max_length(self):
+        long_title = "B" * 255
+        update = AdminExpenseReportUpdate(title=long_title)
+        assert len(update.title) == 255
+
+    def test_reimbursable_true_with_valid_client(self):
+        for client_name in CLIENTS:
+            update = AdminExpenseReportUpdate(
+                reimbursable_from_client=True, client=client_name
+            )
+            assert update.client == client_name
+
+
+class TestAdminExpenseReportUpdateInvalid:
+    """Tests for AdminExpenseReportUpdate schema — invalid inputs.
+
+    Requirements: 1.5, 6.1
+    """
+
+    def test_empty_title_is_rejected(self):
+        """title must have min_length=1 when provided."""
+        with pytest.raises(ValidationError) as exc_info:
+            AdminExpenseReportUpdate(title="")
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("title",) for e in errors)
+
+    def test_title_exceeding_max_length_is_rejected(self):
+        with pytest.raises(ValidationError) as exc_info:
+            AdminExpenseReportUpdate(title="A" * 256)
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("title",) for e in errors)
+
+    def test_invalid_client_value_is_rejected(self):
+        """A client value not in CLIENTS must be rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            AdminExpenseReportUpdate(client="Unknown Corp")
+        errors = exc_info.value.errors()
+        assert any("client" in str(e["msg"]).lower() for e in errors)
+
+    def test_admin_notes_exceeding_max_length_is_rejected(self):
+        """admin_notes must not exceed 1000 characters."""
+        with pytest.raises(ValidationError) as exc_info:
+            AdminExpenseReportUpdate(admin_notes="X" * 1001)
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("admin_notes",) for e in errors)
+
+    def test_reimbursable_true_with_no_client_is_rejected(self):
+        """client is required when reimbursable_from_client is true."""
+        with pytest.raises(ValidationError) as exc_info:
+            AdminExpenseReportUpdate(reimbursable_from_client=True, client=None)
+        errors = exc_info.value.errors()
+        assert any("client" in str(e["msg"]).lower() for e in errors)
+
+    def test_reimbursable_true_with_missing_client_is_rejected(self):
+        """Omitting client entirely when reimbursable=True should also fail."""
+        with pytest.raises(ValidationError) as exc_info:
+            AdminExpenseReportUpdate(reimbursable_from_client=True)
+        errors = exc_info.value.errors()
+        assert any("client" in str(e["msg"]).lower() for e in errors)
+
+    def test_invalid_client_without_reimbursable_flag_is_rejected(self):
+        """Even when reimbursable=False, a non-CLIENTS value is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            AdminExpenseReportUpdate(
+                reimbursable_from_client=False, client="Fake Client"
+            )
+        errors = exc_info.value.errors()
+        assert any("client" in str(e["msg"]).lower() for e in errors)

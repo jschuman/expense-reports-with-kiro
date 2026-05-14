@@ -30,6 +30,7 @@ export const expenseReportUpdateSchema = z.object({
   total_amount: z.number({ invalid_type_error: 'Amount must be a number' }).positive('Amount must be positive').optional(),
   reimbursable_from_client: z.boolean().optional(),
   client: z.string().optional(),
+  admin_notes: z.string().max(1000, 'Admin notes must be 1000 characters or less').optional(),
 }).superRefine((data, ctx) => {
   if (data.reimbursable_from_client && !data.client) {
     ctx.addIssue({

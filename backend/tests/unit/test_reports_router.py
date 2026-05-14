@@ -553,3 +553,165 @@ def test_get_reports_role_branching_calls_correct_service_for_admin(admin_auth_c
     assert len(body) == 1
     assert body[0]["title"] == "Frank Report"
     assert body[0]["owner_username"] == "frank"
+
+
+# ---------------------------------------------------------------------------
+# PUT /reports/{id} — role-based branching (Admin delegates to admin_update_report)
+# ---------------------------------------------------------------------------
+
+
+def test_put_report_admin_delegates_to_admin_update_report(admin_auth_client):
+    """PUT /reports/{id} as Admin delegates to admin_update_report with full data including admin_notes.
+
+    Requirements: 5.4, 7.5
+    """
+    now = datetime.now(timezone.utc)
+    session = admin_auth_client._test_session_factory()
+
+    # Create a report owned by another user
+    other_user = User(username="bob", hashed_password=hash_password("pw"), role_id=1)
+    session.add(other_user)
+    session.flush()
+
+    report = ExpenseReport(
+        title="Original Title",
+        description="Original Desc",
+        status="Submitted",
+        owner_id=other_user.id,
+        created_at=now,
+        reimbursable_from_client=False,
+        admin_notes=None,
+    )
+    session.add(report)
+    session.commit()
+    session.refresh(report)
+    report_id = report.id
+    session.close()
+
+    payload = {
+        "title": "Updated Title",
+        "admin_notes": "Admin feedback here",
+    }
+
+    response = admin_auth_client.put(f"/reports/{report_id}", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    # Admin can update any report regardless of status and admin_notes is persisted
+    assert body["title"] == "Updated Title"
+    assert body["admin_notes"] == "Admin feedback here"
+    # Status should remain unchanged
+    assert body["status"] == "Submitted"
+
+
+def test_put_report_admin_can_update_report_in_any_status(admin_auth_client):
+    """PUT /reports/{id} as Admin succeeds for reports in non-editable statuses.
+
+    Requirements: 5.4
+    """
+    now = datetime.now(timezone.utc)
+    session = admin_auth_client._test_session_factory()
+
+    other_user = User(username="carol", hashed_password=hash_password("pw"), role_id=1)
+    session.add(other_user)
+    session.flush()
+
+    report = ExpenseReport(
+        title="Scheduled Report",
+        status="Scheduled for Payment",
+        owner_id=other_user.id,
+        created_at=now,
+        reimbursable_from_client=False,
+    )
+    session.add(report)
+    session.commit()
+    session.refresh(report)
+    report_id = report.id
+    session.close()
+
+    payload = {"title": "Corrected Title"}
+
+    response = admin_auth_client.put(f"/reports/{report_id}", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["title"] == "Corrected Title"
+    assert body["status"] == "Scheduled for Payment"
+
+
+# ---------------------------------------------------------------------------
+# PUT /reports/{id} — non-admin strips admin_notes
+# ---------------------------------------------------------------------------
+
+
+def test_put_report_non_admin_strips_admin_notes(auth_client):
+    """PUT /reports/{id} as non-admin strips admin_notes from payload and delegates to update_report.
+
+    Requirements: 5.4, 7.5
+    """
+    now = datetime.now(timezone.utc)
+    session = auth_client._test_session_factory()
+
+    # Create a report owned by the authenticated user with existing admin_notes
+    report = ExpenseReport(
+        title="My Report",
+        description="Desc",
+        status="In Progress",
+        owner_id=auth_client._seeded_user_id,
+        created_at=now,
+        reimbursable_from_client=False,
+        admin_notes="Existing admin note",
+    )
+    session.add(report)
+    session.commit()
+    session.refresh(report)
+    report_id = report.id
+    session.close()
+
+    # Non-admin sends admin_notes in the payload — it should be stripped
+    payload = {
+        "title": "Updated By User",
+        "admin_notes": "User trying to set admin notes",
+    }
+
+    response = auth_client.put(f"/reports/{report_id}", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    # Title is updated
+    assert body["title"] == "Updated By User"
+    # admin_notes should remain unchanged (existing value preserved, user's value discarded)
+    assert body["admin_notes"] == "Existing admin note"
+
+
+def test_put_report_non_admin_without_admin_notes_succeeds(auth_client):
+    """PUT /reports/{id} as non-admin without admin_notes in payload succeeds normally.
+
+    Requirements: 7.5
+    """
+    now = datetime.now(timezone.utc)
+    session = auth_client._test_session_factory()
+
+    report = ExpenseReport(
+        title="My Report",
+        status="In Progress",
+        owner_id=auth_client._seeded_user_id,
+        created_at=now,
+        reimbursable_from_client=False,
+        admin_notes="Some admin note",
+    )
+    session.add(report)
+    session.commit()
+    session.refresh(report)
+    report_id = report.id
+    session.close()
+
+    payload = {"title": "New Title"}
+
+    response = auth_client.put(f"/reports/{report_id}", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["title"] == "New Title"
+    # admin_notes preserved
+    assert body["admin_notes"] == "Some admin note"

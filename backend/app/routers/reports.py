@@ -16,6 +16,7 @@ from app.models.expense_report import ExpenseReport
 from app.models.status_audit_log import StatusAuditLog
 from app.models.user import User
 from app.schemas.expense_report import (
+    AdminExpenseReportUpdate,
     ExpenseReportCreate,
     ExpenseReportResponse,
     ExpenseReportUpdate,
@@ -167,25 +168,44 @@ def reject_report(
 @router.put("/{report_id}", response_model=ExpenseReportResponse)
 def update_report(
     report_id: int,
-    data: ExpenseReportUpdate,
+    data: AdminExpenseReportUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ExpenseReportResponse:
     """Update editable fields on an expense report.
 
-    Only the report owner may update, and only while the report is in an
-    editable state ('In Progress' or 'Rejected').
+    Admin users can update any report regardless of status (including admin_notes).
+    Non-admin users can only update reports they own in editable states
+    ('In Progress' or 'Rejected'), and admin_notes is silently discarded.
 
     Returns 200 with the updated ExpenseReportResponse on success.
     Returns 401 when no valid session cookie is present.
-    Returns 403 when the caller is not the report owner.
+    Returns 403 when the caller is not the report owner (non-admin).
     Returns 404 when the report does not exist.
-    Returns 409 when the report is in a read-only state.
+    Returns 409 when the report is in a read-only state (non-admin).
     Returns 422 when the request body fails Pydantic validation.
 
-    Requirements: 2.1, 2.4, 4.1, 7.1, 7.6
+    Requirements: 1.1, 5.4, 7.4, 7.5
     """
-    report = report_service.update_report(db, report_id, data, current_user)
+    # Reload user with role relationship to determine authorization
+    user_with_role = (
+        db.query(User)
+        .options(joinedload(User.role))
+        .filter(User.id == current_user.id)
+        .one()
+    )
+
+    if user_with_role.role.name == "Admin":
+        report = report_service.admin_update_report(db, report_id, data)
+    else:
+        # Strip admin_notes, delegate to existing update_report
+        user_data = ExpenseReportUpdate(
+            title=data.title,
+            description=data.description,
+            reimbursable_from_client=data.reimbursable_from_client,
+            client=data.client,
+        )
+        report = report_service.update_report(db, report_id, user_data, current_user)
     return _to_response(report, db)
 
 
