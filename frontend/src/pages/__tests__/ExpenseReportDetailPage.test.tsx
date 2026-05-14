@@ -29,6 +29,7 @@ vi.mock('../../hooks/useReports');
 vi.mock('../../hooks/useAuth');
 vi.mock('../../hooks/useExpenseLines');
 vi.mock('../../api/attachments');
+vi.mock('../../api/reports');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -43,11 +44,13 @@ import { useReports } from '../../hooks/useReports';
 import { useAuth } from '../../hooks/useAuth';
 import { useExpenseLines } from '../../hooks/useExpenseLines';
 import { getAttachmentMetadata } from '../../api/attachments';
+import { getStatusHistory } from '../../api/reports';
 
 const mockUseReports = vi.mocked(useReports);
 const mockUseAuth = vi.mocked(useAuth);
 const mockUseExpenseLines = vi.mocked(useExpenseLines);
 const mockGetMetadata = vi.mocked(getAttachmentMetadata);
+const mockGetStatusHistory = vi.mocked(getStatusHistory);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -154,6 +157,8 @@ describe('ExpenseReportDetailPage', () => {
     mockNavigate.mockReset();
     // Default: no attachments for any line
     mockGetMetadata.mockRejectedValue({ status: 404 });
+    // Default: no status history entries
+    mockGetStatusHistory.mockResolvedValue([]);
   });
 
   // -------------------------------------------------------------------------
@@ -420,5 +425,120 @@ describe('Back to Dashboard button', () => {
     await user.click(screen.getByRole('button', { name: /back to dashboard/i }));
 
     expect(mockNavigate).toHaveBeenCalledWith('/');
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Status History integration tests (Requirements 2.1, 2.2, 4.1, 4.5)
+// ---------------------------------------------------------------------------
+
+describe('ExpenseReportDetailPage — Status History', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockGetMetadata.mockRejectedValue({ status: 404 });
+    mockGetStatusHistory.mockResolvedValue([]);
+  });
+
+  it('renders the Status History table when API returns 2+ entries', async () => {
+    const entries = [
+      { id: 1, expense_report_id: 10, status: 'In Progress', changed_at: '2026-04-01T10:00:00Z' },
+      { id: 2, expense_report_id: 10, status: 'Submitted', changed_at: '2026-04-05T14:00:00Z' },
+    ];
+    mockGetStatusHistory.mockResolvedValue(entries);
+    setupReportsMock(makeReport());
+    setupLinesMock(sampleLines);
+    setupAuthMock();
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Status History')).toBeInTheDocument();
+    });
+    // The StatusHistoryTable renders a table with "Status" and "Date" column headers
+    // (these are distinct from the expense lines table headers)
+    const tables = screen.getAllByRole('table');
+    expect(tables.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('does not render the Status History table when API returns 0 entries', async () => {
+    mockGetStatusHistory.mockResolvedValue([]);
+    setupReportsMock(makeReport());
+    setupLinesMock(sampleLines);
+    setupAuthMock();
+
+    renderPage();
+
+    // Wait for the page to settle (report renders)
+    await waitFor(() => {
+      expect(screen.getByText('Q1 Travel')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Status History')).not.toBeInTheDocument();
+  });
+
+  it('does not render the Status History table when API returns 1 entry', async () => {
+    const entries = [
+      { id: 1, expense_report_id: 10, status: 'In Progress', changed_at: '2026-04-01T10:00:00Z' },
+    ];
+    mockGetStatusHistory.mockResolvedValue(entries);
+    setupReportsMock(makeReport());
+    setupLinesMock(sampleLines);
+    setupAuthMock();
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Q1 Travel')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Status History')).not.toBeInTheDocument();
+  });
+
+  it('renders "Status History" heading when the table is shown', async () => {
+    const entries = [
+      { id: 1, expense_report_id: 10, status: 'In Progress', changed_at: '2026-04-01T10:00:00Z' },
+      { id: 2, expense_report_id: 10, status: 'Submitted', changed_at: '2026-04-05T14:00:00Z' },
+      { id: 3, expense_report_id: 10, status: 'Scheduled for Payment', changed_at: '2026-04-10T09:00:00Z' },
+    ];
+    mockGetStatusHistory.mockResolvedValue(entries);
+    setupReportsMock(makeReport());
+    setupLinesMock(sampleLines);
+    setupAuthMock();
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Status History')).toBeInTheDocument();
+    });
+
+    // Verify it's a heading element (h6)
+    const heading = screen.getByText('Status History');
+    expect(heading.tagName).toBe('H6');
+  });
+
+  it('renders the Status History table after the report detail content', async () => {
+    const entries = [
+      { id: 1, expense_report_id: 10, status: 'In Progress', changed_at: '2026-04-01T10:00:00Z' },
+      { id: 2, expense_report_id: 10, status: 'Submitted', changed_at: '2026-04-05T14:00:00Z' },
+    ];
+    mockGetStatusHistory.mockResolvedValue(entries);
+    setupReportsMock(makeReport());
+    setupLinesMock(sampleLines);
+    setupAuthMock();
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Status History')).toBeInTheDocument();
+    });
+
+    // The Status History heading should appear after the Expense Lines heading in the DOM
+    const expenseLinesHeading = screen.getByText('Expense Lines');
+    const statusHistoryHeading = screen.getByText('Status History');
+
+    // compareDocumentPosition: bit 4 (DOCUMENT_POSITION_FOLLOWING) means the node comes after
+    const position = expenseLinesHeading.compareDocumentPosition(statusHistoryHeading);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

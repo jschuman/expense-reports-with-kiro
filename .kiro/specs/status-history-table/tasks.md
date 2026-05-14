@@ -106,18 +106,18 @@ This plan implements a read-only status history table on expense report detail p
     - Minimum 100 iterations
     - _Requirements: 3.4, 3.5, 3.6_
 
-- [~] 4. Checkpoint - Component verification
+- [x] 4. Checkpoint - Component verification
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Integrate StatusHistoryTable into detail pages
-  - [~] 5.1 Integrate into `ExpenseReportDetailPage` in `frontend/src/pages/ExpenseReportDetailPage.tsx`
+- [x] 5. Integrate StatusHistoryTable into detail pages
+  - [x] 5.1 Integrate into `ExpenseReportDetailPage` in `frontend/src/pages/ExpenseReportDetailPage.tsx`
     - Call `getStatusHistory(reportId)` on mount alongside existing data fetches
     - Store result in local state
     - Render `<Typography variant="h6">Status History</Typography>` heading and `<StatusHistoryTable entries={entries} />` at the bottom of the page when `entries.length >= 2`
     - Handle fetch errors silently (do not block page rendering)
     - _Requirements: 2.1, 2.2, 4.1, 4.2, 4.5_
 
-  - [~] 5.2 Integrate into `EditReportPage` in `frontend/src/pages/EditReportPage.tsx`
+  - [x] 5.2 Integrate into `EditReportPage` in `frontend/src/pages/EditReportPage.tsx`
     - Call `getStatusHistory(reportId)` on mount alongside existing data fetches
     - Store result in local state
     - Render heading and `<StatusHistoryTable entries={entries} />` **outside** the `<form>` element, at the bottom of the page, when `entries.length >= 2`
@@ -125,14 +125,14 @@ This plan implements a read-only status history table on expense report detail p
     - Handle fetch errors silently
     - _Requirements: 2.1, 2.2, 2.3, 4.1, 4.2, 4.3, 4.4, 4.5_
 
-  - [~] 5.3 Write unit tests for status history integration in `ExpenseReportDetailPage` in `frontend/src/pages/__tests__/ExpenseReportDetailPage.test.tsx`
+  - [x] 5.3 Write unit tests for status history integration in `ExpenseReportDetailPage` in `frontend/src/pages/__tests__/ExpenseReportDetailPage.test.tsx`
     - Test table renders when API returns 2+ entries
     - Test table does not render when API returns 0 or 1 entries
     - Test "Status History" heading is present when table is shown
     - Test table appears after report detail content
     - _Requirements: 2.1, 2.2, 4.1, 4.5_
 
-  - [~] 5.4 Write unit tests for status history integration in `EditReportPage` in `frontend/src/pages/__tests__/EditReportPage.test.tsx`
+  - [x] 5.4 Write unit tests for status history integration in `EditReportPage` in `frontend/src/pages/__tests__/EditReportPage.test.tsx`
     - Test table renders when API returns 2+ entries
     - Test table does not render when API returns 0 or 1 entries
     - Test table is rendered outside the form element
@@ -140,7 +140,7 @@ This plan implements a read-only status history table on expense report detail p
     - Test re-fetch after status transition action
     - _Requirements: 2.1, 2.2, 2.3, 4.2, 4.3, 4.4_
 
-- [~] 6. Final checkpoint - Full integration verification
+- [x] 6. Final checkpoint - Full integration verification
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

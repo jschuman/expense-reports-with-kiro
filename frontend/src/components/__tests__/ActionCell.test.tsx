@@ -227,7 +227,10 @@ describe('ActionCell', () => {
         currentUser: makeUser({ id: 1, role: 'User' }),
       });
 
+      // Click the delete icon button to open confirmation dialog
       await user.click(screen.getByRole('button', { name: /^Delete/i }));
+      // Confirm deletion in the dialog
+      await user.click(screen.getByRole('button', { name: 'Delete' }));
       expect(props.onDelete).toHaveBeenCalledOnce();
       expect(props.onDelete).toHaveBeenCalledWith(99);
     });

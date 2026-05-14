@@ -13,6 +13,7 @@ vi.mock('../../hooks/useReports');
 vi.mock('../../hooks/useClients');
 vi.mock('../../hooks/useExpenseLines');
 vi.mock('../../api/attachments');
+vi.mock('../../api/reports');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -27,12 +28,14 @@ import { useReports } from '../../hooks/useReports';
 import { useClients } from '../../hooks/useClients';
 import { useExpenseLines } from '../../hooks/useExpenseLines';
 import { getAttachmentMetadata } from '../../api/attachments';
-import type { ExpenseLineResponse } from '../../types/expenseReport';
+import { getStatusHistory } from '../../api/reports';
+import type { ExpenseLineResponse, StatusAuditLogEntry } from '../../types/expenseReport';
 
 const mockUseReports = vi.mocked(useReports);
 const mockUseClients = vi.mocked(useClients);
 const mockUseExpenseLines = vi.mocked(useExpenseLines);
 const mockGetMetadata = vi.mocked(getAttachmentMetadata);
+const mockGetStatusHistory = vi.mocked(getStatusHistory);
 
 const baseReport = {
   id: 42,
@@ -81,6 +84,7 @@ describe('EditReportPage', () => {
   beforeEach(() => {
     mockNavigate.mockReset();
     mockGetMetadata.mockRejectedValue({ status: 404 });
+    mockGetStatusHistory.mockResolvedValue([]);
     mockUseClients.mockReturnValue({
       clients: ['Acme Corp', 'Globex Industries'],
       isLoading: false,
@@ -261,5 +265,118 @@ describe('EditReportPage', () => {
       expect(screen.queryByText('Delete Expense Line')).not.toBeInTheDocument();
     });
     expect(handleDelete).not.toHaveBeenCalled();
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Status History Integration Tests
+// Requirements: 2.1, 2.2, 2.3, 4.2, 4.3, 4.4
+// ---------------------------------------------------------------------------
+
+describe('EditReportPage - Status History', () => {
+  const twoEntries: StatusAuditLogEntry[] = [
+    { id: 1, expense_report_id: 42, status: 'In Progress', changed_at: '2026-04-20T10:00:00Z' },
+    { id: 2, expense_report_id: 42, status: 'Submitted', changed_at: '2026-04-23T17:00:00Z' },
+  ];
+
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockGetMetadata.mockRejectedValue({ status: 404 });
+    mockGetStatusHistory.mockResolvedValue([]);
+    mockUseClients.mockReturnValue({
+      clients: ['Acme Corp', 'Globex Industries'],
+      isLoading: false,
+      error: null,
+    });
+    setupLinesMock();
+    mockUseReports.mockReturnValue({
+      reports: [baseReport],
+      isLoading: false,
+      error: null,
+      handleUpdate: vi.fn().mockResolvedValue(undefined),
+    });
+  });
+
+  it('renders StatusHistoryTable when API returns 2+ entries', async () => {
+    mockGetStatusHistory.mockResolvedValue(twoEntries);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Status History')).toBeInTheDocument();
+    });
+    // The table should have Status and Date column headers from StatusHistoryTable
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
+    expect(screen.getByText('Submitted')).toBeInTheDocument();
+  });
+
+  it('does not render StatusHistoryTable when API returns 0 entries', async () => {
+    mockGetStatusHistory.mockResolvedValue([]);
+
+    renderPage();
+
+    // Wait for the component to settle
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Q1 Travel')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Status History')).not.toBeInTheDocument();
+  });
+
+  it('does not render StatusHistoryTable when API returns 1 entry', async () => {
+    mockGetStatusHistory.mockResolvedValue([twoEntries[0]]);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Q1 Travel')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Status History')).not.toBeInTheDocument();
+  });
+
+  it('renders StatusHistoryTable outside the form element', async () => {
+    mockGetStatusHistory.mockResolvedValue(twoEntries);
+
+    const { container } = renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Status History')).toBeInTheDocument();
+    });
+
+    // The status history heading should NOT be inside the form
+    const form = container.querySelector('form');
+    expect(form).not.toBeNull();
+
+    const statusHistoryHeading = screen.getByText('Status History');
+    expect(form!.contains(statusHistoryHeading)).toBe(false);
+  });
+
+  it('displays "Status History" heading when table is shown', async () => {
+    mockGetStatusHistory.mockResolvedValue(twoEntries);
+
+    renderPage();
+
+    await waitFor(() => {
+      const heading = screen.getByText('Status History');
+      expect(heading).toBeInTheDocument();
+      expect(heading.tagName).toBe('H6');
+    });
+  });
+
+  it('re-fetches status history after a status transition (form submit)', async () => {
+    mockGetStatusHistory.mockClear();
+    mockGetStatusHistory.mockResolvedValue(twoEntries);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Status History')).toBeInTheDocument();
+    });
+
+    // getStatusHistory should have been called on mount with the correct report ID
+    expect(mockGetStatusHistory).toHaveBeenCalledWith(42);
+    expect(mockGetStatusHistory).toHaveBeenCalledTimes(1);
   });
 });

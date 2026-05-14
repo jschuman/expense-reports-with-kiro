@@ -49,10 +49,13 @@ import { useReports } from '../hooks/useReports';
 import { useClients } from '../hooks/useClients';
 import { useExpenseLines } from '../hooks/useExpenseLines';
 import { ErrorAlert } from '../components/ErrorAlert';
+import { StatusHistoryTable } from '../components/StatusHistoryTable';
 import { expenseReportUpdateSchema } from '../types/schemas';
 import { formatIncurredDate } from '../utils/formatDate';
 import { getAttachmentMetadata, downloadAttachment } from '../api/attachments';
+import { getStatusHistory } from '../api/reports';
 import type { AttachmentMetadata } from '../types/attachments';
+import type { StatusAuditLogEntry } from '../types/expenseReport';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -102,6 +105,19 @@ export function EditReportPage() {
   const [deleteLineError, setDeleteLineError] = useState<string | null>(null);
   const [attachmentMap, setAttachmentMap] = useState<Record<number, AttachmentMetadata | null>>({});
 
+  // Status history state
+  const [statusHistory, setStatusHistory] = useState<StatusAuditLogEntry[]>([]);
+
+  const fetchStatusHistory = useCallback(async () => {
+    if (!reportIdNum) return;
+    try {
+      const entries = await getStatusHistory(reportIdNum);
+      setStatusHistory(entries);
+    } catch {
+      // Fail silently — status history is supplementary info
+    }
+  }, [reportIdNum]);
+
   const fetchAttachments = useCallback(async () => {
     if (lines.length === 0) return;
     const results = await Promise.allSettled(
@@ -118,6 +134,10 @@ export function EditReportPage() {
   useEffect(() => {
     void fetchAttachments();
   }, [fetchAttachments]);
+
+  useEffect(() => {
+    void fetchStatusHistory();
+  }, [fetchStatusHistory]);
 
   // Populate fields once the report is available
   useEffect(() => {
@@ -403,6 +423,14 @@ export function EditReportPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Status History section */}
+      {statusHistory.length >= 2 && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6">Status History</Typography>
+          <StatusHistoryTable entries={statusHistory} />
+        </Box>
+      )}
     </Container>
   );
 }

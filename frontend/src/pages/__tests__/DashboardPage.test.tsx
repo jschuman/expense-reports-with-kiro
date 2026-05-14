@@ -710,7 +710,10 @@ describe('Delete action wiring', () => {
     });
     renderDashboard();
 
+    // Click the delete icon button to open confirmation dialog
     await userEvent.click(screen.getByRole('button', { name: /delete travel expenses/i }));
+    // Confirm deletion in the dialog
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     expect(handleDelete).toHaveBeenCalledOnce();
     expect(handleDelete).toHaveBeenCalledWith(99);

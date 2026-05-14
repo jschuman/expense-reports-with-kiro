@@ -40,9 +40,12 @@ import { useAuth } from '../hooks/useAuth';
 import { useExpenseLines } from '../hooks/useExpenseLines';
 import { useReports } from '../hooks/useReports';
 import { ErrorAlert } from '../components/ErrorAlert';
+import { StatusHistoryTable } from '../components/StatusHistoryTable';
 import { formatIncurredDate } from '../utils/formatDate';
 import { getAttachmentMetadata, downloadAttachment } from '../api/attachments';
+import { getStatusHistory } from '../api/reports';
 import type { AttachmentMetadata } from '../types/attachments';
+import type { StatusAuditLogEntry } from '../types/expenseReport';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -76,6 +79,7 @@ export function ExpenseReportDetailPage() {
   const [deleteLineId, setDeleteLineId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [attachmentMap, setAttachmentMap] = useState<Record<number, AttachmentMetadata | null>>({});
+  const [statusHistory, setStatusHistory] = useState<StatusAuditLogEntry[]>([]);
 
   const report = reports.find((r) => r.id === reportIdNum);
 
@@ -101,6 +105,15 @@ export function ExpenseReportDetailPage() {
   useEffect(() => {
     void fetchAttachments();
   }, [fetchAttachments]);
+
+  useEffect(() => {
+    if (!reportIdNum) return;
+    getStatusHistory(reportIdNum)
+      .then(setStatusHistory)
+      .catch(() => {
+        // Fail silently — status history is supplementary info
+      });
+  }, [reportIdNum]);
 
   async function confirmDelete() {
     if (deleteLineId === null) return;
@@ -279,6 +292,14 @@ export function ExpenseReportDetailPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Status History section */}
+      {statusHistory.length >= 2 && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6">Status History</Typography>
+          <StatusHistoryTable entries={statusHistory} />
+        </Box>
+      )}
     </Container>
   );
 }
