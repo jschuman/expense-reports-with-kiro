@@ -114,8 +114,8 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - **Property 6: Regular user dashboard shows edit action only for owned editable reports**
     - **Validates: Requirements 2.3**
 
-- [ ] 5. Frontend Edit Screen updates
-  - [ ] 5.1 Update `EditReportPage` in `frontend/src/pages/EditReportPage.tsx` for admin notes
+- [x] 5. Frontend Edit Screen updates
+  - [x] 5.1 Update `EditReportPage` in `frontend/src/pages/EditReportPage.tsx` for admin notes
     - Add `adminNotes` state field, pre-populated from `report.admin_notes`
     - If user is Admin: render editable `<TextField multiline>` with 1000 char max and character count
     - If user is regular User: render read-only, visually distinct display of admin notes (non-interactive)
@@ -124,7 +124,7 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Include `admin_notes` in update payload when user is Admin
     - _Requirements: 3.1, 3.2, 5.1, 5.2, 5.3, 5.5, 6.1, 6.2, 6.3_
 
-  - [ ] 5.2 Ensure Edit Screen validation and submission behavior
+  - [x] 5.2 Ensure Edit Screen validation and submission behavior
     - Client-side validation: title required (1-255 chars), client required when reimbursable
     - Admin notes max 1000 chars validation for admin users
     - Disable all fields and submit button during submission
@@ -132,7 +132,7 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Display API errors (403, 404, 409) as ErrorAlert banner
     - _Requirements: 3.3, 3.4, 3.5, 3.6, 3.7_
 
-  - [ ] 5.3 Write component tests for `EditReportPage` admin notes in `frontend/src/pages/__tests__/EditReportPage.test.tsx`
+  - [x] 5.3 Write component tests for `EditReportPage` admin notes in `frontend/src/pages/__tests__/EditReportPage.test.tsx`
     - Test admin sees editable admin_notes TextField
     - Test regular user sees read-only admin_notes display
     - Test admin notes placeholder when empty
@@ -140,8 +140,8 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Test admin_notes included in payload for admin, excluded for regular user
     - _Requirements: 3.1, 3.7, 5.1, 5.2, 6.1_
 
-- [ ] 6. Frontend View Screen updates
-  - [ ] 6.1 Update `ExpenseReportDetailPage` in `frontend/src/pages/ExpenseReportDetailPage.tsx`
+- [x] 6. Frontend View Screen updates
+  - [x] 6.1 Update `ExpenseReportDetailPage` in `frontend/src/pages/ExpenseReportDetailPage.tsx`
     - Add "Admin Notes" section with visible label
     - Display content preserving line breaks (`whiteSpace: 'pre-wrap'`)
     - Show placeholder "No admin notes have been added." when empty
@@ -149,7 +149,7 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Read-only for all users (both Admin and regular)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-  - [ ] 6.2 Write component tests for admin notes on View Screen in `frontend/src/pages/__tests__/ExpenseReportDetailPage.admin.test.tsx`
+  - [x] 6.2 Write component tests for admin notes on View Screen in `frontend/src/pages/__tests__/ExpenseReportDetailPage.admin.test.tsx`
     - Test "Admin Notes" label is displayed
     - Test content renders with line breaks preserved
     - Test placeholder shown when admin_notes is null/empty
@@ -157,7 +157,7 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Test read-only for both admin and regular users
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 7. Final checkpoint - Ensure all tests pass
+- [x] 7. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

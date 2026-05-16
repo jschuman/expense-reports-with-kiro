@@ -293,6 +293,30 @@ export function ExpenseReportDetailPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Admin Notes section */}
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h6">Admin Notes</Typography>
+        {report.admin_notes ? (
+          <Box
+            sx={{
+              whiteSpace: 'pre-wrap',
+              ...(report.admin_notes.length > 500 && {
+                maxHeight: 200,
+                overflowY: 'auto',
+              }),
+            }}
+          >
+            <Typography variant="body1" component="span" sx={{ whiteSpace: 'inherit' }}>
+              {report.admin_notes}
+            </Typography>
+          </Box>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            No admin notes have been added.
+          </Typography>
+        )}
+      </Box>
+
       {/* Status History section */}
       {statusHistory.length >= 2 && (
         <Box sx={{ mt: 4 }}>

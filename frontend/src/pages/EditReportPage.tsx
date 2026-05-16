@@ -45,6 +45,7 @@ import Typography from '@mui/material/Typography';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import { useAuth } from '../hooks/useAuth';
 import { useReports } from '../hooks/useReports';
 import { useClients } from '../hooks/useClients';
 import { useExpenseLines } from '../hooks/useExpenseLines';
@@ -54,6 +55,7 @@ import { expenseReportUpdateSchema } from '../types/schemas';
 import { formatIncurredDate } from '../utils/formatDate';
 import { getAttachmentMetadata, downloadAttachment } from '../api/attachments';
 import { getStatusHistory } from '../api/reports';
+import { ApiError } from '../api/client';
 import type { AttachmentMetadata } from '../types/attachments';
 import type { StatusAuditLogEntry } from '../types/expenseReport';
 
@@ -69,6 +71,7 @@ interface FieldErrors {
   title?: string;
   description?: string;
   client?: string;
+  admin_notes?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -79,7 +82,9 @@ export function EditReportPage() {
   const { reportId } = useParams<{ reportId: string }>();
   const { reports, handleUpdate } = useReports();
   const { clients, isLoading: clientsLoading } = useClients();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const isAdmin = user?.role === 'Admin';
 
   const reportIdNum = Number(reportId);
   const report = reports.find((r) => r.id === reportIdNum);
@@ -96,6 +101,7 @@ export function EditReportPage() {
   const [description, setDescription] = useState('');
   const [reimbursableFromClient, setReimbursableFromClient] = useState(false);
   const [client, setClient] = useState('');
+  const [adminNotes, setAdminNotes] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -146,6 +152,7 @@ export function EditReportPage() {
       setDescription(report.description ?? '');
       setReimbursableFromClient(report.reimbursable_from_client);
       setClient(report.client ?? '');
+      setAdminNotes(report.admin_notes ?? '');
     }
   }, [report]);
 
@@ -166,10 +173,11 @@ export function EditReportPage() {
     setApiError(null);
 
     const rawData = {
-      title: title || undefined,
+      title: title,
       description: description || undefined,
       reimbursable_from_client: reimbursableFromClient,
       client: reimbursableFromClient && client ? client : undefined,
+      ...(isAdmin ? { admin_notes: adminNotes } : {}),
     };
 
     const result = expenseReportUpdateSchema.safeParse(rawData);
@@ -193,8 +201,36 @@ export function EditReportPage() {
       await handleUpdate(reportIdNum, result.data);
       navigate('/');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update report';
-      setApiError(message);
+      if (err instanceof ApiError && err.status === 422) {
+        // Parse server-side validation errors and display adjacent to fields
+        try {
+          const detail = JSON.parse(err.message);
+          if (Array.isArray(detail)) {
+            const fieldErrors: FieldErrors = {};
+            for (const issue of detail) {
+              const loc = issue.loc;
+              if (Array.isArray(loc) && loc.length > 1) {
+                const field = loc[loc.length - 1] as keyof FieldErrors;
+                if (!fieldErrors[field]) {
+                  fieldErrors[field] = issue.msg;
+                }
+              }
+            }
+            if (Object.keys(fieldErrors).length > 0) {
+              setErrors(fieldErrors);
+            } else {
+              setApiError(err.message);
+            }
+          } else {
+            setApiError(err.message);
+          }
+        } catch {
+          setApiError(err.message);
+        }
+      } else {
+        const message = err instanceof Error ? err.message : 'Failed to update report';
+        setApiError(message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -295,6 +331,47 @@ export function EditReportPage() {
             </Select>
             <FormHelperText>{errors.client ?? ' '}</FormHelperText>
           </FormControl>
+        )}
+
+        {/* Admin Notes Section */}
+        {isAdmin ? (
+          <TextField
+            id="admin_notes"
+            label="Admin Notes"
+            fullWidth
+            margin="normal"
+            multiline
+            minRows={3}
+            value={adminNotes}
+            onChange={(e) => setAdminNotes(e.target.value)}
+            disabled={isSubmitting}
+            inputProps={{ maxLength: 1000 }}
+            error={Boolean(errors.admin_notes)}
+            helperText={errors.admin_notes ?? `${adminNotes.length}/1000`}
+          />
+        ) : (
+          <Box sx={{ mt: 2, mb: 1 }}>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              Admin Notes
+            </Typography>
+            {adminNotes ? (
+              <Typography
+                variant="body2"
+                sx={{
+                  whiteSpace: 'pre-wrap',
+                  backgroundColor: 'grey.100',
+                  p: 2,
+                  borderRadius: 1,
+                }}
+              >
+                {adminNotes}
+              </Typography>
+            ) : (
+              <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                No admin notes have been added.
+              </Typography>
+            )}
+          </Box>
         )}
         <Box display="flex" gap={2} mt={2}>
           <Button

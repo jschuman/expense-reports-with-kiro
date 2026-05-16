@@ -12,6 +12,7 @@ import { EditReportPage } from '../EditReportPage';
 vi.mock('../../hooks/useReports');
 vi.mock('../../hooks/useClients');
 vi.mock('../../hooks/useExpenseLines');
+vi.mock('../../hooks/useAuth');
 vi.mock('../../api/attachments');
 vi.mock('../../api/reports');
 
@@ -27,6 +28,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 import { useReports } from '../../hooks/useReports';
 import { useClients } from '../../hooks/useClients';
 import { useExpenseLines } from '../../hooks/useExpenseLines';
+import { useAuth } from '../../hooks/useAuth';
 import { getAttachmentMetadata } from '../../api/attachments';
 import { getStatusHistory } from '../../api/reports';
 import type { ExpenseLineResponse, StatusAuditLogEntry } from '../../types/expenseReport';
@@ -34,6 +36,7 @@ import type { ExpenseLineResponse, StatusAuditLogEntry } from '../../types/expen
 const mockUseReports = vi.mocked(useReports);
 const mockUseClients = vi.mocked(useClients);
 const mockUseExpenseLines = vi.mocked(useExpenseLines);
+const mockUseAuth = vi.mocked(useAuth);
 const mockGetMetadata = vi.mocked(getAttachmentMetadata);
 const mockGetStatusHistory = vi.mocked(getStatusHistory);
 
@@ -89,6 +92,13 @@ describe('EditReportPage', () => {
       clients: ['Acme Corp', 'Globex Industries'],
       isLoading: false,
       error: null,
+    });
+    mockUseAuth.mockReturnValue({
+      user: { id: 1, username: 'alice', role: 'User' },
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
     });
     setupLinesMock(); // default: no lines
   });
@@ -288,6 +298,13 @@ describe('EditReportPage - Status History', () => {
       clients: ['Acme Corp', 'Globex Industries'],
       isLoading: false,
       error: null,
+    });
+    mockUseAuth.mockReturnValue({
+      user: { id: 1, username: 'alice', role: 'User' },
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
     });
     setupLinesMock();
     mockUseReports.mockReturnValue({

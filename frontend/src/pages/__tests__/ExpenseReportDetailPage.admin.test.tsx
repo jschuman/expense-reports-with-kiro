@@ -1,13 +1,21 @@
 /**
- * Integration tests for ExpenseReportDetailPage — attachment download icon.
+ * Integration tests for ExpenseReportDetailPage — attachment download icon
+ * and admin notes display on View Screen.
  *
  * Tests that the paperclip download icon appears in the description column
  * when a line has an attachment, triggers a download on click, and is absent
  * when no attachment exists — for both admin and regular users.
  *
+ * Also tests the Admin Notes section on the View Screen:
+ * - "Admin Notes" label is displayed
+ * - Content renders with line breaks preserved
+ * - Placeholder shown when admin_notes is null/empty
+ * - Scrollable container for content > 500 characters
+ * - Read-only for both admin and regular users
+ *
  * API functions are mocked so no real HTTP calls are made.
  *
- * Requirements: 13.1, 13.2, 13.3, 13.5, 13.6
+ * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 13.1, 13.2, 13.3, 13.5, 13.6
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -26,6 +34,7 @@ vi.mock('../../hooks/useReports');
 vi.mock('../../hooks/useAuth');
 vi.mock('../../hooks/useExpenseLines');
 vi.mock('../../api/attachments');
+vi.mock('../../api/reports');
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -37,12 +46,14 @@ import { useReports } from '../../hooks/useReports';
 import { useAuth } from '../../hooks/useAuth';
 import { useExpenseLines } from '../../hooks/useExpenseLines';
 import { getAttachmentMetadata, downloadAttachment } from '../../api/attachments';
+import { getStatusHistory } from '../../api/reports';
 
 const mockUseReports = vi.mocked(useReports);
 const mockUseAuth = vi.mocked(useAuth);
 const mockUseExpenseLines = vi.mocked(useExpenseLines);
 const mockGetMetadata = vi.mocked(getAttachmentMetadata);
 const mockDownload = vi.mocked(downloadAttachment);
+const mockGetStatusHistory = vi.mocked(getStatusHistory);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -148,6 +159,7 @@ describe('Attachment download icon in lines table (Req 13.1, 13.2, 13.3, 13.5, 1
     mockNavigate.mockReset();
     mockGetMetadata.mockReset();
     mockDownload.mockReset();
+    mockGetStatusHistory.mockResolvedValue([]);
   });
 
   // -------------------------------------------------------------------------
@@ -279,5 +291,158 @@ describe('Attachment download icon in lines table (Req 13.1, 13.2, 13.3, 13.5, 1
 
     await new Promise((r) => setTimeout(r, 50));
     expect(mockGetMetadata).not.toHaveBeenCalled();
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Admin Notes on View Screen (Requirements 4.1, 4.2, 4.3, 4.4, 4.5)
+// ---------------------------------------------------------------------------
+
+describe('Admin Notes on View Screen', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockGetMetadata.mockRejectedValue({ status: 404 });
+    mockDownload.mockReset();
+    mockGetStatusHistory.mockResolvedValue([]);
+  });
+
+  // -------------------------------------------------------------------------
+  // Req 4.1: "Admin Notes" label is displayed
+  // -------------------------------------------------------------------------
+
+  it('displays the "Admin Notes" label', () => {
+    setupReportsMock({ ...REPORT, admin_notes: 'Some notes' });
+    setupLinesMock([]);
+    setupAuthMock(OWNER_USER);
+
+    renderPage();
+
+    expect(screen.getByText('Admin Notes')).toBeInTheDocument();
+  });
+
+  it('displays the "Admin Notes" label even when admin_notes is null', () => {
+    setupReportsMock({ ...REPORT, admin_notes: null });
+    setupLinesMock([]);
+    setupAuthMock(OWNER_USER);
+
+    renderPage();
+
+    expect(screen.getByText('Admin Notes')).toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // Req 4.1: Content renders with line breaks preserved
+  // -------------------------------------------------------------------------
+
+  it('renders admin notes content with line breaks preserved (whiteSpace: pre-wrap)', () => {
+    const notesWithLineBreaks = 'Line one\nLine two\nLine three';
+    setupReportsMock({ ...REPORT, admin_notes: notesWithLineBreaks });
+    setupLinesMock([]);
+    setupAuthMock(OWNER_USER);
+
+    renderPage();
+
+    // The text is rendered inside a Typography span with whiteSpace inherited from parent
+    const notesElement = screen.getByText((content, element) => {
+      return element?.tagName === 'SPAN' && element?.textContent === notesWithLineBreaks;
+    });
+    expect(notesElement).toBeInTheDocument();
+    // The parent Box has whiteSpace: 'pre-wrap' which is inherited via sx prop
+    const parentBox = notesElement.parentElement!;
+    expect(parentBox.className).toContain('MuiBox-root');
+  });
+
+  // -------------------------------------------------------------------------
+  // Req 4.2: Placeholder shown when admin_notes is null/empty
+  // -------------------------------------------------------------------------
+
+  it('shows placeholder when admin_notes is null', () => {
+    setupReportsMock({ ...REPORT, admin_notes: null });
+    setupLinesMock([]);
+    setupAuthMock(OWNER_USER);
+
+    renderPage();
+
+    expect(screen.getByText('No admin notes have been added.')).toBeInTheDocument();
+  });
+
+  it('shows placeholder when admin_notes is empty string', () => {
+    setupReportsMock({ ...REPORT, admin_notes: '' });
+    setupLinesMock([]);
+    setupAuthMock(OWNER_USER);
+
+    renderPage();
+
+    expect(screen.getByText('No admin notes have been added.')).toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // Req 4.5: Scrollable container for content > 500 characters
+  // -------------------------------------------------------------------------
+
+  it('applies scrollable container when admin_notes exceeds 500 characters', () => {
+    const longNotes = 'A'.repeat(501);
+    setupReportsMock({ ...REPORT, admin_notes: longNotes });
+    setupLinesMock([]);
+    setupAuthMock(OWNER_USER);
+
+    renderPage();
+
+    const notesElement = screen.getByText(longNotes);
+    // The scrollable container is the parent Box
+    const scrollContainer = notesElement.parentElement!;
+    const style = window.getComputedStyle(scrollContainer);
+    expect(style.maxHeight).toBe('200px');
+    expect(style.overflowY).toBe('auto');
+  });
+
+  it('does not apply scrollable container when admin_notes is 500 characters or less', () => {
+    const shortNotes = 'B'.repeat(500);
+    setupReportsMock({ ...REPORT, admin_notes: shortNotes });
+    setupLinesMock([]);
+    setupAuthMock(OWNER_USER);
+
+    renderPage();
+
+    const notesElement = screen.getByText(shortNotes);
+    const container = notesElement.parentElement!;
+    const style = window.getComputedStyle(container);
+    // Should NOT have maxHeight: 200px
+    expect(style.maxHeight).not.toBe('200px');
+  });
+
+  // -------------------------------------------------------------------------
+  // Req 4.3, 4.4: Read-only for both admin and regular users
+  // -------------------------------------------------------------------------
+
+  it('admin notes are read-only for regular users (no edit controls)', () => {
+    setupReportsMock({ ...REPORT, admin_notes: 'Admin feedback here' });
+    setupLinesMock([]);
+    setupAuthMock(OWNER_USER);
+
+    renderPage();
+
+    // Verify the notes are displayed as text, not in an input/textarea
+    expect(screen.getByText('Admin feedback here')).toBeInTheDocument();
+    // No textarea or text input for admin notes
+    const adminNotesSection = screen.getByText('Admin Notes').parentElement!;
+    expect(adminNotesSection.querySelector('textarea')).toBeNull();
+    expect(adminNotesSection.querySelector('input[type="text"]')).toBeNull();
+  });
+
+  it('admin notes are read-only for admin users on the View Screen (no edit controls)', () => {
+    setupReportsMock({ ...REPORT, admin_notes: 'Admin feedback here' });
+    setupLinesMock([]);
+    setupAuthMock(ADMIN_USER);
+
+    renderPage();
+
+    // Verify the notes are displayed as text, not in an input/textarea
+    expect(screen.getByText('Admin feedback here')).toBeInTheDocument();
+    // No textarea or text input for admin notes
+    const adminNotesSection = screen.getByText('Admin Notes').parentElement!;
+    expect(adminNotesSection.querySelector('textarea')).toBeNull();
+    expect(adminNotesSection.querySelector('input[type="text"]')).toBeNull();
   });
 });
