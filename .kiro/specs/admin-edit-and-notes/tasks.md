@@ -84,7 +84,7 @@ This plan implements admin edit access (bypassing status restrictions) and admin
 - [x] 3. Checkpoint - Backend complete
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Frontend utility and type updates
+- [x] 4. Frontend utility and type updates
   - [x] 4.1 Update `ExpenseReportUpdate` interface in `frontend/src/types/expenseReport.ts`
     - Add `admin_notes?: string` optional field to the interface
     - _Requirements: 6.1, 6.2_
@@ -99,18 +99,18 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Ensure admin always has edit access regardless of ownership or status
     - _Requirements: 2.1, 2.2_
 
-  - [ ] 4.4 Write unit tests for updated `getRowActions` in `frontend/src/utils/__tests__/tableUtils.test.ts`
+  - [x] 4.4 Write unit tests for updated `getRowActions` in `frontend/src/utils/__tests__/tableUtils.test.ts`
     - Test admin gets edit action for all statuses (In Progress, Submitted, Rejected, Scheduled for Payment)
     - Test admin gets edit for reports they don't own
     - Test regular user still only gets edit for owned editable reports
     - Test Submitted status for admin still includes accept/reject
     - _Requirements: 2.1, 2.3_
 
-  - [ ] 4.5 Write property tests for `getRowActions` in `frontend/src/utils/__tests__/tableUtils.property.test.ts`
+  - [x] 4.5 Write property tests for `getRowActions` in `frontend/src/utils/__tests__/tableUtils.property.test.ts`
     - **Property 5: Admin dashboard shows edit action for all reports**
     - **Validates: Requirements 2.1**
 
-  - [ ] 4.6 Write property test for regular user row actions in `frontend/src/utils/__tests__/tableUtils.property.test.ts`
+  - [x] 4.6 Write property test for regular user row actions in `frontend/src/utils/__tests__/tableUtils.property.test.ts`
     - **Property 6: Regular user dashboard shows edit action only for owned editable reports**
     - **Validates: Requirements 2.3**
 

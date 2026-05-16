@@ -106,6 +106,140 @@ describe('getRowActions - Property 1: Row actions correctness', () => {
 });
 
 /**
+ * Validates: Requirements 2.1, 2.3
+ *
+ * Unit tests for admin edit access in getRowActions.
+ * Admin users should see edit action for all statuses and all reports (regardless of ownership).
+ * Regular users should only see edit for owned reports with editable statuses.
+ */
+describe('getRowActions - Admin edit access (Requirements 2.1, 2.3)', () => {
+  const adminUser: UserResponse = { id: 1, username: 'admin', role: 'Admin' };
+  const regularUser: UserResponse = { id: 2, username: 'user', role: 'User' };
+
+  function makeReport(overrides: Partial<ExpenseReportResponse> = {}): ExpenseReportResponse {
+    return {
+      id: 10,
+      title: 'Test Report',
+      description: null,
+      total_amount: 500,
+      status: 'In Progress',
+      owner_id: 99,
+      owner_username: 'someone_else',
+      created_at: '2026-01-01T00:00:00Z',
+      reimbursable_from_client: false,
+      client: null,
+      admin_notes: null,
+      ...overrides,
+    };
+  }
+
+  describe('Admin gets edit action for all statuses', () => {
+    it('returns edit for In Progress status', () => {
+      const report = makeReport({ status: 'In Progress', owner_id: 99 });
+      const actions = getRowActions(report, adminUser);
+      expect(actions).toContain('edit');
+    });
+
+    it('returns edit for Submitted status', () => {
+      const report = makeReport({ status: 'Submitted', owner_id: 99 });
+      const actions = getRowActions(report, adminUser);
+      expect(actions).toContain('edit');
+    });
+
+    it('returns edit for Rejected status', () => {
+      const report = makeReport({ status: 'Rejected', owner_id: 99 });
+      const actions = getRowActions(report, adminUser);
+      expect(actions).toContain('edit');
+    });
+
+    it('returns edit for Scheduled for Payment status', () => {
+      const report = makeReport({ status: 'Scheduled for Payment', owner_id: 99 });
+      const actions = getRowActions(report, adminUser);
+      expect(actions).toContain('edit');
+    });
+  });
+
+  describe('Admin gets edit for reports they do not own', () => {
+    it('returns edit for non-owned In Progress report', () => {
+      const report = makeReport({ status: 'In Progress', owner_id: 999 });
+      const actions = getRowActions(report, adminUser);
+      expect(actions).toContain('edit');
+    });
+
+    it('returns edit for non-owned Rejected report', () => {
+      const report = makeReport({ status: 'Rejected', owner_id: 999 });
+      const actions = getRowActions(report, adminUser);
+      expect(actions).toContain('edit');
+    });
+
+    it('returns edit for non-owned Submitted report', () => {
+      const report = makeReport({ status: 'Submitted', owner_id: 999 });
+      const actions = getRowActions(report, adminUser);
+      expect(actions).toContain('edit');
+    });
+
+    it('returns edit for non-owned Scheduled for Payment report', () => {
+      const report = makeReport({ status: 'Scheduled for Payment', owner_id: 999 });
+      const actions = getRowActions(report, adminUser);
+      expect(actions).toContain('edit');
+    });
+  });
+
+  describe('Submitted status for admin still includes accept/reject', () => {
+    it('returns accept and reject for Submitted reports', () => {
+      const report = makeReport({ status: 'Submitted', owner_id: 99 });
+      const actions = getRowActions(report, adminUser);
+      expect(actions).toContain('accept');
+      expect(actions).toContain('reject');
+    });
+
+    it('returns exactly edit, accept, reject for Submitted reports', () => {
+      const report = makeReport({ status: 'Submitted', owner_id: 99 });
+      const actions = getRowActions(report, adminUser);
+      expect(actions).toEqual(['edit', 'accept', 'reject']);
+    });
+  });
+
+  describe('Regular user only gets edit for owned editable reports', () => {
+    it('returns edit for owned In Progress report', () => {
+      const report = makeReport({ status: 'In Progress', owner_id: regularUser.id });
+      const actions = getRowActions(report, regularUser);
+      expect(actions).toContain('edit');
+    });
+
+    it('returns edit for owned Rejected report', () => {
+      const report = makeReport({ status: 'Rejected', owner_id: regularUser.id });
+      const actions = getRowActions(report, regularUser);
+      expect(actions).toContain('edit');
+    });
+
+    it('does not return edit for owned Submitted report', () => {
+      const report = makeReport({ status: 'Submitted', owner_id: regularUser.id });
+      const actions = getRowActions(report, regularUser);
+      expect(actions).not.toContain('edit');
+    });
+
+    it('does not return edit for owned Scheduled for Payment report', () => {
+      const report = makeReport({ status: 'Scheduled for Payment', owner_id: regularUser.id });
+      const actions = getRowActions(report, regularUser);
+      expect(actions).not.toContain('edit');
+    });
+
+    it('does not return edit for non-owned In Progress report', () => {
+      const report = makeReport({ status: 'In Progress', owner_id: 999 });
+      const actions = getRowActions(report, regularUser);
+      expect(actions).not.toContain('edit');
+    });
+
+    it('does not return edit for non-owned Rejected report', () => {
+      const report = makeReport({ status: 'Rejected', owner_id: 999 });
+      const actions = getRowActions(report, regularUser);
+      expect(actions).not.toContain('edit');
+    });
+  });
+});
+
+/**
  * Validates: Requirements 1.3
  *
  * Property 2: Currency formatting value preservation

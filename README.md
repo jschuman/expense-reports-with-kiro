@@ -13,6 +13,8 @@ The Expense Report Web App allows authenticated users to create, view, and manag
 - **Expense Report Status Lifecycle**: Reports move through a four-state workflow — `In Progress → Submitted → Scheduled for Payment` (or `Rejected → Submitted` for resubmission)
 - **Expense Report Management**: Create, edit, submit, and delete expense reports with detailed information
 - **Admin Review**: Admins can accept or reject submitted reports; rejected reports require a reason (admin notes)
+- **Admin Edit Access**: Admins can edit any expense report regardless of its current status, bypassing the normal workflow restrictions that apply to regular users
+- **Admin Notes**: Admins can add/edit administrative annotations on any report; regular users see admin notes in read-only mode on both the edit and view screens
 - **Status Audit Log**: Every status change is recorded with a UTC timestamp for full traceability
 - **Status History Table**: Expense report detail pages display a chronological table of all status changes (shown when 2+ transitions exist), with color-coded status pills and human-readable local dates
 - **Expense Line Items**: Each report supports multiple line items (description, amount, incurred date); the report total is automatically computed as the sum of all lines
