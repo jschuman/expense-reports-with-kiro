@@ -118,24 +118,24 @@ describe('ActionCell', () => {
   // -------------------------------------------------------------------------
 
   describe('admin with "Submitted" status (Req 5.3)', () => {
-    it('renders View, Accept, and Reject buttons', () => {
+    it('renders Edit, Accept, and Reject buttons', () => {
       renderActionCell({
         report: makeReport({ status: 'Submitted', owner_id: 2 }),
         currentUser: makeUser({ id: 1, role: 'Admin' }),
       });
 
-      expect(screen.getByRole('button', { name: /^View Trip to NYC$/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Edit Trip to NYC$/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^Accept Trip to NYC$/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^Reject Trip to NYC$/i })).toBeInTheDocument();
     });
 
-    it('does not render Edit, Delete, or Submit buttons', () => {
+    it('does not render View, Delete, or Submit buttons', () => {
       renderActionCell({
         report: makeReport({ status: 'Submitted', owner_id: 2 }),
         currentUser: makeUser({ id: 1, role: 'Admin' }),
       });
 
-      expect(screen.queryByRole('button', { name: /^Edit/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^View/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /^Delete/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /^Submit/i })).not.toBeInTheDocument();
     });
@@ -172,34 +172,37 @@ describe('ActionCell', () => {
   // -------------------------------------------------------------------------
 
   describe('admin with non-"Submitted" status (Req 5.5)', () => {
-    it('renders only a View button for "In Progress" status', () => {
+    it('renders Edit and View buttons for "In Progress" status', () => {
       renderActionCell({
         report: makeReport({ status: 'In Progress', owner_id: 2 }),
         currentUser: makeUser({ id: 1, role: 'Admin' }),
       });
 
+      expect(screen.getByRole('button', { name: /^Edit Trip to NYC$/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^View Trip to NYC$/i })).toBeInTheDocument();
-      expect(screen.getAllByRole('button')).toHaveLength(1);
+      expect(screen.getAllByRole('button')).toHaveLength(2);
     });
 
-    it('renders only a View button for "Scheduled for Payment" status', () => {
+    it('renders Edit and View buttons for "Scheduled for Payment" status', () => {
       renderActionCell({
         report: makeReport({ status: 'Scheduled for Payment', owner_id: 2 }),
         currentUser: makeUser({ id: 1, role: 'Admin' }),
       });
 
+      expect(screen.getByRole('button', { name: /^Edit Trip to NYC$/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^View Trip to NYC$/i })).toBeInTheDocument();
-      expect(screen.getAllByRole('button')).toHaveLength(1);
+      expect(screen.getAllByRole('button')).toHaveLength(2);
     });
 
-    it('renders only a View button for "Rejected" status', () => {
+    it('renders Edit and View buttons for "Rejected" status', () => {
       renderActionCell({
         report: makeReport({ status: 'Rejected', owner_id: 2 }),
         currentUser: makeUser({ id: 1, role: 'Admin' }),
       });
 
+      expect(screen.getByRole('button', { name: /^Edit Trip to NYC$/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^View Trip to NYC$/i })).toBeInTheDocument();
-      expect(screen.getAllByRole('button')).toHaveLength(1);
+      expect(screen.getAllByRole('button')).toHaveLength(2);
     });
   });
 
@@ -250,7 +253,7 @@ describe('ActionCell', () => {
     it('calls onView with the report ID when View is clicked', async () => {
       const user = userEvent.setup();
       const props = renderActionCell({
-        report: makeReport({ status: 'Submitted', owner_id: 2 }),
+        report: makeReport({ status: 'Scheduled for Payment', owner_id: 2 }),
         currentUser: makeUser({ id: 1, role: 'Admin' }),
       });
 
@@ -318,7 +321,7 @@ describe('ActionCell', () => {
 
     it('View button aria-label includes the report title', () => {
       renderActionCell({
-        report: makeReport({ status: 'Submitted', owner_id: 2, title: 'Team Lunch' }),
+        report: makeReport({ status: 'Scheduled for Payment', owner_id: 2, title: 'Team Lunch' }),
         currentUser: makeUser({ id: 1, role: 'Admin' }),
       });
 

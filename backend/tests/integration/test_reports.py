@@ -456,3 +456,264 @@ async def test_create_report_empty_body_returns_422(async_client, seeded_user):
     response = await async_client.post("/reports", json={})
 
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Fixtures for PUT /reports/{id} tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+async def seeded_admin(async_client):
+    """Insert an Admin user into the shared in-memory DB and return credentials."""
+    session = async_client._test_session_factory()  # type: ignore[attr-defined]
+    try:
+        user = User(username="adminuser", hashed_password=hash_password("adminpass"), role_id=2)
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return {"id": user.id, "username": "adminuser", "password": "adminpass"}
+    finally:
+        session.close()
+
+
+@pytest.fixture()
+async def seeded_report_all_statuses(async_client, seeded_user):
+    """Seed one report per valid status for seeded_user. Returns dict of status→report_id."""
+    now = datetime.now(timezone.utc)
+    session = async_client._test_session_factory()  # type: ignore[attr-defined]
+    try:
+        reports = {}
+        for status_val in ("In Progress", "Submitted", "Rejected", "Scheduled for Payment"):
+            report = ExpenseReport(
+                title=f"Report {status_val}",
+                description=f"Desc for {status_val}",
+                status=status_val,
+                owner_id=seeded_user["id"],
+                created_at=now,
+                reimbursable_from_client=False,
+            )
+            session.add(report)
+            session.flush()
+            reports[status_val] = report.id
+        session.commit()
+        return reports
+    finally:
+        session.close()
+
+
+# ---------------------------------------------------------------------------
+# PUT /reports/{id} — Admin success cases
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status_val", ["In Progress", "Submitted", "Rejected", "Scheduled for Payment"])
+async def test_admin_update_report_succeeds_for_each_status(
+    async_client, seeded_admin, seeded_user, seeded_report_all_statuses, status_val
+):
+    """Admin can update a report regardless of its status (Req 1.1)."""
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_admin["username"], "password": seeded_admin["password"]},
+    )
+
+    report_id = seeded_report_all_statuses[status_val]
+    payload = {"title": "Updated Title", "admin_notes": "Admin note added"}
+    response = await async_client.put(f"/reports/{report_id}", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["title"] == "Updated Title"
+    assert body["admin_notes"] == "Admin note added"
+    # Status must remain unchanged (Req 1.4)
+    assert body["status"] == status_val
+
+
+@pytest.mark.asyncio
+async def test_admin_update_report_404_for_nonexistent(async_client, seeded_admin):
+    """Admin gets 404 when updating a non-existent report (Req 1.7)."""
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_admin["username"], "password": seeded_admin["password"]},
+    )
+
+    response = await async_client.put("/reports/99999", json={"title": "New Title"})
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Report not found"
+
+
+@pytest.mark.asyncio
+async def test_admin_update_report_422_for_invalid_title(
+    async_client, seeded_admin, seeded_user, seeded_report_all_statuses
+):
+    """Admin gets 422 when submitting an empty title (Req 1.6)."""
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_admin["username"], "password": seeded_admin["password"]},
+    )
+
+    report_id = seeded_report_all_statuses["In Progress"]
+    response = await async_client.put(f"/reports/{report_id}", json={"title": ""})
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_admin_update_report_422_for_invalid_client(
+    async_client, seeded_admin, seeded_user, seeded_report_all_statuses
+):
+    """Admin gets 422 when submitting an invalid client (Req 1.6)."""
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_admin["username"], "password": seeded_admin["password"]},
+    )
+
+    report_id = seeded_report_all_statuses["In Progress"]
+    response = await async_client.put(
+        f"/reports/{report_id}",
+        json={"reimbursable_from_client": True, "client": "Invalid Corp"},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_admin_update_report_422_for_admin_notes_too_long(
+    async_client, seeded_admin, seeded_user, seeded_report_all_statuses
+):
+    """Admin gets 422 when admin_notes exceeds 1000 characters (Req 1.6)."""
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_admin["username"], "password": seeded_admin["password"]},
+    )
+
+    report_id = seeded_report_all_statuses["In Progress"]
+    response = await async_client.put(
+        f"/reports/{report_id}",
+        json={"admin_notes": "x" * 1001},
+    )
+
+    assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# PUT /reports/{id} — User (non-admin) cases
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_user_update_report_admin_notes_discarded(
+    async_client, seeded_user, seeded_report_all_statuses
+):
+    """Non-admin user's admin_notes is silently discarded from payload (Req 5.4, 7.5)."""
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    report_id = seeded_report_all_statuses["In Progress"]
+    payload = {"title": "User Updated", "admin_notes": "Should be ignored"}
+    response = await async_client.put(f"/reports/{report_id}", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["title"] == "User Updated"
+    # admin_notes should remain unchanged (None), not set to "Should be ignored"
+    assert body["admin_notes"] is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status_val", ["Submitted", "Scheduled for Payment"])
+async def test_user_update_report_409_for_non_editable_status(
+    async_client, seeded_user, seeded_report_all_statuses, status_val
+):
+    """Non-admin user gets 409 for reports in Submitted or Scheduled for Payment status (Req 7.1, 7.2)."""
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    report_id = seeded_report_all_statuses[status_val]
+    response = await async_client.put(f"/reports/{report_id}", json={"title": "Attempt"})
+
+    assert response.status_code == 409
+    assert "status" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_user_update_report_403_for_non_owned_report(async_client, seeded_user):
+    """Non-admin user gets 403 when updating a report they don't own (Req 7.3)."""
+    # Create another user and their report
+    now = datetime.now(timezone.utc)
+    session = async_client._test_session_factory()  # type: ignore[attr-defined]
+    try:
+        other_user = User(username="owner2", hashed_password=hash_password("pass2"), role_id=1)
+        session.add(other_user)
+        session.flush()
+        other_report = ExpenseReport(
+            title="Other's Report",
+            description="Not yours",
+            status="In Progress",
+            owner_id=other_user.id,
+            created_at=now,
+            reimbursable_from_client=False,
+        )
+        session.add(other_report)
+        session.commit()
+        session.refresh(other_report)
+        other_report_id = other_report.id
+    finally:
+        session.close()
+
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    response = await async_client.put(
+        f"/reports/{other_report_id}", json={"title": "Hijack"}
+    )
+
+    assert response.status_code == 403
+    assert "permission" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_user_error_priority_409_before_403(async_client, seeded_user):
+    """When a non-admin user tries to update a non-owned report in non-editable status,
+    409 (status) is returned before 403 (ownership) per Req 7.6."""
+    now = datetime.now(timezone.utc)
+    session = async_client._test_session_factory()  # type: ignore[attr-defined]
+    try:
+        other_user = User(username="owner3", hashed_password=hash_password("pass3"), role_id=1)
+        session.add(other_user)
+        session.flush()
+        # Report owned by another user in non-editable status
+        report = ExpenseReport(
+            title="Locked Report",
+            description="Non-editable and non-owned",
+            status="Submitted",
+            owner_id=other_user.id,
+            created_at=now,
+            reimbursable_from_client=False,
+        )
+        session.add(report)
+        session.commit()
+        session.refresh(report)
+        report_id = report.id
+    finally:
+        session.close()
+
+    await async_client.post(
+        "/auth/login",
+        json={"username": seeded_user["username"], "password": seeded_user["password"]},
+    )
+
+    response = await async_client.put(
+        f"/reports/{report_id}", json={"title": "Attempt"}
+    )
+
+    # Should get 409 (status restriction) not 403 (ownership) per Req 7.6
+    assert response.status_code == 409

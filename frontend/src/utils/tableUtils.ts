@@ -65,9 +65,9 @@ export function getVisibleColumns(columns: GridColDef[], isAdmin: boolean): Grid
  *
  * Logic (evaluated in priority order):
  * 1. Status "In Progress" or "Rejected" AND user is owner → ['edit', 'delete', 'submit']
- * 2. Status "Submitted" AND user is Admin → ['view', 'accept', 'reject']
- * 3. Status "Submitted" or "Scheduled for Payment" AND user is owner (non-admin) → ['view']
- * 4. User is Admin AND status is NOT "Submitted" → ['view']
+ * 2. Status "Submitted" AND user is Admin → ['edit', 'accept', 'reject']
+ * 3. User is Admin (any non-Submitted status) → ['edit', 'view']
+ * 4. Status "Submitted" or "Scheduled for Payment" AND user is owner (non-admin) → ['view']
  * 5. Any other case → ['view']
  */
 export function getRowActions(
@@ -83,18 +83,18 @@ export function getRowActions(
     return ['edit', 'delete', 'submit'];
   }
 
-  // Rule 2: Admin reviewing submitted report
+  // Rule 2: Admin reviewing submitted report (accept/reject takes priority, but edit still available)
   if (status === 'Submitted' && isAdmin) {
-    return ['view', 'accept', 'reject'];
+    return ['edit', 'accept', 'reject'];
   }
 
-  // Rule 3: Owner (non-admin) with submitted or scheduled report
-  if ((status === 'Submitted' || status === 'Scheduled for Payment') && isOwner && !isAdmin) {
-    return ['view'];
+  // Rule 3: Admin can edit any report regardless of ownership or status
+  if (isAdmin) {
+    return ['edit', 'view'];
   }
 
-  // Rule 4: Admin with non-submitted report
-  if (isAdmin && status !== 'Submitted') {
+  // Rule 4: Owner (non-admin) with submitted or scheduled report
+  if ((status === 'Submitted' || status === 'Scheduled for Payment') && isOwner) {
     return ['view'];
   }
 

@@ -128,16 +128,17 @@ def update_report(
     if report is None:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    if current_user.id != report.owner_id:
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to modify this report",
-        )
-
+    # Status restriction evaluated before ownership per Req 7.6
     if report.status not in ("In Progress", "Rejected"):
         raise HTTPException(
             status_code=409,
             detail=f"Cannot perform this action on a report with status '{report.status}'",
+        )
+
+    if current_user.id != report.owner_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to modify this report",
         )
 
     # Apply only the fields that were explicitly provided (non-None)

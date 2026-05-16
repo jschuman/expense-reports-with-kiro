@@ -46,8 +46,8 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Test non-admin request strips admin_notes and delegates to update_report
     - _Requirements: 5.4, 7.5_
 
-- [ ] 2. Backend integration and property tests
-  - [~] 2.1 Write integration tests for admin update in `backend/tests/integration/test_reports.py`
+- [x] 2. Backend integration and property tests
+  - [x] 2.1 Write integration tests for admin update in `backend/tests/integration/test_reports.py`
     - Test PUT /reports/{id} as Admin: successful update for each status
     - Test PUT /reports/{id} as Admin: 404 for non-existent report
     - Test PUT /reports/{id} as Admin: 422 for invalid fields
@@ -57,31 +57,31 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Test error priority: 409 before 403 for non-admin users
     - _Requirements: 1.1, 1.6, 1.7, 5.4, 7.1, 7.2, 7.3, 7.5, 7.6_
 
-  - [~] 2.2 Write property tests for admin update in `backend/tests/property/test_admin_edit_properties.py`
+  - [x] 2.2 Write property tests for admin update in `backend/tests/property/test_admin_edit_properties.py`
     - **Property 1: Admin update succeeds for any status without changing status**
     - **Validates: Requirements 1.1, 1.4**
 
-  - [~] 2.3 Write property test for partial update preservation in `backend/tests/property/test_admin_edit_properties.py`
+  - [x] 2.3 Write property test for partial update preservation in `backend/tests/property/test_admin_edit_properties.py`
     - **Property 2: Admin partial update preserves unprovided fields**
     - **Validates: Requirements 1.3, 6.4**
 
-  - [~] 2.4 Write property test for invalid input rejection in `backend/tests/property/test_admin_edit_properties.py`
+  - [x] 2.4 Write property test for invalid input rejection in `backend/tests/property/test_admin_edit_properties.py`
     - **Property 3: Admin update rejects invalid input without persisting changes**
     - **Validates: Requirements 1.5, 1.6**
 
-  - [~] 2.5 Write property test for non-admin admin_notes stripping in `backend/tests/property/test_admin_edit_properties.py`
+  - [x] 2.5 Write property test for non-admin admin_notes stripping in `backend/tests/property/test_admin_edit_properties.py`
     - **Property 4: Non-admin update discards admin_notes from payload**
     - **Validates: Requirements 5.4, 7.5**
 
-  - [~] 2.6 Write property test for admin notes round-trip in `backend/tests/property/test_admin_edit_properties.py`
+  - [x] 2.6 Write property test for admin notes round-trip in `backend/tests/property/test_admin_edit_properties.py`
     - **Property 7: Admin notes round-trip persistence**
     - **Validates: Requirements 6.2**
 
-  - [~] 2.7 Write property test for non-owner rejection in `backend/tests/property/test_admin_edit_properties.py`
+  - [x] 2.7 Write property test for non-owner rejection in `backend/tests/property/test_admin_edit_properties.py`
     - **Property 8: Non-owner regular user cannot update reports**
     - **Validates: Requirements 7.3**
 
-- [~] 3. Checkpoint - Backend complete
+- [x] 3. Checkpoint - Backend complete
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. Frontend utility and type updates
@@ -93,29 +93,29 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Add `admin_notes: z.string().max(1000, 'Admin notes must be 1000 characters or less').optional()`
     - _Requirements: 6.1_
 
-  - [~] 4.3 Update `getRowActions` in `frontend/src/utils/tableUtils.ts`
+  - [x] 4.3 Update `getRowActions` in `frontend/src/utils/tableUtils.ts`
     - Add admin rule before existing Rule 1: if user is Admin, return `['edit', 'view']` for non-Submitted statuses
     - For Submitted status, keep existing Rule 2 (accept/reject) taking priority
     - Ensure admin always has edit access regardless of ownership or status
     - _Requirements: 2.1, 2.2_
 
-  - [~] 4.4 Write unit tests for updated `getRowActions` in `frontend/src/utils/__tests__/tableUtils.test.ts`
+  - [ ] 4.4 Write unit tests for updated `getRowActions` in `frontend/src/utils/__tests__/tableUtils.test.ts`
     - Test admin gets edit action for all statuses (In Progress, Submitted, Rejected, Scheduled for Payment)
     - Test admin gets edit for reports they don't own
     - Test regular user still only gets edit for owned editable reports
     - Test Submitted status for admin still includes accept/reject
     - _Requirements: 2.1, 2.3_
 
-  - [~] 4.5 Write property tests for `getRowActions` in `frontend/src/utils/__tests__/tableUtils.property.test.ts`
+  - [ ] 4.5 Write property tests for `getRowActions` in `frontend/src/utils/__tests__/tableUtils.property.test.ts`
     - **Property 5: Admin dashboard shows edit action for all reports**
     - **Validates: Requirements 2.1**
 
-  - [~] 4.6 Write property test for regular user row actions in `frontend/src/utils/__tests__/tableUtils.property.test.ts`
+  - [ ] 4.6 Write property test for regular user row actions in `frontend/src/utils/__tests__/tableUtils.property.test.ts`
     - **Property 6: Regular user dashboard shows edit action only for owned editable reports**
     - **Validates: Requirements 2.3**
 
 - [ ] 5. Frontend Edit Screen updates
-  - [~] 5.1 Update `EditReportPage` in `frontend/src/pages/EditReportPage.tsx` for admin notes
+  - [ ] 5.1 Update `EditReportPage` in `frontend/src/pages/EditReportPage.tsx` for admin notes
     - Add `adminNotes` state field, pre-populated from `report.admin_notes`
     - If user is Admin: render editable `<TextField multiline>` with 1000 char max and character count
     - If user is regular User: render read-only, visually distinct display of admin notes (non-interactive)
@@ -124,7 +124,7 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Include `admin_notes` in update payload when user is Admin
     - _Requirements: 3.1, 3.2, 5.1, 5.2, 5.3, 5.5, 6.1, 6.2, 6.3_
 
-  - [~] 5.2 Ensure Edit Screen validation and submission behavior
+  - [ ] 5.2 Ensure Edit Screen validation and submission behavior
     - Client-side validation: title required (1-255 chars), client required when reimbursable
     - Admin notes max 1000 chars validation for admin users
     - Disable all fields and submit button during submission
@@ -132,7 +132,7 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Display API errors (403, 404, 409) as ErrorAlert banner
     - _Requirements: 3.3, 3.4, 3.5, 3.6, 3.7_
 
-  - [~] 5.3 Write component tests for `EditReportPage` admin notes in `frontend/src/pages/__tests__/EditReportPage.test.tsx`
+  - [ ] 5.3 Write component tests for `EditReportPage` admin notes in `frontend/src/pages/__tests__/EditReportPage.test.tsx`
     - Test admin sees editable admin_notes TextField
     - Test regular user sees read-only admin_notes display
     - Test admin notes placeholder when empty
@@ -141,7 +141,7 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - _Requirements: 3.1, 3.7, 5.1, 5.2, 6.1_
 
 - [ ] 6. Frontend View Screen updates
-  - [~] 6.1 Update `ExpenseReportDetailPage` in `frontend/src/pages/ExpenseReportDetailPage.tsx`
+  - [ ] 6.1 Update `ExpenseReportDetailPage` in `frontend/src/pages/ExpenseReportDetailPage.tsx`
     - Add "Admin Notes" section with visible label
     - Display content preserving line breaks (`whiteSpace: 'pre-wrap'`)
     - Show placeholder "No admin notes have been added." when empty
@@ -149,7 +149,7 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Read-only for all users (both Admin and regular)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-  - [~] 6.2 Write component tests for admin notes on View Screen in `frontend/src/pages/__tests__/ExpenseReportDetailPage.admin.test.tsx`
+  - [ ] 6.2 Write component tests for admin notes on View Screen in `frontend/src/pages/__tests__/ExpenseReportDetailPage.admin.test.tsx`
     - Test "Admin Notes" label is displayed
     - Test content renders with line breaks preserved
     - Test placeholder shown when admin_notes is null/empty
@@ -157,7 +157,7 @@ This plan implements admin edit access (bypassing status restrictions) and admin
     - Test read-only for both admin and regular users
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [~] 7. Final checkpoint - Ensure all tests pass
+- [ ] 7. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

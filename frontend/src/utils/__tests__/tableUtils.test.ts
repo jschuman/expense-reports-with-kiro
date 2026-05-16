@@ -64,9 +64,9 @@ describe('getRowActions - Property 1: Row actions correctness', () => {
   /**
    * Computes the expected actions based on the requirements matrix:
    * 1. Status "In Progress" or "Rejected" AND user is owner → ['edit', 'delete', 'submit']
-   * 2. Status "Submitted" AND user is Admin → ['view', 'accept', 'reject']
-   * 3. Status "Submitted" or "Scheduled for Payment" AND user is owner (non-admin) → ['view']
-   * 4. Admin AND status is NOT "Submitted" → ['view']
+   * 2. Status "Submitted" AND user is Admin → ['edit', 'accept', 'reject']
+   * 3. Admin (any non-Submitted status) → ['edit', 'view']
+   * 4. Status "Submitted" or "Scheduled for Payment" AND user is owner (non-admin) → ['view']
    * 5. Any other case → ['view']
    */
   function expectedActions(status: string, role: string, isOwner: boolean): ActionType[] {
@@ -77,14 +77,14 @@ describe('getRowActions - Property 1: Row actions correctness', () => {
     }
 
     if (status === 'Submitted' && isAdmin) {
-      return ['view', 'accept', 'reject'];
+      return ['edit', 'accept', 'reject'];
     }
 
-    if ((status === 'Submitted' || status === 'Scheduled for Payment') && isOwner && !isAdmin) {
-      return ['view'];
+    if (isAdmin) {
+      return ['edit', 'view'];
     }
 
-    if (isAdmin && status !== 'Submitted') {
+    if ((status === 'Submitted' || status === 'Scheduled for Payment') && isOwner) {
       return ['view'];
     }
 
